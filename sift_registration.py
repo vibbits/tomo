@@ -1,6 +1,6 @@
-# @String srcdir
-# @String dstdir
-# @String prefix
+#@String srcdir
+#@String dstdir
+#@String prefix
 
 # Prototype script for registering a set of images with ImageJ's SIFT registration plugin.
 # This script is to be executed by a headless Fiji.
@@ -22,7 +22,7 @@ def natural_keys(text):
 
 def registration():
     # Collect the filenames of the images we will load and save as a single stack
-    print('Scanning source directory for images')
+    print('Scanning source directory {} for images'.format(srcdir))
     images = []
     for filename in os.listdir(srcdir):
         if filename.startswith(prefix):

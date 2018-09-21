@@ -3,6 +3,7 @@
 # September 2018
 
 import numpy as np
+import subprocess
 import cv2
 import sys
 import os
@@ -10,7 +11,17 @@ import re
 import json
 import math
 import time
-import subprocess
+import wx  # installed on Windows with "conda install -c anaconda wxpython"
+
+# Installing Python packages and setting up environment
+#
+# 1. Install Miniconda
+# 2. conda create -n tomo-py37 python=3.7
+# 3. source activate tomo-py37
+# 4. pip install numpy
+# 5. pip install opencv-python
+# 6. conda install -c anaconda wxpython
+
 
 # OpenCV notes:
 # - the origin is in the top-left corner of the image, with the positive y axis pointing down.
@@ -263,31 +274,9 @@ def commandline_exec(lst):
     encoding = sys.stdout.encoding  # I'm not sure that this is correct on all platforms
     return (proc.returncode, out.decode(encoding), err.decode(encoding))
 
-def main():
-    # Check that we're running Python 3.6+
-    if sys.version_info[0] < 3:
-        raise Exception("Must be running Python 3.6 or higher")
-    else:
-        if sys.version_info[1] < 6:
-            raise Exception("Must be running Python 3.6 or higher")
-
-    print('Using Python {}.{}.{} and OpenCV {}'.format(*sys.version_info[:3], cv2.__version__))
-
-    # Input parameters # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-    # TODO: add user interface that pops up a dialog asking the user for these input values (and saves them as defaults for next time)
-    overview_image_path = r'F:\Secom\sergio_x20_LM_objective_overview_image\bisstitched-0.tif'
-    slice_polygons_path = r'E:\git\bits\bioimaging\Secom\tomo\data\bisstitched-0.points.json'
-    lm_images_output_folder = r'E:\git\bits\bioimaging\Secom\tomo\data\output\LM'
-    original_point_of_interest = np.array([2417, 1066]) #[1205, 996])
-    delay_between_LM_image_acquisition_secs = 0.1  # time in seconds to pause between successive microscope commands to acquire an LM image (maybe 1 or 2 secs in reality)
-    mm_per_pixel = 3077.38542  # of the x20 lens overview image
-    fiji = r'e:\Fiji.app\ImageJ-win64.exe'
-    odemis_cli = r'E:\git\bits\bioimaging\Secom\tomo\odemis-cli.bat'
-    sift_registration_script = r'E:\git\bits\bioimaging\Secom\tomo\sift_registration.py'
-    lm_images_prefix = 'section'                      # prefix = 'lm_slice_'   # prefix of x100 image filenames
-    sift_input_folder = r'F:\Secom\cell1'
-    sift_output_folder = r'F:\Secom\cell1\frank'      # os.path.join(lm_images_output_folder, 'xxxxx')
-    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+def go(delay_between_LM_image_acquisition_secs, fiji, lm_images_output_folder, lm_images_prefix, overview_image_mm_per_pixel,
+       odemis_cli, original_point_of_interest, overview_image_path, sift_input_folder, sift_output_folder, sift_images_mm_per_pixel,
+       sift_registration_script, slice_polygons_path):
 
     # Read overview image
     print('Loading ' + overview_image_path)
@@ -313,11 +302,11 @@ def main():
     display(img, 'test')
 
     # Display overview image pixel size information
-    pixelsize_in_microns = 1000.0 / mm_per_pixel
-    print('Overview image pixel size = {} micrometer = {} mm per pixel'.format(pixelsize_in_microns, mm_per_pixel))
+    overview_image_pixelsize_in_microns = 1000.0 / overview_image_mm_per_pixel
+    print('Overview image pixel size = {} micrometer = {} mm per pixel'.format(overview_image_pixelsize_in_microns, overview_image_mm_per_pixel))
 
     # Calculate the physical displacements on the sample required for moving between the points of interest.
-    slice_offsets_microns = physical_point_of_interest_offsets_in_microns(all_points_of_interest, pixelsize_in_microns)
+    slice_offsets_microns = physical_point_of_interest_offsets_in_microns(all_points_of_interest, overview_image_pixelsize_in_microns)
     print('Rough offset from slice polygons (in microns): '+ repr(slice_offsets_microns))
 
     # Now acquire an LM image at the point of interest location in each slice.
@@ -329,7 +318,7 @@ def main():
     # https://imagej.net/Headless#Running_macros_in_headless_mode
     print('Aligning LM images')
     print('Starting a headless Fiji and calling the SIFT image registration plugin. Please be patient...')
-    retcode, out, err = commandline_exec([fiji, "-Dpython.console.encoding=UTF-8", "--ij2", "--headless", "--run", sift_registration_script, "'srcdir=\"{}\",dstdir=\"{}\",prefix=\"{}\"'".format(sift_input_folder, sift_output_folder, lm_images_prefix)])
+    retcode, out, err = commandline_exec([fiji, "-Dpython.console.encoding=UTF-8", "--ij2", "--headless", "--console", "--run", sift_registration_script, "srcdir='{}',dstdir='{}',prefix='{}'".format(sift_input_folder, sift_output_folder, lm_images_prefix)])
     print('retcode={}\nstdout=\n{}\nstderr={}\n'.format(retcode, out, err))
 
     # Parse the output of the SIFT registration plugin and extract
@@ -342,7 +331,8 @@ def main():
     # So our matrices should be pure translations. Extract the last column (=the offset) and convert from pixel
     # coordinates to physical distances on the sample.
     # (We also add a (0,0) offset for the first slice.)
-    sift_offsets_microns = [np.array([0, 0])] + [mat[:, 2] * pixelsize_in_microns for mat in sift_matrices]
+    sift_images_pixelsize_in_microns = 1000.0 / sift_images_mm_per_pixel
+    sift_offsets_microns = [np.array([0, 0])] + [mat[:, 2] * sift_images_pixelsize_in_microns for mat in sift_matrices]
     print('Fine SIFT offset (in microns): '+ repr(sift_offsets_microns))
 
     # Invert y of the SIFT offsets
@@ -360,6 +350,325 @@ def main():
     # TODO? Also acquire EM images? Using combined_offsets_microns?
     # odemis-cli --se-detector --output filename.ome.tiff
 
+
+class ParametersDialog(wx.Dialog):
+    KEY_OVERVIEW_IMAGE_PATH = 'overview_image_path'
+    KEY_SLICE_POLYGONS_PATH = 'slice_polygons_path'
+    KEY_LM_IMAGES_OUTPUT_FOLDER = 'lm_images_output_folder'
+    KEY_ORIGINAL_POI_X = 'original_poi_x'
+    KEY_ORIGINAL_POI_Y = 'original_poi_y'
+    KEY_LM_ACQUISITION_DELAY = 'lm_acquisition_delay'
+    KEY_OVERVIEW_IMAGE_MM_PER_PIXEL = 'overview_image_mm_per_pixel'
+    KEY_SIFT_IMAGES_MM_PER_PIXEL = 'sift_images_mm_per_pixel'
+    KEY_FIJI_PATH = 'fiji_path'
+    KEY_ODEMIS_CLI = 'odemis_cli'
+    KEY_SIFT_REGISTRATION_SCRIPT = 'sift_registration_script'
+    KEY_LM_IMAGES_PREFIX = 'lm_images_prefix'
+    KEY_SIFT_INPUT_FOLDER = 'sift_input_folder'
+    KEY_SIFT_OUTPUT_FOLDER = 'sift_output_folder'
+
+    # Model parameters
+    _overview_image_path = None
+    _slice_polygons_path = None
+    _lm_images_output_folder = None
+    _original_point_of_interest = np.array([0, 0])
+    _delay_between_LM_image_acquisition_secs = 0.0  # time in seconds to pause between successive microscope commands to acquire an LM image (maybe 1 or 2 secs in reality)
+    _overview_image_mm_per_pixel = 0.0  # of the e.g. x20 lens overview image
+    _sift_images_mm_per_pixel = 0.0 # of the e.g. x100 lens LM images that will be acquired and used for SIFT registration
+    _fijiPath = None
+    _odemis_cli = None
+    _sift_registration_script = None
+    _lm_images_prefix = None  # prefix of x100 image filenames
+    _sift_input_folder = None
+    _sift_output_folder = None
+
+    # persistent parameter storage
+    _config = None
+
+    # UI elements
+    _odemisCliPathEdit = None
+    _overviewImagePathEdit = None
+    _slicePolygonsPathEdit = None
+    _registrationScriptFileEdit = None
+    _lmImagesOutputFolderEdit = None
+    _fijiPathEdit = None
+    _overviewPixelSizeEdit = None
+    _siftInputFolderEdit = None
+    _siftOutputFolderEdit = None
+    _siftPixelSizeEdit = None
+    _prefixEdit = None
+    _pointOfInterestXEdit = None
+    _pointOfInterestYEdit = None
+    _lmAcquisitionDelayText = None
+    _goButton = None
+
+    def __init__(self, parent, ID, title, size = wx.DefaultSize, pos = wx.DefaultPosition, style = wx.DEFAULT_DIALOG_STYLE):
+        wx.Dialog.__init__(self, parent, ID, title, pos, size, style)
+
+        self._config = wx.Config('be.vib.bits.tomo')
+        self._readParameters()
+
+        w = 450  # width for long input fields
+
+        box = wx.BoxSizer(wx.HORIZONTAL) # box for adding a border around the panel
+
+        #
+
+        overviewImagePathLabel = wx.StaticText(self, wx.ID_ANY, "Overview Image File:")
+        self._overviewImagePathEdit = wx.TextCtrl(self, wx.ID_ANY, self._overview_image_path, size = (w, -1))
+
+        overviewPixelSizeLabel = wx.StaticText(self, wx.ID_ANY, "Overview Image Pixel size (mm/pixel):")
+        self._overviewPixelSizeEdit = wx.TextCtrl(self, wx.ID_ANY, str(self._overview_image_mm_per_pixel), size = (100, -1))
+
+        slicePolygonsPathLabel = wx.StaticText(self, wx.ID_ANY, "Slice Polygons File:")
+        self._slicePolygonsPathEdit = wx.TextCtrl(self, wx.ID_ANY, self._slice_polygons_path, size = (w, -1))
+
+        pointOfInterestLabel = wx.StaticText(self, wx.ID_ANY, "Point of Interest (X, Y):")
+        self._pointOfInterestXEdit = wx.TextCtrl(self, wx.ID_ANY, str(self._original_point_of_interest[0]), size = (50, -1))
+        self._pointOfInterestYEdit = wx.TextCtrl(self, wx.ID_ANY, str(self._original_point_of_interest[1]), size = (50, -1))
+
+        lmImagesOutputFolderLabel = wx.StaticText(self, wx.ID_ANY, "LM Image Acquisition Output Folder:")
+        self._lmImagesOutputFolderEdit = wx.TextCtrl(self, wx.ID_ANY, self._lm_images_output_folder, size = (w, -1))
+
+        prefixLabel = wx.StaticText(self, wx.ID_ANY, "Image Filename Prefix:")
+        self._prefixEdit = wx.TextCtrl(self, wx.ID_ANY, self._lm_images_prefix, size = (w, -1))
+
+        lmAcquisitionDelayLabel = wx.StaticText(self, wx.ID_ANY, "Image Acquisition Delay (sec):")
+        self._lmAcquisitionDelayText = wx.TextCtrl(self, wx.ID_ANY, str(self._delay_between_LM_image_acquisition_secs), size = (50, -1))
+
+        #
+
+        siftInputFolderLabel = wx.StaticText(self, wx.ID_ANY, "SIFT Input Folder:")
+        self._siftInputFolderEdit = wx.TextCtrl(self, wx.ID_ANY, self._sift_input_folder, size = (w, -1))
+
+        siftOutputFolderLabel = wx.StaticText(self, wx.ID_ANY, "SIFT Output Folder:")
+        self._siftOutputFolderEdit = wx.TextCtrl(self, wx.ID_ANY, self._sift_output_folder, size = (w, -1))
+
+        siftPixelSizeLabel = wx.StaticText(self, wx.ID_ANY, "SIFT Image Pixel size (mm/pixel):")
+        self._siftPixelSizeEdit = wx.TextCtrl(self, wx.ID_ANY, str(self._sift_images_mm_per_pixel), size = (100, -1))
+
+        #
+        
+        fijiPathLabel = wx.StaticText(self, wx.ID_ANY, "Fiji Folder:")
+        self._fijiPathEdit = wx.TextCtrl(self, wx.ID_ANY, self._fijiPath, size = (w, -1))
+
+        odemisCliPathLabel = wx.StaticText(self, wx.ID_ANY, "Odemis CLI File:")
+        self._odemisCliPathEdit = wx.TextCtrl(self, wx.ID_ANY, self._odemis_cli, size = (w, -1))
+
+        registrationScriptFileLabel = wx.StaticText(self, wx.ID_ANY, "Registration Script:")
+        self._registrationScriptFileEdit = wx.TextCtrl(self, wx.ID_ANY, self._sift_registration_script, size = (w, -1))
+
+        #
+        
+        self._goButton = wx.Button(self, wx.ID_ANY, "Go!", size = (70, -1))
+
+        # TODO: group parameters
+
+        pointOfInterestSizer = wx.BoxSizer(wx.HORIZONTAL)
+        pointOfInterestSizer.Add(self._pointOfInterestXEdit, flag = wx.ALIGN_CENTER_VERTICAL)
+        pointOfInterestSizer.AddSpacer(8)
+        pointOfInterestSizer.Add(self._pointOfInterestYEdit, flag = wx.ALIGN_CENTER_VERTICAL)
+
+        contents = wx.FlexGridSizer(cols = 2, vgap = 4, hgap = 8)
+
+        # Overview
+        contents.Add(overviewImagePathLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(self._overviewImagePathEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(overviewPixelSizeLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(self._overviewPixelSizeEdit, flag =wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(slicePolygonsPathLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(self._slicePolygonsPathEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(pointOfInterestLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(pointOfInterestSizer, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+
+        # LM Image Acquisition
+        contents.Add(lmImagesOutputFolderLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(self._lmImagesOutputFolderEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(prefixLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(self._prefixEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(lmAcquisitionDelayLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(self._lmAcquisitionDelayText, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+
+        # SIFT registration
+        contents.Add(siftInputFolderLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(self._siftInputFolderEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(siftOutputFolderLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(self._siftOutputFolderEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(siftPixelSizeLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(self._siftPixelSizeEdit, flag =wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+
+        # Environment
+        contents.Add(fijiPathLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(self._fijiPathEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(odemisCliPathLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(self._odemisCliPathEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(registrationScriptFileLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        contents.Add(self._registrationScriptFileEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+
+        contents.Add(self._goButton, flag = wx.ALIGN_CENTER_VERTICAL)
+        # TODO: Go! button should span both columns of the flexgridsizer
+        # TODO: make the dialog resizable (add wx.EXPAND to the edit fields that can grow, and use FlexGridSizer.AddGrowableColumn())
+
+        self.Bind(wx.EVT_TEXT, self._onDelayChange, self._lmAcquisitionDelayText)
+        self.Bind(wx.EVT_TEXT, self._onOdemisCliPathChange, self._odemisCliPathEdit)
+        self.Bind(wx.EVT_TEXT, self._onPrefixChange, self._prefixEdit)
+        self.Bind(wx.EVT_TEXT, self._onFijiPathChange, self._fijiPathEdit)
+        self.Bind(wx.EVT_TEXT, self._onPoiXChange, self._pointOfInterestXEdit)
+        self.Bind(wx.EVT_TEXT, self._onPoiYChange, self._pointOfInterestYEdit)
+        self.Bind(wx.EVT_TEXT, self._onOverviewPixelSizeChange, self._overviewPixelSizeEdit)
+        self.Bind(wx.EVT_TEXT, self._onRegistrationScriptChange, self._registrationScriptFileEdit)
+        self.Bind(wx.EVT_TEXT, self._onSiftInputFolderChange, self._siftInputFolderEdit)
+        self.Bind(wx.EVT_TEXT, self._onSiftOutputFolderChange, self._siftOutputFolderEdit)
+        self.Bind(wx.EVT_TEXT, self._onSiftPixelSizeChange, self._siftPixelSizeEdit)
+        self.Bind(wx.EVT_TEXT, self._onOverviewImagePathChange, self._overviewImagePathEdit)
+        self.Bind(wx.EVT_TEXT, self._onSlicePolygonsPathChange, self._slicePolygonsPathEdit)
+        self.Bind(wx.EVT_TEXT, self._onLmImagesOutputFolderChange, self._lmImagesOutputFolderEdit)
+        self.Bind(wx.EVT_BUTTON, self._onGoButtonClick, self._goButton)
+
+        # TODO: quit when user presses the dialog close button (and we haven't started go() yet)
+        # TODO: IMPORTANT improvement: especially for the numeric fields, deal with situation where the input field is temporarily empty (while entering a number), and also forbid leaving the edit field if the value is not acceptable (or replace it with the last acceptable value)
+
+        box.Add(contents, flag = wx.ALL | wx.EXPAND, border = 10)
+
+        self.SetSizer(box)
+        box.Fit(self)
+
+    def _readParameters(self):
+        self._overview_image_path                     = self._config.Read(ParametersDialog.KEY_OVERVIEW_IMAGE_PATH, r'/home/secom/development/tomo/data/bisstitched-0.tif')
+        self._slice_polygons_path                     = self._config.Read(ParametersDialog.KEY_SLICE_POLYGONS_PATH, r'/home/secom/development/tomo/data/bisstitched-0.points.json')
+        self._lm_images_output_folder                 = self._config.Read(ParametersDialog.KEY_LM_IMAGES_OUTPUT_FOLDER, r'/home/secom/development/tomo/data/output/LM')
+        self._original_point_of_interest[0]           = self._config.ReadInt(ParametersDialog.KEY_ORIGINAL_POI_X, 2417)
+        self._original_point_of_interest[1]           = self._config.ReadInt(ParametersDialog.KEY_ORIGINAL_POI_Y, 1066)
+        self._delay_between_LM_image_acquisition_secs = self._config.ReadFloat(ParametersDialog.KEY_LM_ACQUISITION_DELAY, 2.0)
+        self._overview_image_mm_per_pixel             = self._config.ReadFloat(ParametersDialog.KEY_OVERVIEW_IMAGE_MM_PER_PIXEL, 3077.38542)
+        self._fijiPath                                = self._config.Read(ParametersDialog.KEY_FIJI_PATH, r'/home/secom/Downloads/Fiji.app/ImageJ-linux64')
+        self._odemis_cli                              = self._config.Read(ParametersDialog.KEY_ODEMIS_CLI, r'/usr/bin/odemis-cli')
+        self._sift_registration_script                = self._config.Read(ParametersDialog.KEY_SIFT_REGISTRATION_SCRIPT, r'/home/secom/development/tomo/sift_registration.py')
+        self._lm_images_prefix                        = self._config.Read(ParametersDialog.KEY_LM_IMAGES_PREFIX, 'section')
+        self._sift_input_folder                       = self._config.Read(ParametersDialog.KEY_SIFT_INPUT_FOLDER, r'/home/secom/development/tomo/data/output/LM')
+        self._sift_output_folder                      = self._config.Read(ParametersDialog.KEY_SIFT_OUTPUT_FOLDER, r'/home/secom/development/tomo/data/output/LM')
+        self._sift_images_mm_per_pixel                = self._config.ReadFloat(ParametersDialog.KEY_SIFT_IMAGES_MM_PER_PIXEL, 1000.0)  # just a random value, probably not typical
+
+    def _writeParameters(self):
+        self._config.Write(ParametersDialog.KEY_OVERVIEW_IMAGE_PATH, self._overview_image_path)
+        self._config.Write(ParametersDialog.KEY_SLICE_POLYGONS_PATH, self._slice_polygons_path)
+        self._config.Write(ParametersDialog.KEY_LM_IMAGES_OUTPUT_FOLDER, self._lm_images_output_folder)
+        self._config.WriteInt(ParametersDialog.KEY_ORIGINAL_POI_X, self._original_point_of_interest[0])
+        self._config.WriteInt(ParametersDialog.KEY_ORIGINAL_POI_Y, self._original_point_of_interest[1])
+        self._config.WriteFloat(ParametersDialog.KEY_LM_ACQUISITION_DELAY, self._delay_between_LM_image_acquisition_secs)
+        self._config.WriteFloat(ParametersDialog.KEY_OVERVIEW_IMAGE_MM_PER_PIXEL, self._overview_image_mm_per_pixel)
+        self._config.Write(ParametersDialog.KEY_FIJI_PATH, self._fijiPath)
+        self._config.Write(ParametersDialog.KEY_ODEMIS_CLI, self._odemis_cli)
+        self._config.Write(ParametersDialog.KEY_SIFT_REGISTRATION_SCRIPT, self._sift_registration_script)
+        self._config.Write(ParametersDialog.KEY_LM_IMAGES_PREFIX, self._lm_images_prefix)
+        self._config.Write(ParametersDialog.KEY_SIFT_INPUT_FOLDER, self._sift_input_folder)
+        self._config.Write(ParametersDialog.KEY_SIFT_OUTPUT_FOLDER, self._sift_output_folder)
+        self._config.WriteFloat(ParametersDialog.KEY_SIFT_IMAGES_MM_PER_PIXEL, self._sift_images_mm_per_pixel)
+        self._config.Flush()
+
+    def _onGoButtonClick(self, event):
+        self.Show(False)
+        self._writeParameters()
+        go(self._delay_between_LM_image_acquisition_secs, self._fijiPath, self._lm_images_output_folder, self._lm_images_prefix, self._overview_image_mm_per_pixel,
+           self._odemis_cli, self._original_point_of_interest, self._overview_image_path, self._sift_input_folder, self._sift_output_folder, self._sift_images_mm_per_pixel,
+           self._sift_registration_script, self._slice_polygons_path)
+        self.Destroy()
+
+    def _onDelayChange(self, event):
+        self._delay_between_LM_image_acquisition_secs = float(self._lmAcquisitionDelayText.GetValue())
+        print('_delay_between_LM_image_acquisition_secs={}'.format(self._delay_between_LM_image_acquisition_secs))
+
+    def _onPoiXChange(self, event):
+        self._original_point_of_interest[0] = float(self._pointOfInterestXEdit.GetValue())
+        print('_original_point_of_interest[0]={}'.format(self._original_point_of_interest[0]))
+
+    def _onPoiYChange(self, event):
+        self._original_point_of_interest[1] = float(self._pointOfInterestYEdit.GetValue())
+        print('_original_point_of_interest[1]={}'.format(self._original_point_of_interest[1]))
+
+    def _onOverviewPixelSizeChange(self, event):
+        self._overview_image_mm_per_pixel = float(self._overviewPixelSizeEdit.GetValue())
+        print('_overview_image_mm_per_pixel={}'.format(self._overview_image_mm_per_pixel))
+
+    def _onOdemisCliPathChange(self, event):
+        self._odemis_cli = self._odemisCliPathEdit.GetValue()
+        print('_odemis_cli={}'.format(self._odemis_cli))
+
+    def _onPrefixChange(self, event):
+        self._lm_images_prefix = self._prefixEdit.GetValue()
+        print('_lm_images_prefix={}'.format(self._lm_images_prefix))
+
+    def _onFijiPathChange(self, event):
+        self._fijiPath = self._fijiPathEdit.GetValue()
+        print('_fiji={}'.format(self._fijiPath))
+
+    def _onOverviewImagePathChange(self, event):
+        self._overview_image_path = self._overviewImagePathEdit.GetValue()
+        print('_overview_image_path={}'.format(self._overview_image_path))
+
+    def _onSlicePolygonsPathChange(self, event):
+        self._slice_polygons_path = self._slicePolygonsPathEdit.GetValue()
+        print('_slice_polygons_path={}'.format(self._slice_polygons_path))
+
+    def _onLmImagesOutputFolderChange(self, event):
+        self._lm_images_output_folder = self._lmImagesOutputFolderEdit.GetValue()
+        print('_lm_images_output_folder={}'.format(self._lm_images_output_folder))
+
+    def _onSiftInputFolderChange(self, event):
+        self._sift_input_folder = self._siftInputFolderEdit.GetValue()
+        print('_sift_input_folder={}'.format(self._sift_input_folder))
+
+    def _onSiftOutputFolderChange(self, event):
+        self._sift_output_folder = self._siftOutputFolderEdit.GetValue()
+        print('_sift_output_folder={}'.format(self._sift_output_folder))
+
+    def _onSiftPixelSizeChange(self, event):
+        self._sift_images_mm_per_pixel = float(self._siftPixelSizeEdit.GetValue())
+        print('_sift_images_mm_per_pixel={}'.format(self._sift_images_mm_per_pixel))
+
+    def _onRegistrationScriptChange(self, event):
+        self._sift_registration_script = self._registrationScriptFileEdit.GetValue()
+        print('_sift_registration_script={}'.format(self._sift_registration_script))
+
+def main():
+    # Check that we're running Python 3.6+
+    if sys.version_info[0] < 3:
+        raise Exception("Must be running Python 3.6 or higher")
+    else:
+        if sys.version_info[1] < 6:
+            raise Exception("Must be running Python 3.6 or higher")
+
+    print('Environment:\n  Python: {}.{}.{}\n  OpenCV: {}\n  wxWindows: {}'.format(*sys.version_info[:3], cv2.__version__, wx.version()))
+
+    app = wx.App()
+    dlg = ParametersDialog(None, wx.ID_ANY, "Tomography")
+    dlg.CenterOnScreen()
+    dlg.Show(True)
+    app.MainLoop()
+
+    # # Input parameters # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+    # Frank Windows
+    # overview_image_path = r'F:\Secom\sergio_x20_LM_objective_overview_image\bisstitched-0.tif'
+    # slice_polygons_path = r'E:\git\bits\bioimaging\Secom\tomo\data\bisstitched-0.points.json'
+    # lm_images_output_folder = r'E:\git\bits\bioimaging\Secom\tomo\data\output\LM'
+    # original_point_of_interest = np.array([2417, 1066]) #[1205, 996])
+    # delay_between_LM_image_acquisition_secs = 0.1  # time in seconds to pause between successive microscope commands to acquire an LM image (maybe 1 or 2 secs in reality)
+    # mm_per_pixel = 3077.38542  # of the x20 lens overview image
+    # fiji = r'e:\Fiji.app\ImageJ-win64.exe'
+    # odemis_cli = r'E:\git\bits\bioimaging\Secom\tomo\odemis-cli.bat'
+    # sift_registration_script = r'E:\git\bits\bioimaging\Secom\tomo\sift_registration.py'
+    # lm_images_prefix = 'section'                      # prefix = 'lm_slice_'   # prefix of x100 image filenames
+    # sift_input_folder = r'F:\Secom\cell1'
+    # sift_output_folder = r'F:\Secom\cell1\frank'      # os.path.join(lm_images_output_folder, 'xxxxx')
+    #
+    # Frank Ubuntu
+    # overview_image_path = r'/media/frank/FRANK EXTERNAL/Manual Backups/tomo/data/bisstitched-0.tif'
+    # slice_polygons_path = r'/media/frank/FRANK EXTERNAL/Manual Backups/tomo/data/bisstitched-0.points.json'    
+    # sift_registration_script = r'/media/frank/FRANK EXTERNAL/sift_registration.py'
+    # sift_input_folder = r'/media/frank/FRANK EXTERNAL/Secom/cell1'
+    # sift_output_folder = r'/media/frank/FRANK EXTERNAL/Secom/cell1/frank' 
+    # fiji = r'/home/frank/Fiji.app/ImageJ-linux64'
+    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if __name__ == "__main__":
     main()
