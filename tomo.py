@@ -299,7 +299,7 @@ def go(delay_between_LM_image_acquisition_secs, fiji, lm_images_output_folder, l
     # Draw the points of interests (POIs) onto the overview image
     draw_points_of_interest(img, all_points_of_interest)
 
-    display(img, 'test')
+    display(img, overview_image_path)
 
     # Display overview image pixel size information
     overview_image_pixelsize_in_microns = 1000.0 / overview_image_mm_per_pixel
