@@ -4,14 +4,14 @@
 
 import wx
 
-class ImagePanel(wx.Panel):  # TODO: rename to OverviewPanel or so, it has rather dedicated methods dealing with POIs and slices
+class OverviewPanel(wx.Panel):  # TODO: rename to OverviewPanel or so, it has rather dedicated methods dealing with POIs and slices
     _bitmap = None
     _slice_outlines = None
     _points_of_interest = None
     _scale = (1.0, 1.0)
 
     def __init__(self, parent, title):
-        super(ImagePanel, self).__init__(parent, size = (1024, 1024))  # FIXME: size needed?
+        super(OverviewPanel, self).__init__(parent, size = (1024, 1024))  # FIXME: size needed?
         self.init_ui()
 
     def init_ui(self):
@@ -28,6 +28,10 @@ class ImagePanel(wx.Panel):  # TODO: rename to OverviewPanel or so, it has rathe
         else:
             new_h = max_size
             new_w = max_size * w / h
+
+        # TEST TEST
+        new_w = new_w * 5
+        new_h = new_h * 5
 
         self._scale = (new_w / float(w), new_h / float(h))
 

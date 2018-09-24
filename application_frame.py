@@ -9,13 +9,13 @@ from model import TomoModel
 from preferences_dialog import PreferencesDialog
 from overview_image_dialog import OverviewImageDialog
 from acquisition_dialog import AcquisitionDialog
-from image_panel import ImagePanel
+from overview_panel import OverviewPanel
 
 import tools
 import mapping
 import sys
 
-class ParametersFrame(wx.Frame):
+class ApplicationFrame(wx.Frame):
     _model = None
 
     # UI elements
@@ -53,7 +53,7 @@ class ParametersFrame(wx.Frame):
         self.SetMenuBar(menu_bar)
 
         # Image Panel
-        self._image_panel = ImagePanel(self, "img panel")
+        self._image_panel = OverviewPanel(self, "img panel")
 
         contents = wx.BoxSizer(wx.VERTICAL)
         contents.Add(self._image_panel, 0, wx.ALL | wx.EXPAND, border = 5)

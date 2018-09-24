@@ -7,7 +7,7 @@ import sys
 import cv2
 import wx
 
-from parameters_frame import ParametersFrame
+from application_frame import ApplicationFrame
 
 # Notes:
 # - In OpenCV and in Fiji the origin is in the top-left corner of the image, with the positive y axis pointing down.
@@ -34,7 +34,7 @@ def main():
     print('Environment:\n  Python: {}.{}.{}\n  OpenCV: {}\n  wxWindows: {}'.format(*sys.version_info[:3], cv2.__version__, wx.version()))
 
     app = wx.App()
-    frame = ParametersFrame(None, wx.ID_ANY, "Tomography")
+    frame = ApplicationFrame(None, wx.ID_ANY, "Tomography")
     frame.CenterOnScreen()
     frame.Show(True)
     app.MainLoop()
