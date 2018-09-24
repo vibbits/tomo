@@ -4,7 +4,10 @@
 
 # Prototype script for registering a set of images with ImageJ's SIFT registration plugin.
 # This script is to be executed by a headless Fiji.
-# Frank Vernaillen, VIB, September 2018.
+#
+# Frank Vernaillen
+# September 2018
+# (c) Vlaams Instituut voor Biotechnologie (VIB)
 
 import os
 import re
