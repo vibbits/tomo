@@ -1,5 +1,6 @@
 # Prototype tomography with secom
 # Frank Vernaillen
+# Vlaams Instituut voor Biotechnologie (VIB)
 # September 2018
 
 import numpy as np
@@ -204,8 +205,12 @@ def physical_point_of_interest_offsets_in_microns(all_points_of_interest, pixels
 
     return physical_offsets_microns
 
-# XXX
-# physical_offsets_microns: an offset per slice; with the first slice always having offset (0,0)
+# This function uses the Odemis command line tool to repeatedly move the stage and acquire an LM image.
+# It assumes that the microscope parameters are already set correctly in Odemis, and that the stage is positioned
+# at the initial point of interest. It the repeatedly moves the stage and acquires an LM image. The image is saved
+# to 'lm_images_output_folder' with filename lm_images_prefix + number + ome.tiff. The stage movement distances
+# are specified in 'physical_offsets_microns'.
+# (physical_offsets_microns: an offset per slice; with the first slice always having offset (0,0))
 def acquire_light_microscope_images(physical_offsets_microns, delay_between_LM_image_acquisition_secs,
                                     odemis_cli, lm_images_output_folder, lm_images_prefix):
     # Ensure the output folder for LM images exists
@@ -228,7 +233,20 @@ def matrix_string_to_numpy_array(str):
     a, b, c, d, tx, ty = nums
     return np.array([[a, c, tx], [b, d, ty]])
 
-# XXXX
+# The output of the (modified) SIFT registration plugin looks like this:
+#    ...
+#    Processing SIFT ...
+#     took 1873ms.
+#    373 features extracted.
+#    identifying correspondences using brute force ... took 253ms
+#    33 potentially corresponding features identified
+#    Slice 3 to 4 transformation: [1.0, 0.0, 0.0, 1.0, 45.05236873053536, 9.754784450831266]    <-- this is a private modification
+#    Slice 1 to 4 transformation: [1.0, 0.0, 0.0, 1.0, 93.45191660749424, -5.962104282614291]   <-- this is a private modification
+#    Processing SIFT ...
+#    ...
+# From this text string (sift_plugin_log_string) we extract the transformation matrices
+# between slice i and i+1, for all slices. This function returns a list with numpy arrays (of shape 2 x 3)
+# representing these transformation matrices.
 def extract_sift_alignment_matrices(sift_plugin_log_string):
     # Split the log string in individual lines
     lines = sift_plugin_log_string.splitlines()
@@ -410,14 +428,12 @@ class ParametersDialog(wx.Dialog):
 
         w = 450  # width for long input fields
 
-        box = wx.BoxSizer(wx.HORIZONTAL) # box for adding a border around the panel
-
         #
 
-        overviewImagePathLabel = wx.StaticText(self, wx.ID_ANY, "Overview Image File:")
+        overviewImagePathLabel = wx.StaticText(self, wx.ID_ANY, "Image File:")
         self._overviewImagePathEdit = wx.TextCtrl(self, wx.ID_ANY, self._overview_image_path, size = (w, -1))
 
-        overviewPixelSizeLabel = wx.StaticText(self, wx.ID_ANY, "Overview Image Pixel size (mm/pixel):")
+        overviewPixelSizeLabel = wx.StaticText(self, wx.ID_ANY, "Pixel size (mm/pixel):")
         self._overviewPixelSizeEdit = wx.TextCtrl(self, wx.ID_ANY, str(self._overview_image_mm_per_pixel), size = (100, -1))
 
         slicePolygonsPathLabel = wx.StaticText(self, wx.ID_ANY, "Slice Polygons File:")
@@ -427,24 +443,24 @@ class ParametersDialog(wx.Dialog):
         self._pointOfInterestXEdit = wx.TextCtrl(self, wx.ID_ANY, str(self._original_point_of_interest[0]), size = (50, -1))
         self._pointOfInterestYEdit = wx.TextCtrl(self, wx.ID_ANY, str(self._original_point_of_interest[1]), size = (50, -1))
 
-        lmImagesOutputFolderLabel = wx.StaticText(self, wx.ID_ANY, "LM Image Acquisition Output Folder:")
+        lmImagesOutputFolderLabel = wx.StaticText(self, wx.ID_ANY, "Output Folder:")
         self._lmImagesOutputFolderEdit = wx.TextCtrl(self, wx.ID_ANY, self._lm_images_output_folder, size = (w, -1))
 
-        prefixLabel = wx.StaticText(self, wx.ID_ANY, "Image Filename Prefix:")
+        prefixLabel = wx.StaticText(self, wx.ID_ANY, "Filename Prefix:")
         self._prefixEdit = wx.TextCtrl(self, wx.ID_ANY, self._lm_images_prefix, size = (w, -1))
 
-        lmAcquisitionDelayLabel = wx.StaticText(self, wx.ID_ANY, "Image Acquisition Delay (sec):")
+        lmAcquisitionDelayLabel = wx.StaticText(self, wx.ID_ANY, "Acquisition Delay (sec):")
         self._lmAcquisitionDelayText = wx.TextCtrl(self, wx.ID_ANY, str(self._delay_between_LM_image_acquisition_secs), size = (50, -1))
 
         #
 
-        siftInputFolderLabel = wx.StaticText(self, wx.ID_ANY, "SIFT Input Folder:")
+        siftInputFolderLabel = wx.StaticText(self, wx.ID_ANY, "Input Folder:")
         self._siftInputFolderEdit = wx.TextCtrl(self, wx.ID_ANY, self._sift_input_folder, size = (w, -1))
 
-        siftOutputFolderLabel = wx.StaticText(self, wx.ID_ANY, "SIFT Output Folder:")
+        siftOutputFolderLabel = wx.StaticText(self, wx.ID_ANY, "Output Folder:")
         self._siftOutputFolderEdit = wx.TextCtrl(self, wx.ID_ANY, self._sift_output_folder, size = (w, -1))
 
-        siftPixelSizeLabel = wx.StaticText(self, wx.ID_ANY, "SIFT Image Pixel size (mm/pixel):")
+        siftPixelSizeLabel = wx.StaticText(self, wx.ID_ANY, "Pixel size (mm/pixel):")
         self._siftPixelSizeEdit = wx.TextCtrl(self, wx.ID_ANY, str(self._sift_images_mm_per_pixel), size = (100, -1))
 
         #
@@ -452,62 +468,76 @@ class ParametersDialog(wx.Dialog):
         fijiPathLabel = wx.StaticText(self, wx.ID_ANY, "Fiji Folder:")
         self._fijiPathEdit = wx.TextCtrl(self, wx.ID_ANY, self._fijiPath, size = (w, -1))
 
-        odemisCliPathLabel = wx.StaticText(self, wx.ID_ANY, "Odemis CLI File:")
+        odemisCliPathLabel = wx.StaticText(self, wx.ID_ANY, "Odemis CLI Tool:")
         self._odemisCliPathEdit = wx.TextCtrl(self, wx.ID_ANY, self._odemis_cli, size = (w, -1))
 
-        registrationScriptFileLabel = wx.StaticText(self, wx.ID_ANY, "Registration Script:")
+        registrationScriptFileLabel = wx.StaticText(self, wx.ID_ANY, "Registration Script for Fiji:")
         self._registrationScriptFileEdit = wx.TextCtrl(self, wx.ID_ANY, self._sift_registration_script, size = (w, -1))
 
         #
         
-        self._goButton = wx.Button(self, wx.ID_ANY, "Go!", size = (70, -1))
-
-        # TODO: group parameters
-
         pointOfInterestSizer = wx.BoxSizer(wx.HORIZONTAL)
         pointOfInterestSizer.Add(self._pointOfInterestXEdit, flag = wx.ALIGN_CENTER_VERTICAL)
         pointOfInterestSizer.AddSpacer(8)
         pointOfInterestSizer.Add(self._pointOfInterestYEdit, flag = wx.ALIGN_CENTER_VERTICAL)
 
-        contents = wx.FlexGridSizer(cols = 2, vgap = 4, hgap = 8)
+        #
 
-        # Overview
-        contents.Add(overviewImagePathLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(self._overviewImagePathEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(overviewPixelSizeLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(self._overviewPixelSizeEdit, flag =wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(slicePolygonsPathLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(self._slicePolygonsPathEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(pointOfInterestLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(pointOfInterestSizer, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        self._goButton = wx.Button(self, wx.ID_ANY, "Go!", size = (70, -1))
+
+        # Overview image
+        overviewFgs = wx.FlexGridSizer(cols = 2, vgap = 4, hgap = 8)
+        overviewFgs.Add(overviewImagePathLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        overviewFgs.Add(self._overviewImagePathEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        overviewFgs.Add(overviewPixelSizeLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        overviewFgs.Add(self._overviewPixelSizeEdit, flag =wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        overviewFgs.Add(slicePolygonsPathLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        overviewFgs.Add(self._slicePolygonsPathEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        overviewFgs.Add(pointOfInterestLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        overviewFgs.Add(pointOfInterestSizer, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+
+        overviewBox = wx.StaticBox(self, -1, 'Overview Image')
+        overviewSizer = wx.StaticBoxSizer(overviewBox, wx.VERTICAL)
+        overviewSizer.Add(overviewFgs, 0, wx.ALL|wx.CENTER, 10)
 
         # LM Image Acquisition
-        contents.Add(lmImagesOutputFolderLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(self._lmImagesOutputFolderEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(prefixLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(self._prefixEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(lmAcquisitionDelayLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(self._lmAcquisitionDelayText, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        lmFgs = wx.FlexGridSizer(cols = 2, vgap = 4, hgap = 8)
+        lmFgs.Add(lmImagesOutputFolderLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        lmFgs.Add(self._lmImagesOutputFolderEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        lmFgs.Add(prefixLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        lmFgs.Add(self._prefixEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        lmFgs.Add(lmAcquisitionDelayLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        lmFgs.Add(self._lmAcquisitionDelayText, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+
+        lmBox = wx.StaticBox(self, -1, 'LM Image Acquisition')
+        lmSizer = wx.StaticBoxSizer(lmBox, wx.VERTICAL)
+        lmSizer.Add(lmFgs, 0, wx.ALL|wx.CENTER, 10)
 
         # SIFT registration
-        contents.Add(siftInputFolderLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(self._siftInputFolderEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(siftOutputFolderLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(self._siftOutputFolderEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(siftPixelSizeLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(self._siftPixelSizeEdit, flag =wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        siftFgs = wx.FlexGridSizer(cols = 2, vgap = 4, hgap = 8)
+        siftFgs.Add(siftInputFolderLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        siftFgs.Add(self._siftInputFolderEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        siftFgs.Add(siftOutputFolderLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        siftFgs.Add(self._siftOutputFolderEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        siftFgs.Add(siftPixelSizeLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        siftFgs.Add(self._siftPixelSizeEdit, flag =wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+
+        siftBox = wx.StaticBox(self, -1, 'SIFT Registration')
+        siftSizer = wx.StaticBoxSizer(siftBox, wx.VERTICAL)
+        siftSizer.Add(siftFgs, 0, wx.ALL|wx.CENTER, 10)
 
         # Environment
-        contents.Add(fijiPathLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(self._fijiPathEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(odemisCliPathLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(self._odemisCliPathEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(registrationScriptFileLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        contents.Add(self._registrationScriptFileEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        envFgs = wx.FlexGridSizer(cols = 2, vgap = 4, hgap = 8)
+        envFgs.Add(fijiPathLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        envFgs.Add(self._fijiPathEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        envFgs.Add(odemisCliPathLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        envFgs.Add(self._odemisCliPathEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        envFgs.Add(registrationScriptFileLabel, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        envFgs.Add(self._registrationScriptFileEdit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
-        contents.Add(self._goButton, flag = wx.ALIGN_CENTER_VERTICAL)
-        # TODO: Go! button should span both columns of the flexgridsizer
-        # TODO: make the dialog resizable (add wx.EXPAND to the edit fields that can grow, and use FlexGridSizer.AddGrowableColumn())
+        envBox = wx.StaticBox(self, -1, 'Environment')
+        envSizer = wx.StaticBoxSizer(envBox, wx.VERTICAL)
+        envSizer.Add(envFgs, 0, wx.ALL|wx.CENTER, 10)
 
         self.Bind(wx.EVT_TEXT, self._onDelayChange, self._lmAcquisitionDelayText)
         self.Bind(wx.EVT_TEXT, self._onOdemisCliPathChange, self._odemisCliPathEdit)
@@ -525,13 +555,20 @@ class ParametersDialog(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self._onLmImagesOutputFolderChange, self._lmImagesOutputFolderEdit)
         self.Bind(wx.EVT_BUTTON, self._onGoButtonClick, self._goButton)
 
-        # TODO: quit when user presses the dialog close button (and we haven't started go() yet)
-        # TODO: IMPORTANT improvement: especially for the numeric fields, deal with situation where the input field is temporarily empty (while entering a number), and also forbid leaving the edit field if the value is not acceptable (or replace it with the last acceptable value)
-
-        box.Add(contents, flag = wx.ALL | wx.EXPAND, border = 10)
+        box = wx.BoxSizer(wx.VERTICAL)
+        box.Add(overviewSizer, 0, wx.ALL | wx.EXPAND, border = 5)
+        box.Add(lmSizer, 0, wx.ALL | wx.EXPAND, border = 5)
+        box.Add(siftSizer, 0, wx.ALL | wx.EXPAND, border = 5)
+        box.Add(envSizer, 0, wx.ALL | wx.EXPAND, border = 5)
+        box.Add(self._goButton, 0, wx.ALL | wx.CENTER, border = 5)
 
         self.SetSizer(box)
         box.Fit(self)
+
+        # TODO: make the dialog resizable (add wx.EXPAND to the edit fields that can grow, and use FlexGridSizer.AddGrowableColumn())
+        # TODO: quit when user presses the dialog close button (and we haven't started go() yet)
+        # TODO: IMPORTANT improvement: especially for the numeric fields, deal with situation where the input field is temporarily empty (while entering a number), and also forbid leaving the edit field if the value is not acceptable (or replace it with the last acceptable value)
+
 
     def _readParameters(self):
         self._overview_image_path                     = self._config.Read(ParametersDialog.KEY_OVERVIEW_IMAGE_PATH, r'/home/secom/development/tomo/data/bisstitched-0.tif')
