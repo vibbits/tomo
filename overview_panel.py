@@ -3,84 +3,38 @@
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
 
 import wx
+from wx.lib.floatcanvas import NavCanvas, FloatCanvas
 
-class OverviewPanel(wx.Panel):  # TODO: rename to OverviewPanel or so, it has rather dedicated methods dealing with POIs and slices
-    _bitmap = None
-    _slice_outlines = None
-    _points_of_interest = None
-    _scale = (1.0, 1.0)
+class OverviewPanel(NavCanvas.NavCanvas):  # TODO: rename to OverviewPanel or so, it has rather dedicated methods dealing with POIs and slices
+    def __init__(self, parent):
+        NavCanvas.NavCanvas.__init__(self, parent)
+        wx.CallAfter(self.Canvas.ZoomToBB) # so it will get called after everything is created and sized
 
-    def __init__(self, parent, title):
-        super(OverviewPanel, self).__init__(parent, size = (1024, 1024))  # FIXME: size needed?
-        self.init_ui()
+    def add_image(self, filename):
+        print('Loading ' + filename)
+        image = wx.Image(filename)
+        img = FloatCanvas.ScaledBitmap2(image,
+                                        (0,0),
+                                        Height = image.GetHeight(),
+                                        Position = 'tl')
+        self.Canvas.AddObject(img)
 
-    def init_ui(self):
-        self.Bind(wx.EVT_PAINT, self._on_paint)
-        self.Show(True)  # FIXME: needed?
+    def add_slice_outlines(self, slice_outlines):
+        for outline in slice_outlines:
+            pts = [(p[0], -p[1]) for p in outline]
+            self.Canvas.AddPolygon(pts, LineColor = "Green")
 
-    def _rescale_image(self, img, max_size):
-        # scale the image, preserving the aspect ratio
-        w = img.GetWidth()
-        h = img.GetHeight()
-        if w > h:
-            new_w = max_size
-            new_h = max_size * h / w
-        else:
-            new_h = max_size
-            new_w = max_size * w / h
+    # The first point is user-specified, drawn in green.
+    # The other points are calculated, drawn in red.
+    def add_points_of_interest(self, points_of_interest):
+        pts = [(p[0], -p[1]) for p in points_of_interest]
+        self._add_cross(pts[0], line_color = "Green")
+        for pt in pts[1:]:
+            self._add_cross(pt, line_color="Red")
 
-        # TEST TEST
-        new_w = new_w * 5
-        new_h = new_h * 5
+    def _add_cross(self, pt, line_color, size = 25):
+        self.Canvas.AddLine([(pt[0] - size, pt[1]), (pt[0] + size, pt[1])], LineColor = line_color)
+        self.Canvas.AddLine([(pt[0], pt[1] - size), (pt[0], pt[1] + size)], LineColor = line_color)
 
-        self._scale = (new_w / float(w), new_h / float(h))
-
-        img = img.Scale(new_w, new_h)
-        return img
-
-    def set_image(self, filename, max_size):
-        img = wx.Image(filename, wx.BITMAP_TYPE_ANY)
-        img = self._rescale_image(img, max_size)
-        self._bitmap = wx.Bitmap(img)
-
-    def set_slice_outlines(self, slice_outlines):
-        self._slice_outlines = slice_outlines
-
-    def set_points_of_interest(self, points_of_interest):
-        self._points_of_interest = points_of_interest
-
-    def _draw_polygon(self, dc, points):
-        pts = [wx.Point(p[0] * self._scale[0], p[1] * self._scale[1]) for p in points]
-        pts.append(pts[0]) # close the polygon
-        dc.DrawLines(pts)
-
-    def _draw_cross(self, dc, pos, size = 5):
-        x, y = pos * self._scale
-        dc.DrawLine(x-size, y, x+size, y)
-        dc.DrawLine(x, y-size, x, y+size)
-
-    def _on_paint(self, event):
-        red_pen = wx.Pen(wx.Colour(255, 0, 0))
-        green_pen = wx.Pen(wx.Colour(0, 255, 0))
-
-        dc = wx.PaintDC(self)
-        white_brush = wx.Brush("white")
-        dc.SetBackground(white_brush)
-        dc.Clear()
-
-        if self._bitmap:
-            dc.DrawBitmap(self._bitmap, 0, 0)  # (0,0) is the top-left corner of the image
-
-        if self._slice_outlines:
-            dc.SetPen(green_pen)
-            for polygon in self._slice_outlines:
-                self._draw_polygon(dc, polygon)
-
-        if self._points_of_interest:
-            for i, pos in enumerate(self._points_of_interest):
-                if i == 0:
-                    dc.SetPen(green_pen)
-                else:
-                    dc.SetPen(red_pen)
-                self._draw_cross(dc, pos)
-
+    def zoom_to_fit(self):
+        self.Canvas.ZoomToBB()

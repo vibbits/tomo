@@ -13,7 +13,6 @@ from overview_panel import OverviewPanel
 
 import tools
 import mapping
-import sys
 
 class ApplicationFrame(wx.Frame):
     _model = None
@@ -53,11 +52,9 @@ class ApplicationFrame(wx.Frame):
         self.SetMenuBar(menu_bar)
 
         # Image Panel
-        self._image_panel = OverviewPanel(self, "img panel")
-
+        self._image_panel = OverviewPanel(self)
         contents = wx.BoxSizer(wx.VERTICAL)
-        contents.Add(self._image_panel, 0, wx.ALL | wx.EXPAND, border = 5)
-
+        contents.Add(self._image_panel, 1, wx.ALL | wx.EXPAND, border = 5) # note: proportion=1 here is crucial, 0 will not work
         self.SetSizer(contents)
         # contents.Fit(self)  # don't do it, because it undoes the fixed size we set
 
@@ -75,28 +72,14 @@ class ApplicationFrame(wx.Frame):
         original_point_of_interest = self._model.original_point_of_interest
         overview_image_mm_per_pixel = self._model.overview_image_mm_per_pixel
 
-        # # Read overview image
-        # print('Loading ' + overview_image_path)
-        # img = tools.read_image(overview_image_path)
-        # if img is None:
-        #     sys.exit('Failed to open {}'.format(overview_image_path))
-
         # Read slice polygon coordinates
         slice_polygons = tools.json_load_polygons(slice_polygons_path)
         print('Loaded {} slice polygons from {}'.format(len(slice_polygons), slice_polygons_path))
-
-        # # Draw the slice polygons onto the overview image
-        # tools.draw_slice_polygons(img, slice_polygons)
 
         # Transform point-of-interest from one slice to the next
         print('Original point-of-interest: x={} y={}'.format(*original_point_of_interest))
         transformed_points_of_interest = mapping.repeatedly_transform_point(slice_polygons, original_point_of_interest)
         self._model.all_points_of_interest = [original_point_of_interest] + transformed_points_of_interest
-
-        # # Draw the points of interests (POIs) onto the overview image
-        # tools.draw_points_of_interest(img, self._model.all_points_of_interest)
-        #
-        # tools.display(img, overview_image_path)
 
         # Display overview image pixel size information
         overview_image_pixelsize_in_microns = 1000.0 / overview_image_mm_per_pixel
@@ -104,11 +87,10 @@ class ApplicationFrame(wx.Frame):
                                                                                    overview_image_mm_per_pixel))
 
         # Draw the overview image, slice outlines and POIs.
-        max_size = 1024
-        self._image_panel.set_image(self._model.overview_image_path, max_size)
-        self._image_panel.set_points_of_interest(self._model.all_points_of_interest)
-        self._image_panel.set_slice_outlines(slice_polygons)
-        self.Refresh()  # force a redraw of the image panel
+        self._image_panel.add_image(overview_image_path)
+        self._image_panel.add_points_of_interest(self._model.all_points_of_interest)
+        self._image_panel.add_slice_outlines(slice_polygons)
+        self._image_panel.zoom_to_fit()
 
         # Enable the menu item for acquiring LM images
         # (We can now use it because we've got POIs)
