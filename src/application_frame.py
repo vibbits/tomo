@@ -10,6 +10,7 @@ from preferences_dialog import PreferencesDialog
 from overview_image_dialog import OverviewImageDialog
 from acquisition_dialog import AcquisitionDialog
 from overview_panel import OverviewPanel
+from ribbon_outline_dialog import RibbonOutlineDialog
 
 import tools
 import mapping
@@ -17,8 +18,11 @@ import mapping
 class ApplicationFrame(wx.Frame):
     _model = None
 
-    # UI elements
     _image_panel = None
+
+    # Menu
+    _import_overview_image_item = None
+    _load_slice_polygons_item = None
     _lm_image_acquisition_item = None
 
     def __init__(self, parent, ID, title, size = (1024, 1024), pos = wx.DefaultPosition):
@@ -31,7 +35,9 @@ class ApplicationFrame(wx.Frame):
         menu_bar = wx.MenuBar()
 
         file_menu = wx.Menu()
-        import_overview_image_item = file_menu.Append(wx.NewId(), "Import Overview Image...")
+        self._import_overview_image_item = file_menu.Append(wx.NewId(), "Import Overview Image...")
+        self._load_slice_polygons_item = file_menu.Append(wx.NewId(), "Load Slice Polygons...")
+        self._load_slice_polygons_item.Enable(False)
         exit_menu_item = file_menu.Append(wx.NewId(), "Exit")
 
         edit_menu = wx.Menu()
@@ -47,7 +53,8 @@ class ApplicationFrame(wx.Frame):
 
         self.Bind(wx.EVT_MENU, self._on_exit, exit_menu_item)
         self.Bind(wx.EVT_MENU, self._on_edit_preferences, prefs_menu_item)
-        self.Bind(wx.EVT_MENU, self._on_import_overview_image, import_overview_image_item)
+        self.Bind(wx.EVT_MENU, self._on_import_overview_image, self._import_overview_image_item)
+        self.Bind(wx.EVT_MENU, self._on_load_slice_polygons, self._load_slice_polygons_item)
         self.Bind(wx.EVT_MENU, self._on_lm_image_acquisition, self._lm_image_acquisition_item)
         self.SetMenuBar(menu_bar)
 
@@ -56,48 +63,20 @@ class ApplicationFrame(wx.Frame):
         contents = wx.BoxSizer(wx.VERTICAL)
         contents.Add(self._image_panel, 1, wx.ALL | wx.EXPAND, border = 5) # note: proportion=1 here is crucial, 0 will not work
         self.SetSizer(contents)
-        # contents.Fit(self)  # don't do it, because it undoes the fixed size we set
 
-        # TODO: IMPORTANT improvement: especially for the numeric fields, deal with situation where the input field is temporarily empty (while entering a number), and also forbid leaving the edit field if the value is not acceptable (or replace it with the last acceptable value)
+        # TODO: IMPORTANT improvement: especially for the numeric fields, deal with situation where the input field is
+        # temporarily empty (while entering a number), and also forbid leaving the edit field if the value is not acceptable (or replace it with the last acceptable value)
 
-        pub.subscribe(self._do_import_overview_image, 'overviewimage.import')  # FIXME: do we want to use this mechanism? do the import in the import dialog? if so we still need to enable the lm acquisition menu entry here somehow
-
-    def _on_exit(self, event):
-        self.Close()
-
-    def _do_import_overview_image(self):
-        # Shorthands
-        overview_image_path = self._model.overview_image_path
-        slice_polygons_path = self._model.slice_polygons_path
-        original_point_of_interest = self._model.original_point_of_interest
-        overview_image_mm_per_pixel = self._model.overview_image_mm_per_pixel
-
-        # Read slice polygon coordinates
-        slice_polygons = tools.json_load_polygons(slice_polygons_path)
-        print('Loaded {} slice polygons from {}'.format(len(slice_polygons), slice_polygons_path))
-
-        # Transform point-of-interest from one slice to the next
-        print('Original point-of-interest: x={} y={}'.format(*original_point_of_interest))
-        transformed_points_of_interest = mapping.repeatedly_transform_point(slice_polygons, original_point_of_interest)
-        self._model.all_points_of_interest = [original_point_of_interest] + transformed_points_of_interest
-
-        # Display overview image pixel size information
-        overview_image_pixelsize_in_microns = 1000.0 / overview_image_mm_per_pixel
-        print('Overview image pixel size = {} micrometer = {} mm per pixel'.format(overview_image_pixelsize_in_microns,
-                                                                                   overview_image_mm_per_pixel))
-
-        # Draw the overview image, slice outlines and POIs.
-        self._image_panel.add_image(overview_image_path)
-        self._image_panel.add_points_of_interest(self._model.all_points_of_interest)
-        self._image_panel.add_slice_outlines(slice_polygons)
-        self._image_panel.zoom_to_fit()
-
-        # Enable the menu item for acquiring LM images
-        # (We can now use it because we've got POIs)
-        self._lm_image_acquisition_item.Enable(True)
+        pub.subscribe(self._do_import_overview_image, 'overviewimage.import')
+        pub.subscribe(self._do_load_slice_polygons, 'slicepolygons.load')
 
     def _on_import_overview_image(self, event):
         dlg = OverviewImageDialog(self._model, None, wx.ID_ANY, "Overview Image")
+        dlg.CenterOnScreen()
+        dlg.Show(True)
+
+    def _on_load_slice_polygons(self, event):
+        dlg = RibbonOutlineDialog(self._model, None, wx.ID_ANY, "Slice Polygons")
         dlg.CenterOnScreen()
         dlg.Show(True)
 
@@ -111,3 +90,41 @@ class ApplicationFrame(wx.Frame):
         dlg.CenterOnScreen()
         dlg.Show(True)
 
+    def _on_exit(self, event):
+        self.Close()
+
+    def _do_import_overview_image(self):
+        # Display overview image pixel size information
+        overview_image_pixelsize_in_microns = 1000.0 / self._model.overview_image_mm_per_pixel
+        print('Overview image pixel size = {} micrometer = {} mm per pixel'.format(overview_image_pixelsize_in_microns,
+                                                                                   self._model.overview_image_mm_per_pixel))
+
+        # Draw the overview image
+        self._image_panel.add_image(self._model.overview_image_path)
+        self._image_panel.zoom_to_fit()
+
+        # Enable the menu item for loading the slice outlines
+        # (We can now use it because we've got the pixel size of the overview image (really needed????))
+        self._import_overview_image_item.Enable(False)  # Right now we cannot import a (different) overview image - TODO
+        self._load_slice_polygons_item.Enable(True)
+
+    def _do_load_slice_polygons(self):
+        # Read slice polygon coordinates
+        slice_polygons = tools.json_load_polygons(self._model.slice_polygons_path)
+        print('Loaded {} slice polygons from {}'.format(len(slice_polygons), self._model.slice_polygons_path))
+
+        # Transform point-of-interest from one slice to the next
+        original_point_of_interest = self._model.original_point_of_interest
+        print('Original point-of-interest: x={} y={}'.format(*original_point_of_interest))
+        transformed_points_of_interest = mapping.repeatedly_transform_point(slice_polygons, original_point_of_interest)
+        self._model.all_points_of_interest = [original_point_of_interest] + transformed_points_of_interest
+
+        # Draw the slice outlines and POIs.
+        self._image_panel.add_points_of_interest(self._model.all_points_of_interest)
+        self._image_panel.add_slice_outlines(slice_polygons)
+        self._image_panel.redraw()  # force a redraw, but we don't doe zoom_to_fit() because the user may have zoomed in already
+
+        # Enable the menu item for acquiring LM images
+        # (We can now use it because we've got POIs)
+        self._load_slice_polygons_item.Enable(False)  # We cannot import a polygons file multiple times right now
+        self._lm_image_acquisition_item.Enable(True)

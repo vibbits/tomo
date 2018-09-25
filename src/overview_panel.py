@@ -30,7 +30,7 @@ class OverviewPanel(NavCanvas.NavCanvas):  # TODO: rename to OverviewPanel or so
         pts = [(p[0], -p[1]) for p in points_of_interest]
         self._add_cross(pts[0], line_color = "Green")
         for pt in pts[1:]:
-            self._add_cross(pt, line_color="Red")
+            self._add_cross(pt, line_color = "Red")
 
     def _add_cross(self, pt, line_color, size = 25):
         self.Canvas.AddLine([(pt[0] - size, pt[1]), (pt[0] + size, pt[1])], LineColor = line_color)
@@ -38,3 +38,6 @@ class OverviewPanel(NavCanvas.NavCanvas):  # TODO: rename to OverviewPanel or so
 
     def zoom_to_fit(self):
         self.Canvas.ZoomToBB()
+
+    def redraw(self):
+        self.Canvas.Draw()
