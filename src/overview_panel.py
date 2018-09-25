@@ -6,6 +6,7 @@ import wx
 from wx.lib.floatcanvas import NavCanvas, FloatCanvas
 
 class OverviewPanel(NavCanvas.NavCanvas):  # TODO: rename to OverviewPanel or so, it has rather dedicated methods dealing with POIs and slices
+    _poi_lines = []
     def __init__(self, parent):
         NavCanvas.NavCanvas.__init__(self, parent)
         wx.CallAfter(self.Canvas.ZoomToBB) # so it will get called after everything is created and sized
@@ -32,9 +33,16 @@ class OverviewPanel(NavCanvas.NavCanvas):  # TODO: rename to OverviewPanel or so
         for pt in pts[1:]:
             self._add_cross(pt, line_color = "Red")
 
+    def remove_points_of_interest(self):
+        for line in self._poi_lines:
+            self.Canvas.RemoveObject(line)
+        self._poi_lines = []
+
     def _add_cross(self, pt, line_color, size = 25):
-        self.Canvas.AddLine([(pt[0] - size, pt[1]), (pt[0] + size, pt[1])], LineColor = line_color)
-        self.Canvas.AddLine([(pt[0], pt[1] - size), (pt[0], pt[1] + size)], LineColor = line_color)
+        line1 = self.Canvas.AddLine([(pt[0] - size, pt[1]), (pt[0] + size, pt[1])], LineColor = line_color)
+        line2 = self.Canvas.AddLine([(pt[0], pt[1] - size), (pt[0], pt[1] + size)], LineColor = line_color)
+        self._poi_lines.append(line1)
+        self._poi_lines.append(line2)
 
     def zoom_to_fit(self):
         self.Canvas.ZoomToBB()

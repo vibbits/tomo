@@ -152,9 +152,9 @@ class ApplicationFrame(wx.Frame):
         self._model.all_points_of_interest = [original_point_of_interest] + transformed_points_of_interest
 
         # Draw the points of interest
+        self._image_panel.remove_points_of_interest()
         self._image_panel.add_points_of_interest(self._model.all_points_of_interest)
         self._image_panel.redraw()
 
         # Enable/disable menu entries
-        self._set_point_of_interest_item.Enable(False)   # we cannot do this multiple times right now
         self._lm_image_acquisition_item.Enable(True)   # we've got points of interest now, so we can acquire LM images
