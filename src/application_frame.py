@@ -11,6 +11,7 @@ from overview_image_dialog import OverviewImageDialog
 from acquisition_dialog import AcquisitionDialog
 from overview_panel import OverviewPanel
 from ribbon_outline_dialog import RibbonOutlineDialog
+from point_of_interest_dialog import PointOfInterestDialog
 
 from wx.lib.floatcanvas import FloatCanvas
 
@@ -49,6 +50,8 @@ class ApplicationFrame(wx.Frame):
         microscope_menu = wx.Menu()
         self._lm_image_acquisition_item = microscope_menu.Append(wx.NewId(), "Acquire LM Images...")
         self._lm_image_acquisition_item.Enable(False)
+        self._set_point_of_interest_item = microscope_menu.Append(wx.NewId(), "Set point of interest...")
+        self._set_point_of_interest_item.Enable(False)
 
         menu_bar.Append(file_menu, "&File")
         menu_bar.Append(edit_menu, "&Edit")
@@ -59,6 +62,8 @@ class ApplicationFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_import_overview_image, self._import_overview_image_item)
         self.Bind(wx.EVT_MENU, self._on_load_slice_polygons, self._load_slice_polygons_item)
         self.Bind(wx.EVT_MENU, self._on_lm_image_acquisition, self._lm_image_acquisition_item)
+        self.Bind(wx.EVT_MENU, self._on_set_point_of_interest, self._set_point_of_interest_item)
+
         self.SetMenuBar(menu_bar)
 
         self._status_label = wx.StaticText(self, wx.ID_ANY, "")
@@ -77,6 +82,7 @@ class ApplicationFrame(wx.Frame):
 
         pub.subscribe(self._do_import_overview_image, 'overviewimage.import')
         pub.subscribe(self._do_load_slice_polygons, 'slicepolygons.load')
+        pub.subscribe(self._do_set_point_of_interest, 'pointofinterest.set')
 
     def _on_mouse_move_over_image(self, event):
         self._status_label.SetLabelText("Pos: %i, %i" % (event.Coords[0], -event.Coords[1]))  # flip y so we have the y-axis pointing down and (0,0)= top left corner of the image
@@ -93,6 +99,11 @@ class ApplicationFrame(wx.Frame):
 
     def _on_edit_preferences(self, event):
         dlg = PreferencesDialog(self._model, None, wx.ID_ANY, "Preferences")
+        dlg.CenterOnScreen()
+        dlg.Show(True)
+
+    def _on_set_point_of_interest(self, event):
+        dlg = PointOfInterestDialog(self._model, None, wx.ID_ANY, "Point of Interest in First Slice")
         dlg.CenterOnScreen()
         dlg.Show(True)
 
@@ -121,21 +132,29 @@ class ApplicationFrame(wx.Frame):
 
     def _do_load_slice_polygons(self):
         # Read slice polygon coordinates
-        slice_polygons = tools.json_load_polygons(self._model.slice_polygons_path)
-        print('Loaded {} slice polygons from {}'.format(len(slice_polygons), self._model.slice_polygons_path))
+        self._model.slice_polygons = tools.json_load_polygons(self._model.slice_polygons_path)
+        print('Loaded {} slice polygons from {}'.format(len(self._model.slice_polygons), self._model.slice_polygons_path))
 
-        # Transform point-of-interest from one slice to the next
-        original_point_of_interest = self._model.original_point_of_interest
-        print('Original point-of-interest: x={} y={}'.format(*original_point_of_interest))
-        transformed_points_of_interest = mapping.repeatedly_transform_point(slice_polygons, original_point_of_interest)
-        self._model.all_points_of_interest = [original_point_of_interest] + transformed_points_of_interest
-
-        # Draw the slice outlines and POIs.
-        self._image_panel.add_points_of_interest(self._model.all_points_of_interest)
-        self._image_panel.add_slice_outlines(slice_polygons)
-        self._image_panel.redraw()  # force a redraw, but we don't doe zoom_to_fit() because the user may have zoomed in already
+        # Draw the slice outlines
+        self._image_panel.add_slice_outlines(self._model.slice_polygons)
+        self._image_panel.redraw()
 
         # Enable the menu item for acquiring LM images
         # (We can now use it because we've got POIs)
         self._load_slice_polygons_item.Enable(False)  # We cannot import a polygons file multiple times right now
-        self._lm_image_acquisition_item.Enable(True)
+        self._set_point_of_interest_item.Enable(True)
+
+    def _do_set_point_of_interest(self):
+        # Transform point-of-interest from one slice to the next
+        original_point_of_interest = self._model.original_point_of_interest
+        print('Original point-of-interest: x={} y={}'.format(*original_point_of_interest))
+        transformed_points_of_interest = mapping.repeatedly_transform_point(self._model.slice_polygons, original_point_of_interest)
+        self._model.all_points_of_interest = [original_point_of_interest] + transformed_points_of_interest
+
+        # Draw the points of interest
+        self._image_panel.add_points_of_interest(self._model.all_points_of_interest)
+        self._image_panel.redraw()
+
+        # Enable/disable menu entries
+        self._set_point_of_interest_item.Enable(False)   # we cannot do this multiple times right now
+        self._lm_image_acquisition_item.Enable(True)   # we've got points of interest now, so we can acquire LM images

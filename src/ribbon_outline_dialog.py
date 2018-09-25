@@ -9,8 +9,6 @@ class RibbonOutlineDialog(wx.Dialog):
     _model = None
 
     _slice_polygons_path_edit = None
-    _point_of_interest_x_edit = None
-    _point_of_interest_y_edit = None
     _load_button = None
 
     def __init__(self, model, parent, ID, title, size = wx.DefaultSize, pos = wx.DefaultPosition, style = wx.DEFAULT_DIALOG_STYLE):
@@ -23,20 +21,9 @@ class RibbonOutlineDialog(wx.Dialog):
         slice_polygons_path_label = wx.StaticText(self, wx.ID_ANY, "Slice Polygons File:")
         self._slice_polygons_path_edit = wx.TextCtrl(self, wx.ID_ANY, self._model.slice_polygons_path, size = (w, -1))
 
-        point_of_interest_label = wx.StaticText(self, wx.ID_ANY, "Point of Interest (X, Y):")
-        self._point_of_interest_x_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.original_point_of_interest[0]), size = (50, -1))
-        self._point_of_interest_y_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.original_point_of_interest[1]), size = (50, -1))
-
-        poiSizer = wx.BoxSizer(wx.HORIZONTAL)
-        poiSizer.Add(self._point_of_interest_x_edit, flag = wx.ALIGN_CENTER_VERTICAL)
-        poiSizer.AddSpacer(8)
-        poiSizer.Add(self._point_of_interest_y_edit, flag = wx.ALIGN_CENTER_VERTICAL)
-
         fgs = wx.FlexGridSizer(cols = 2, vgap = 4, hgap = 8)
         fgs.Add(slice_polygons_path_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self._slice_polygons_path_edit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(point_of_interest_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(poiSizer, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
         self._load_button = wx.Button(self, wx.ID_ANY, "Load Slice Polygons!")
 
@@ -45,8 +32,6 @@ class RibbonOutlineDialog(wx.Dialog):
         sizer.Add(fgs, 0, wx.ALL|wx.CENTER, 10)
 
         self.Bind(wx.EVT_TEXT, self._on_slice_polygons_path_change, self._slice_polygons_path_edit)
-        self.Bind(wx.EVT_TEXT, self._on_poi_x_change, self._point_of_interest_x_edit)
-        self.Bind(wx.EVT_TEXT, self._on_poi_y_change, self._point_of_interest_y_edit)
         self.Bind(wx.EVT_BUTTON, self._on_load_button_click, self._load_button)
 
         contents = wx.BoxSizer(wx.VERTICAL)
@@ -61,14 +46,6 @@ class RibbonOutlineDialog(wx.Dialog):
         self._model.write_parameters()
         pub.sendMessage('slicepolygons.load')
         self.Destroy()
-
-    def _on_poi_x_change(self, event):
-        self._model.original_point_of_interest[0] = float(self._point_of_interest_x_edit.GetValue())
-        print('original_point_of_interest[0]={}'.format(self._model.original_point_of_interest[0]))
-
-    def _on_poi_y_change(self, event):
-        self._model.original_point_of_interest[1] = float(self._point_of_interest_y_edit.GetValue())
-        print('original_point_of_interest[1]={}'.format(self._model.original_point_of_interest[1]))
 
     def _on_slice_polygons_path_change(self, event):
         self._model.slice_polygons_path = self._slice_polygons_path_edit.GetValue()

@@ -41,6 +41,7 @@ class TomoModel:
 
     # Calculated model parameters (not persistent)
     all_points_of_interest = None
+    slice_polygons = None
 
     def __init__(self):
         self._config = wx.Config('be.vib.bits.tomo')
