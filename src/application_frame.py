@@ -12,6 +12,8 @@ from acquisition_dialog import AcquisitionDialog
 from overview_panel import OverviewPanel
 from ribbon_outline_dialog import RibbonOutlineDialog
 
+from wx.lib.floatcanvas import FloatCanvas
+
 import tools
 import mapping
 
@@ -19,6 +21,7 @@ class ApplicationFrame(wx.Frame):
     _model = None
 
     _image_panel = None
+    _status_label = None
 
     # Menu
     _import_overview_image_item = None
@@ -58,10 +61,15 @@ class ApplicationFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_lm_image_acquisition, self._lm_image_acquisition_item)
         self.SetMenuBar(menu_bar)
 
+        self._status_label = wx.StaticText(self, wx.ID_ANY, "")
+
         # Image Panel
         self._image_panel = OverviewPanel(self)
+        self._image_panel.Bind(FloatCanvas.EVT_MOTION, self._on_mouse_move_over_image)
+
         contents = wx.BoxSizer(wx.VERTICAL)
         contents.Add(self._image_panel, 1, wx.ALL | wx.EXPAND, border = 5) # note: proportion=1 here is crucial, 0 will not work
+        contents.Add(self._status_label, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border = 5)
         self.SetSizer(contents)
 
         # TODO: IMPORTANT improvement: especially for the numeric fields, deal with situation where the input field is
@@ -69,6 +77,9 @@ class ApplicationFrame(wx.Frame):
 
         pub.subscribe(self._do_import_overview_image, 'overviewimage.import')
         pub.subscribe(self._do_load_slice_polygons, 'slicepolygons.load')
+
+    def _on_mouse_move_over_image(self, event):
+        self._status_label.SetLabelText("Pos: %i, %i" % (event.Coords[0], -event.Coords[1]))  # flip y so we have the y-axis pointing down and (0,0)= top left corner of the image
 
     def _on_import_overview_image(self, event):
         dlg = OverviewImageDialog(self._model, None, wx.ID_ANY, "Overview Image")
