@@ -3,11 +3,9 @@
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
 
 import wx
-import tools
-import numpy as np
-import os
+from wx.lib.pubsub import pub
 
-class AcquisitionDialog(wx.Dialog):
+class LMAcquisitionDialog(wx.Dialog):
     _model = None
 
     # UI elements
@@ -146,61 +144,8 @@ class AcquisitionDialog(wx.Dialog):
     def _on_acquire_button_click(self, event):
         self.Show(False)
         self._model.write_parameters()
-        self._do_acquire()
+        pub.sendMessage('lm.acquire')
         self.Destroy()
-
-    def _do_acquire(self):
-        # Calculate the physical displacements on the sample required for moving between the points of interest.
-        overview_image_pixelsize_in_microns = 1000.0 / self._model.overview_image_mm_per_pixel
-        slice_offsets_microns = tools.physical_point_of_interest_offsets_in_microns(self._model.all_points_of_interest,
-                                                                                    overview_image_pixelsize_in_microns)
-        print('Rough offset from slice polygons (in microns): ' + repr(slice_offsets_microns))
-
-        # Now acquire an LM image at the point of interest location in each slice.
-        tools.acquire_light_microscope_images(slice_offsets_microns, self._model.delay_between_LM_image_acquisition_secs,
-                                              self._model.odemis_cli, self._model.lm_images_output_folder, self._model.lm_images_prefix)
-
-        # Have Fiji execute a macro for aligning the LM images
-        # using Fiji's Plugins > Registration > Linear Stack Alignment with SIFT
-        # https://imagej.net/Headless#Running_macros_in_headless_mode
-        print('Aligning LM images')
-        print('Starting a headless Fiji and calling the SIFT image registration plugin. Please be patient...')
-        retcode, out, err = tools.commandline_exec(
-            [self._model.fiji_path, "-Dpython.console.encoding=UTF-8", "--ij2", "--headless", "--console", "--run",
-             self._model.sift_registration_script,
-             "srcdir='{}',dstdir='{}',prefix='{}'".format(self._model.sift_input_folder, self._model.sift_output_folder, self._model.lm_images_prefix)])
-        print('retcode={}\nstdout=\n{}\nstderr={}\n'.format(retcode, out, err))
-
-        # Parse the output of the SIFT registration plugin and extract
-        # the transformation matrices to register each slice onto the next.
-        print('Extracting SIFT transformation for fine slice transformation')
-        sift_matrices = tools.extract_sift_alignment_matrices(out)
-        print(sift_matrices)
-
-        # In sift_registration.py we asked for translation only transformations.
-        # So our matrices should be pure translations. Extract the last column (=the offset) and convert from pixel
-        # coordinates to physical distances on the sample.
-        # (We also add a (0,0) offset for the first slice.)
-        sift_images_pixelsize_in_microns = 1000.0 / self._model.sift_images_mm_per_pixel
-        sift_offsets_microns = [np.array([0, 0])] + [mat[:, 2] * sift_images_pixelsize_in_microns for mat in
-                                                     sift_matrices]
-        print('Fine SIFT offset (in microns): ' + repr(sift_offsets_microns))
-
-        # Invert y of the SIFT offsets
-        sift_offsets_microns = [np.array([offset[0], -offset[1]]) for offset in sift_offsets_microns]
-        print('Fine SIFT offset y-inverted (in microns): ' + repr(sift_offsets_microns))
-
-        # Combine (=sum) the rough translations obtained by mapping the slice polygons (of an x20 overview image) onto one another
-        # with the fine corrections obtained by SIFT registration of (x100) light microscopy images.
-        combined_offsets_microns = [trf_pair[0] + trf_pair[1] for i, trf_pair in
-                                    enumerate(zip(slice_offsets_microns, sift_offsets_microns))]
-        print('Rough offset from slice polygons + fine SIFT offset (in microns): ' + repr(combined_offsets_microns))
-
-        # Show overview of the offsets
-        tools.show_offsets_table(slice_offsets_microns, sift_offsets_microns, combined_offsets_microns)
-
-        # TODO? Also acquire EM images? Using combined_offsets_microns?
-        # odemis-cli --se-detector --output filename.ome.tiff
 
     def _on_lm_images_output_folder_change(self, event):
         self._model.lm_images_output_folder = self._lm_images_output_folder_edit.GetValue()
