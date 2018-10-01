@@ -15,6 +15,8 @@ class TomoModel:
     _KEY_ORIGINAL_POI_Y = 'original_poi_y'
     _KEY_LM_ACQUISITION_DELAY = 'lm_acquisition_delay'
     _KEY_EM_ACQUISITION_DELAY = 'em_acquisition_delay'
+    _KEY_LM_DO_AUTOFOCUS = 'lm_do_autofocus'
+    _KEY_LM_MAX_AUTOFOCUS_CHANGE_MICRONS = 'lm_max_autofocus_change_microns'
     _KEY_OVERVIEW_IMAGE_MM_PER_PIXEL = 'overview_image_mm_per_pixel'
     _KEY_SIFT_IMAGES_MM_PER_PIXEL = 'sift_images_mm_per_pixel'
     _KEY_FIJI_PATH = 'fiji_path'
@@ -35,6 +37,8 @@ class TomoModel:
     ribbons_mask_path = None
     lm_images_output_folder = None
     em_images_output_folder = None
+    lm_do_autofocus = False
+    lm_max_autofocus_change_microns = 0.0
     original_point_of_interest = np.array([0, 0])
     delay_between_LM_image_acquisition_secs = 0.0  # time in seconds to pause between successive microscope commands to acquire an LM image (maybe 1 or 2 secs in reality)
     delay_between_EM_image_acquisition_secs = 0.0  # time in seconds to pause between successive microscope commands to acquire an EM image (maybe 1 or 2 secs in reality)
@@ -79,6 +83,8 @@ class TomoModel:
         self.sift_output_folder                      = self._config.Read(TomoModel._KEY_SIFT_OUTPUT_FOLDER, r'/home/secom/development/tomo/data/output/LM')
         self.sift_images_mm_per_pixel                = self._config.ReadFloat(TomoModel._KEY_SIFT_IMAGES_MM_PER_PIXEL, 1000.0)  # just a random value, probably not typical
         self.template_slice_path                     = self._config.Read(TomoModel._KEY_TEMPLATE_SLICE_PATH, r'/home/secom/some/folder/template_slice_contour.json')
+        self.lm_do_autofocus                         = self._config.ReadBool(TomoModel._KEY_LM_DO_AUTOFOCUS, True)
+        self.lm_max_autofocus_change_microns         = self._config.ReadFloat(TomoModel._KEY_LM_MAX_AUTOFOCUS_CHANGE_MICRONS, 5.0)
 
     def write_parameters(self):
         self._config.Write(TomoModel._KEY_OVERVIEW_IMAGE_PATH, self.overview_image_path)
@@ -100,6 +106,8 @@ class TomoModel:
         self._config.Write(TomoModel._KEY_SIFT_OUTPUT_FOLDER, self.sift_output_folder)
         self._config.WriteFloat(TomoModel._KEY_SIFT_IMAGES_MM_PER_PIXEL, self.sift_images_mm_per_pixel)
         self._config.Write(TomoModel._KEY_TEMPLATE_SLICE_PATH, self.template_slice_path)
+        self._config.WriteBool(TomoModel._KEY_LM_DO_AUTOFOCUS, self.lm_do_autofocus)
+        self._config.WriteFloat(TomoModel._KEY_LM_MAX_AUTOFOCUS_CHANGE_MICRONS, self.lm_max_autofocus_change_microns)
         self._config.Flush()
 
     # # Input parameters # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
