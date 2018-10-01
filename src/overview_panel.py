@@ -7,40 +7,56 @@ from wx.lib.floatcanvas import NavCanvas, FloatCanvas
 
 class OverviewPanel(NavCanvas.NavCanvas):
     _poi_lines = []
+    _slice_outlines = []
     _image = None
 
     def __init__(self, parent):
         NavCanvas.NavCanvas.__init__(self, parent)
         wx.CallAfter(self.Canvas.ZoomToBB) # so it will get called after everything is created and sized
 
-    def add_image(self, filename):
+    def set_image(self, filename):
         print('Loading ' + filename)
         image = wx.Image(filename)
         img = FloatCanvas.ScaledBitmap2(image,
                                         (0,0),
                                         Height = image.GetHeight(),
                                         Position = 'tl')
+        if self._image != None:
+            self._remove_image()
         self._image = self.Canvas.AddObject(img)
 
-    def remove_image(self):
-        if self._image != None:
-            self.Canvas.RemoveObject(self._image)
-            self._image = None
+    def _remove_image(self):
+        self.Canvas.RemoveObject(self._image)
+        self._image = None
 
-    def add_slice_outlines(self, slice_outlines):
+    def set_slice_outlines(self, slice_outlines):
+        # Add previous slice outlines (if any)
+        if self._slice_outlines:
+            self._remove_slice_outlines()
+        # Add new slice outlines
         for outline in slice_outlines:
             pts = [(p[0], -p[1]) for p in outline]
-            self.Canvas.AddPolygon(pts, LineColor = "Green")
+            polygon = self.Canvas.AddPolygon(pts, LineColor = "Green")
+            self._slice_outlines.append(polygon)
+
+    def _remove_slice_outlines(self):
+        for polygon in self._slice_outlines:
+            self.Canvas.RemoveObject(polygon)
+        self._slice_outlines = []
 
     # The first point is user-specified, drawn in green.
     # The other points are calculated, drawn in red.
-    def add_points_of_interest(self, points_of_interest):
+    def set_points_of_interest(self, points_of_interest):
+        # Remove old POIs (if any)
+        if self._poi_lines:
+            self._remove_points_of_interest();
+        # Add new POIs
         pts = [(p[0], -p[1]) for p in points_of_interest]
         self._add_cross(pts[0], line_color = "Green")
         for pt in pts[1:]:
             self._add_cross(pt, line_color = "Red")
 
-    def remove_points_of_interest(self):
+    def _remove_points_of_interest(self):
         for line in self._poi_lines:
             self.Canvas.RemoveObject(line)
         self._poi_lines = []

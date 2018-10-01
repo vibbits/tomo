@@ -30,7 +30,7 @@ class PointOfInterestDialog(wx.Dialog):
         fgs.Add(point_of_interest_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(poiSizer, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
-        self._set_button = wx.Button(self, wx.ID_ANY, "Set!")
+        self._set_button = wx.Button(self, wx.ID_ANY, "Set")
 
         box = wx.StaticBox(self, wx.ID_ANY)
         sizer = wx.StaticBoxSizer(box, wx.VERTICAL)

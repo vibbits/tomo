@@ -33,7 +33,7 @@ class RibbonOutlineDialog(wx.Dialog):
         fgs.Add(slice_polygons_path_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(path_sizer, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
-        self._load_button = wx.Button(self, wx.ID_ANY, "Load Slice Polygons!")
+        self._load_button = wx.Button(self, wx.ID_ANY, "Load Slice Polygons")
 
         box = wx.StaticBox(self, wx.ID_ANY)
         sizer = wx.StaticBoxSizer(box, wx.VERTICAL)

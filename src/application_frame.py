@@ -11,6 +11,7 @@ import cv2
 
 import polygon_simplification
 import tools
+import secom_tools
 import mapping
 from model import TomoModel
 from preferences_dialog import PreferencesDialog
@@ -149,8 +150,7 @@ class ApplicationFrame(wx.Frame):
                                                                                    self._model.overview_image_mm_per_pixel))
 
         # Add and draw the overview image
-        self._image_panel.remove_image()
-        self._image_panel.add_image(self._model.overview_image_path)
+        self._image_panel.set_image(self._model.overview_image_path)
         self._image_panel.zoom_to_fit()
 
         # Enable the menu item for loading the slice outlines
@@ -163,12 +163,11 @@ class ApplicationFrame(wx.Frame):
         print('Loaded {} slice polygons from {}'.format(len(self._model.slice_polygons), self._model.slice_polygons_path))
 
         # Add and draw the slice outlines
-        self._image_panel.add_slice_outlines(self._model.slice_polygons)
+        self._image_panel.set_slice_outlines(self._model.slice_polygons)
         self._image_panel.redraw()
 
         # Enable the menu item for acquiring LM images
         # (We can now use it because we've got POIs)
-        self._load_slice_polygons_item.Enable(False)  # We cannot import a polygons file multiple times right now
         self._set_point_of_interest_item.Enable(True)
 
     @staticmethod
@@ -294,8 +293,7 @@ class ApplicationFrame(wx.Frame):
         self._model.all_points_of_interest = [original_point_of_interest] + transformed_points_of_interest
 
         # Draw the points of interest
-        self._image_panel.remove_points_of_interest()
-        self._image_panel.add_points_of_interest(self._model.all_points_of_interest)
+        self._image_panel.set_points_of_interest(self._model.all_points_of_interest)
         self._image_panel.redraw()
 
         # Enable/disable menu entries
@@ -309,9 +307,9 @@ class ApplicationFrame(wx.Frame):
         print('Rough offset from slice polygons (in microns): ' + repr(self._model.slice_offsets_microns))
 
         # Now acquire an LM image at the point of interest location in each slice.
-        tools.acquire_microscope_images('LM',
-                                        self._model.slice_offsets_microns, self._model.delay_between_LM_image_acquisition_secs,
-                                        self._model.odemis_cli, self._model.lm_images_output_folder, self._model.lm_images_prefix)
+        secom_tools.acquire_microscope_images('LM',
+                                              self._model.slice_offsets_microns, self._model.delay_between_LM_image_acquisition_secs,
+                                              self._model.odemis_cli, self._model.lm_images_output_folder, self._model.lm_images_prefix)
 
         # Have Fiji execute a macro for aligning the LM images
         # using Fiji's Plugins > Registration > Linear Stack Alignment with SIFT
@@ -365,13 +363,13 @@ class ApplicationFrame(wx.Frame):
         # so can then acquire EM images on those same points of interest in the different slices
         # but using the more accurate offsets.
         print('Move stage back to point of interest in first slice')
-        tools.move_stage(self._model.odemis_cli, -total_movement)
+        secom_tools.move_stage(self._model.odemis_cli, -total_movement)
 
         # Now acquire an EM image at the samen point of interest location in each slice,
         # but use the more accurate stage offsets (obtained from slice mapping + SIFT registration).
-        tools.acquire_microscope_images('EM',
-                                        self._model.combined_offsets_microns, self._model.delay_between_EM_image_acquisition_secs,
-                                        self._model.odemis_cli, self._model.em_images_output_folder, self._model.em_images_prefix)
+        secom_tools.acquire_microscope_images('EM',
+                                              self._model.combined_offsets_microns, self._model.delay_between_EM_image_acquisition_secs,
+                                              self._model.odemis_cli, self._model.em_images_output_folder, self._model.em_images_prefix)
 
         # Enable/disable menu entries
         self._em_image_acquisition_item.Enable(False)
