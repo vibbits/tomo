@@ -38,7 +38,7 @@ class OverviewImageDialog(wx.Dialog):
         fgs.Add(overview_pixel_size_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self._overview_pixel_size_edit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
-        self._import_button = wx.Button(self, wx.ID_ANY, "Import!")
+        self._import_button = wx.Button(self, wx.ID_ANY, "Import")
 
         box = wx.StaticBox(self, wx.ID_ANY)
         sizer = wx.StaticBoxSizer(box, wx.VERTICAL)

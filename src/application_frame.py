@@ -307,9 +307,12 @@ class ApplicationFrame(wx.Frame):
         print('Rough offset from slice polygons (in microns): ' + repr(self._model.slice_offsets_microns))
 
         # Now acquire an LM image at the point of interest location in each slice.
+        do_autofocus = True   # TODO: get from model
+        max_focus_change_microns = 5.0   # TODO: get from model
+
         secom_tools.acquire_microscope_images('LM',
                                               self._model.slice_offsets_microns, self._model.delay_between_LM_image_acquisition_secs,
-                                              self._model.odemis_cli, self._model.lm_images_output_folder, self._model.lm_images_prefix)
+                                              self._model.odemis_cli, self._model.lm_images_output_folder, self._model.lm_images_prefix, do_autofocus, max_focus_change_microns)
 
         # Have Fiji execute a macro for aligning the LM images
         # using Fiji's Plugins > Registration > Linear Stack Alignment with SIFT
