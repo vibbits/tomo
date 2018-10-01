@@ -8,6 +8,7 @@ import wx
 class TomoModel:
     _KEY_OVERVIEW_IMAGE_PATH = 'overview_image_path'
     _KEY_SLICE_POLYGONS_PATH = 'slice_polygons_path'
+    _KEY_RIBBONS_MASK_PATH = 'ribbons_mask_path'
     _KEY_LM_IMAGES_OUTPUT_FOLDER = 'lm_images_output_folder'
     _KEY_EM_IMAGES_OUTPUT_FOLDER = 'em_images_output_folder'
     _KEY_ORIGINAL_POI_X = 'original_poi_x'
@@ -23,6 +24,7 @@ class TomoModel:
     _KEY_EM_IMAGES_PREFIX = 'em_images_prefix'
     _KEY_SIFT_INPUT_FOLDER = 'sift_input_folder'
     _KEY_SIFT_OUTPUT_FOLDER = 'sift_output_folder'
+    _KEY_TEMPLATE_SLICE_PATH = 'template_slice_path'
 
     # Persistent storage
     _config = None
@@ -30,6 +32,7 @@ class TomoModel:
     # User defined model parameters (will be made persistent)
     overview_image_path = None
     slice_polygons_path = None
+    ribbons_mask_path = None
     lm_images_output_folder = None
     em_images_output_folder = None
     original_point_of_interest = np.array([0, 0])
@@ -44,6 +47,7 @@ class TomoModel:
     em_images_prefix = None  # prefix of EM image filenames
     sift_input_folder = None
     sift_output_folder = None
+    template_slice_path = None
 
     # Calculated model parameters (not persistent)
     slice_polygons = None
@@ -58,6 +62,7 @@ class TomoModel:
     def read_parameters(self):
         self.overview_image_path                     = self._config.Read(TomoModel._KEY_OVERVIEW_IMAGE_PATH, r'/home/secom/development/tomo/data/bisstitched-0.tif')
         self.slice_polygons_path                     = self._config.Read(TomoModel._KEY_SLICE_POLYGONS_PATH, r'/home/secom/development/tomo/data/bisstitched-0.points.json')
+        self.ribbons_mask_path                       = self._config.Read(TomoModel._KEY_RIBBONS_MASK_PATH, r'/home/secom/development/tomo/data/bisstitched-0-ribbonsmask.tif')
         self.lm_images_output_folder                 = self._config.Read(TomoModel._KEY_LM_IMAGES_OUTPUT_FOLDER, r'/home/secom/development/tomo/data/output/LM')
         self.em_images_output_folder                 = self._config.Read(TomoModel._KEY_EM_IMAGES_OUTPUT_FOLDER, r'/home/secom/development/tomo/data/output/EM')
         self.original_point_of_interest[0]           = self._config.ReadInt(TomoModel._KEY_ORIGINAL_POI_X, 2417)
@@ -73,10 +78,12 @@ class TomoModel:
         self.sift_input_folder                       = self._config.Read(TomoModel._KEY_SIFT_INPUT_FOLDER, r'/home/secom/development/tomo/data/output/LM')
         self.sift_output_folder                      = self._config.Read(TomoModel._KEY_SIFT_OUTPUT_FOLDER, r'/home/secom/development/tomo/data/output/LM')
         self.sift_images_mm_per_pixel                = self._config.ReadFloat(TomoModel._KEY_SIFT_IMAGES_MM_PER_PIXEL, 1000.0)  # just a random value, probably not typical
+        self.template_slice_path                     = self._config.Read(TomoModel._KEY_TEMPLATE_SLICE_PATH, r'/home/secom/some/folder/template_slice_contour.json')
 
     def write_parameters(self):
         self._config.Write(TomoModel._KEY_OVERVIEW_IMAGE_PATH, self.overview_image_path)
         self._config.Write(TomoModel._KEY_SLICE_POLYGONS_PATH, self.slice_polygons_path)
+        self._config.Write(TomoModel._KEY_RIBBONS_MASK_PATH, self.ribbons_mask_path)
         self._config.Write(TomoModel._KEY_LM_IMAGES_OUTPUT_FOLDER, self.lm_images_output_folder)
         self._config.Write(TomoModel._KEY_EM_IMAGES_OUTPUT_FOLDER, self.em_images_output_folder)
         self._config.WriteInt(TomoModel._KEY_ORIGINAL_POI_X, self.original_point_of_interest[0])
@@ -92,6 +99,7 @@ class TomoModel:
         self._config.Write(TomoModel._KEY_SIFT_INPUT_FOLDER, self.sift_input_folder)
         self._config.Write(TomoModel._KEY_SIFT_OUTPUT_FOLDER, self.sift_output_folder)
         self._config.WriteFloat(TomoModel._KEY_SIFT_IMAGES_MM_PER_PIXEL, self.sift_images_mm_per_pixel)
+        self._config.Write(TomoModel._KEY_TEMPLATE_SLICE_PATH, self.template_slice_path)
         self._config.Flush()
 
     # # Input parameters # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #

@@ -12,46 +12,104 @@ import subprocess
 # yellow = (0, 255, 255)
 # green = (0, 255, 0)
 
-# def get_best_window_size(img, max_width = 1800, max_height = 1000):
-#     """Returns the maximal dimensions of a window that has the same aspect ratio as the image,
-#        but is no larger than a certain size."""
-#     yscale = min(1.0, max_height / float(img.shape[0]))
-#     xscale = min(1.0, max_width / float(img.shape[1]))
-#     scale = min(xscale, yscale)
-#     width = int(scale * img.shape[1])
-#     height = int(scale * img.shape[0])
-#     return (width, height)
 
-# def display(img, title = ''):
-#     """Display the image in a window, wait for a keypress and close it."""
-#     cv2.namedWindow(title, cv2.WINDOW_NORMAL)
-#     width, height = get_best_window_size(img)
-#     cv2.resizeWindow(title, width, height)
-#
-#     cv2.moveWindow(title, 0, 0)
-#     cv2.imshow(title, img)    # IMPROVEME: on Windows we typically have an opencv without Qt support and this window then has no ui controls to zoom/pan
-#     cv2.waitKey(0)
-#     cv2.destroyAllWindows()
+def get_best_window_size(img, max_width = 1800, max_height = 1000):
+    """Returns the maximal dimensions of a window that has the same aspect ratio as the image,
+       but is no larger than a certain size."""
+    yscale = min(1.0, max_height / float(img.shape[0]))
+    xscale = min(1.0, max_width / float(img.shape[1]))
+    scale = min(xscale, yscale)
+    width = int(scale * img.shape[1])
+    height = int(scale * img.shape[0])
+    return (width, height)
 
-# # Reads the image file 'filename' and returns it as an OpenCV image object.
-# # filename: full path to the image file
-# # returns None on error.
-# def read_image(filename):
-#     # Read overview image with the ribbon
-#     # (We read it as a color image so we can draw colored contours on it later.)
-#     if (cv2.__version__[0] == '2'):
-#         img = cv2.imread(filename, cv2.CV_LOAD_IMAGE_COLOR)
-#     else:
-#         img = cv2.imread(filename, cv2.IMREAD_COLOR)
-#
-#     return img
 
-# def draw_slice_polygons(img, slice_polygons):
-#     for slice_polygon in slice_polygons:
-#         # cv2.polylines() expects an array of shape ROWSx1x2,
-#         # where ROWS is the number of vertices, so reshape the array accordingly
-#         poly = slice_polygon.reshape((-1, 1, 2))
-#         cv2.polylines(img, [poly], True, green, thickness = 20)
+def display(img, title = ''):
+    """Display the image in a window, wait for a keypress and close it."""
+    cv2.namedWindow(title, cv2.WINDOW_NORMAL)
+    width, height = get_best_window_size(img)
+    cv2.resizeWindow(title, width, height)
+
+    cv2.moveWindow(title, 0, 0)
+    cv2.imshow(title, img)    # IMPROVEME: on Windows we typically have an opencv without Qt support and this window then has no ui controls to zoom/pan
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+
+def opencv_contour_to_list(contour):
+    """
+    :param contour: a numpy array of shape (numvertices, 1, 2); a list of such contours is returned by cv2.findContours()
+    :return: a list of (x,y) coordinates representing the contour
+    """
+    return [(v[0][0], v[0][1]) for v in contour]
+
+
+def list_to_opencv_contour(coords_list):
+    """
+    :param coords_list: a list of (x,y) coordinates
+    :return: a numpy array of shape (numvertices, 1, 2); a list of such contours can be drawn using cv2.drawContours()
+    """
+    return np.expand_dims(np.asarray(coords_list), axis = 1)
+
+
+def read_image(filename):
+    """
+    Reads an image file and returns it as an OpenCV image object.
+    :param filename: full file path of the image to read
+    :return: an OpenCV image object, or None on error
+    """
+    # Read overview image with the ribbon
+    # (We read it as a color image so we can draw colored contours on it later.)
+    if (cv2.__version__[0] == '2'):
+        img = cv2.imread(filename, cv2.CV_LOAD_IMAGE_COLOR)
+    else:
+        img = cv2.imread(filename, cv2.IMREAD_COLOR)
+
+    return img
+
+
+def polygon_area(polygon):  # polygon is a list of (x,y) coordinates
+    pts = np.asarray(polygon).astype(np.float)
+    pts = np.vstack([pts, pts[0]])  # close the polygon (TODO: check if open or not, or document requirement for open)
+    area = 0
+    for i in range(0, pts.shape[0]-1):
+        x1 = pts[i  ][0]
+        x2 = pts[i+1][0]
+        y1 = pts[i  ][1]
+        y2 = pts[i+1][1]
+        area += x1 * y2 - x2 * y1
+    return area / 2.0
+
+
+def polygon_center(polygon):
+    """
+    Calculate the center of mass of a polygon.
+    :param polygon: a list of (x,y) coordinates of the vertices
+    :return: the center of mass (cx, cy) of the polygon
+    """
+    pts = np.asarray(polygon).astype(np.float)
+    pts = np.vstack([pts, pts[0]]) # close the polygon (TODO: check if open or not, or document requirement for open)
+    cx = 0
+    cy = 0
+    for i in range(0, pts.shape[0]-1):
+        x1 = pts[i  ][0]
+        x2 = pts[i+1][0]
+        y1 = pts[i  ][1]
+        y2 = pts[i+1][1]
+        cross = (x1 * y2 - x2 * y1)
+        cx += (x1 + x2) * cross
+        cy += (y1 + y2) * cross
+
+    six_area = 6.0 * polygon_area(polygon)
+    return (cx / six_area, cy / six_area)
+
+
+def draw_slice_polygons(img, slice_polygons):
+    for slice_polygon in slice_polygons:
+        # cv2.polylines() expects an array of shape ROWSx1x2,
+        # where ROWS is the number of vertices, so reshape the array accordingly
+        poly = slice_polygon.reshape((-1, 1, 2))
+        cv2.polylines(img, [poly], True, green, thickness = 20)
 
 # # Draw the points of interest onto the overview image.
 # # The first point in points_of_interest is the point-of-interest as specified by the user.
@@ -63,16 +121,44 @@ import subprocess
 #     for point_of_interest in points_of_interest[1:]:
 #         cv2.drawMarker(img, tuple(point_of_interest.astype(np.int32)), red, markerType = mt, markerSize = 100, thickness = 20)
 
+
 # filename: full path to a text file with the slice polygon coordinates
 # Returns a Python list of numpy arrays.
-# Each numpy array is v x 2, with v the number
-# of vertices in the polygon, and the columns representing
+# Each numpy array is v x 2 (if opencv_style=False) or v x 1 x 2 (if opencv_style=True),
+# with v the number of vertices in the polygon, and the columns representing
 # the x,y coordinates of the vertices
-def json_load_polygons(filename):
+def json_load_polygons(filename, opencv_style = False):
     with open(filename) as f:
         d = json.load(f)
     polygons_list = [np.array(a, dtype = np.int32) for a in d]
+    if opencv_style:
+        polygons_list = [np.expand_dims(a, axis = 1) for a in polygons_list]
     return polygons_list
+
+
+# filename: full path of the text file with the slice polygon coordinates
+# polygons_list: a list of polyons. Each polygon is itself a list of (x,y) coordinates of its vertices.
+def json_save_polygons(filename, polygons_list):
+    # We want this:
+    #    with open(filename, 'w') as f:
+    #        json.dump(polygons_list, f, indent = 4)
+    # but with more flexibility in formatting (x,y on one line) and no issues with numpy data types such as int32 not being JSON serializable
+    with open(filename, 'w') as f:
+        f.write('[\n')
+        for i, polygon in enumerate(polygons_list):
+            f.write('[\n')
+            for j, vertex in enumerate(polygon):
+                x, y = vertex
+                f.write(f'[{x}, {y}]')
+                if j < len(polygon) - 1:
+                    f.write(',')
+                f.write('\n')
+            f.write(']')
+            if i < len(polygons_list) - 1:
+                f.write(',')
+            f.write('\n')
+        f.write(']\n')
+
 
 # all_points_of_interest: list of poi's, coordinates expressed in pixels of the overview image
 # pixelsize_in_microns: physical size of a pixel in the overview image
@@ -88,6 +174,7 @@ def physical_point_of_interest_offsets_in_microns(all_points_of_interest, pixels
         prev_poi = poi
 
     return physical_offsets_microns
+
 
 # This function uses the Odemis command line tool to repeatedly move the stage and acquire an LM or EM image.
 # It assumes that the microscope parameters are already set correctly in Odemis, and that the stage is positioned
@@ -118,6 +205,7 @@ def acquire_microscope_images(mode, physical_offsets_microns, delay_between_imag
         # CHECKME: Is this needed? Maybe odemis_cli will automatically buffer commands until it is finished?
         time.sleep(delay_between_image_acquisition_secs)
 
+
 def move_stage(odemis_cli, offset_microns):
     dx_microns, dy_microns = offset_microns
     commandline_exec([odemis_cli, "--move", "stage", "x", str(dx_microns)])
@@ -131,6 +219,7 @@ def matrix_string_to_numpy_array(str):
     nums = [float(e) for e in elems]  # convert from strings to numbers
     a, b, c, d, tx, ty = nums
     return np.array([[a, c, tx], [b, d, ty]])
+
 
 # The output of the (modified) SIFT registration plugin looks like this:
 #    ...
@@ -166,6 +255,7 @@ def extract_sift_alignment_matrices(sift_plugin_log_string):
     trf_matrices = [matrix_string_to_numpy_array(str) for str in trf_matrix_strings]
     return trf_matrices
 
+
 def show_offsets_table(slice_offsets_microns, sift_offsets_microns, combined_offsets_microns):
     num_slices = len(slice_offsets_microns)
     assert(len(sift_offsets_microns) == num_slices)
@@ -181,6 +271,7 @@ def show_offsets_table(slice_offsets_microns, sift_offsets_microns, combined_off
         print('| {:3d} | {:15f} {:15f} | {:15f} {:15f} | {:15f} {:15f} |'.format(i+1, *slice_offsets_microns[i], *sift_offsets_microns[i], *combined_offsets_microns[i]))
     print('+-----+---------------------------------+---------------------------------+---------------------------------+')
 
+
 # Execute a shell command (lst) and return (command return code, standard output, standard error).
 def commandline_exec(lst):
     print('Command: ' + ' '.join(lst))
@@ -189,4 +280,4 @@ def commandline_exec(lst):
     out, err = proc.communicate()
 
     encoding = sys.stdout.encoding  # I'm not sure that this is correct on all platforms
-    return (proc.returncode, out.decode(encoding), err.decode(encoding))
+    return proc.returncode, out.decode(encoding), err.decode(encoding)

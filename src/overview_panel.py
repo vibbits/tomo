@@ -5,8 +5,10 @@
 import wx
 from wx.lib.floatcanvas import NavCanvas, FloatCanvas
 
-class OverviewPanel(NavCanvas.NavCanvas):  # TODO: rename to OverviewPanel or so, it has rather dedicated methods dealing with POIs and slices
+class OverviewPanel(NavCanvas.NavCanvas):
     _poi_lines = []
+    _image = None
+
     def __init__(self, parent):
         NavCanvas.NavCanvas.__init__(self, parent)
         wx.CallAfter(self.Canvas.ZoomToBB) # so it will get called after everything is created and sized
@@ -18,7 +20,12 @@ class OverviewPanel(NavCanvas.NavCanvas):  # TODO: rename to OverviewPanel or so
                                         (0,0),
                                         Height = image.GetHeight(),
                                         Position = 'tl')
-        self.Canvas.AddObject(img)
+        self._image = self.Canvas.AddObject(img)
+
+    def remove_image(self):
+        if self._image != None:
+            self.Canvas.RemoveObject(self._image)
+            self._image = None
 
     def add_slice_outlines(self, slice_outlines):
         for outline in slice_outlines:
