@@ -51,8 +51,8 @@ class LMAcquisitionDialog(wx.Dialog):
         self._lm_do_autofocus_checkbox = wx.CheckBox(self, wx.ID_ANY, "Perform Autofocus")
         self._lm_do_autofocus_checkbox.SetValue(self._model.lm_do_autofocus)
 
-        self._lm_max_autofocus_change_label = wx.StaticText(self, wx.ID_ANY, "Max. Autofocus Change (micrometer):")
-        self._lm_max_autofocus_change_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.lm_max_autofocus_change_microns), size = (50, -1))
+        self._lm_max_autofocus_change_label = wx.StaticText(self, wx.ID_ANY, "Max. Autofocus Change (nanometer):")
+        self._lm_max_autofocus_change_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.lm_max_autofocus_change_nanometers), size = (50, -1))
 
         self._enable_autofocus_edit_field(self._model.lm_do_autofocus)
 
@@ -85,7 +85,7 @@ class LMAcquisitionDialog(wx.Dialog):
         lm_fgs.Add(prefix_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         lm_fgs.Add(self._prefix_edit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
         lm_fgs.Add(lm_acquisition_delay_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        lm_fgs.Add(self._lm_acquisition_delay_edit, flag =wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        lm_fgs.Add(self._lm_acquisition_delay_edit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
         lm_fgs.Add(empty_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         lm_fgs.Add(self._lm_do_autofocus_checkbox, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
         lm_fgs.Add(self._lm_max_autofocus_change_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
@@ -188,8 +188,8 @@ class LMAcquisitionDialog(wx.Dialog):
         self._enable_autofocus_edit_field(self._model.lm_do_autofocus)
 
     def _on_lm_max_autofocus_change(self, event):
-        self._model.lm_max_autofocus_change_microns = float(self._lm_max_autofocus_change_edit.GetValue())
-        print('lm_max_autofocus_change_microns={}'.format(self._model.lm_max_autofocus_change_microns))
+        self._model.lm_max_autofocus_change_nanometers = float(self._lm_max_autofocus_change_edit.GetValue())
+        print('lm_max_autofocus_change_nanometers={}'.format(self._model.lm_max_autofocus_change_nanometers))
 
     def _on_sift_input_folder_change(self, event):
         self._model.sift_input_folder = self._sift_input_folder_edit.GetValue()

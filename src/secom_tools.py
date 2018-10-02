@@ -14,9 +14,9 @@ except ImportError:
 # (physical_offsets_microns: an offset per slice; with the first slice always having offset (0,0))
 # The 'mode' must be 'EM' or 'LM' to acquire electron resp. light microscope images.
 # do_autofocus: boolean
-# max_focus_change_microns: float, maximum change in focus distance z between each image acquisition
+# max_focus_change_nanometers: float, maximum change in focus distance z between each image acquisition
 def acquire_microscope_images(mode, physical_offsets_microns, delay_between_image_acquisition_secs,
-                              odemis_cli, images_output_folder, images_prefix, do_autofocus, max_focus_change_microns):
+                              odemis_cli, images_output_folder, images_prefix, do_autofocus, max_focus_change_nanometers):
 
     # Ensure that the output folder for the images exists
     Path(images_output_folder).mkdir(exist_ok = True)
@@ -36,7 +36,7 @@ def acquire_microscope_images(mode, physical_offsets_microns, delay_between_imag
         # Autofocus
         if do_autofocus:
             if i > 0:
-                max_z_change = max_focus_change_microns * 1e-6  # FIXME - good value? (probably should be a user option) + what units, meters?
+                max_z_change = max_focus_change_nanometers * 1e-9  # FIXME - good value? (probably should be a user option) + what units, meters?
                 z = autofocus(det, emt, focuser, good_focus = z, focus_range = (z - max_z_change, z + max_z_change))
                 print('... autofocus sanity check: {} ?= {}'.format(z, focuser.position.value["z"]))  # CHECKME: on the actual SECOM both values are *not* the same
 
@@ -64,7 +64,6 @@ if platform.system() == "Windows":
     # Stubs
     from odemis_stubs import model
     from odemis_stubs import align
-    from odemis_stubs import MTD_BINARY
 else:
     from odemis import model
     from odemis.acq import align

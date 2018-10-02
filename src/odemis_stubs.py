@@ -5,8 +5,6 @@ import random
 
 print('USING ODEMIS STUBS - ONLY FOR TESTING - NOT FOR USE ON ACTUAL SECOM DEVICE')
 
-MTD_BINARY = "stub_autofocus_method_binary"
-
 class focuser_position:
     value = {"z" : 0.0}
 
@@ -36,13 +34,15 @@ class model:
 
 
 class align:
+    def AutoFocus(det, emt, focuser, good_focus, rng_focus, method):
+        z = random.uniform(rng_focus[0], rng_focus[1])
+        lvl = 666  # TODO: realistic focus level number
+        focuser.set_position(z)
+        return autofocus_future(z, lvl)
+
     class autofocus:
         MTD_BINARY = 0
-        def AutoFocus(det, emt, focuser, good_focus, rng_focus, method):
-            z = random.uniform(rng_focus[0], rng_focus[1])
-            lvl = 666 # TODO: realistic focus level number
-            focuser.set_position(z)
-            return autofocus_future(z, lvl)
+
 
 
 class future:

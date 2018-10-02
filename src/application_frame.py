@@ -310,7 +310,7 @@ class ApplicationFrame(wx.Frame):
         secom_tools.acquire_microscope_images('LM',
                                               self._model.slice_offsets_microns, self._model.delay_between_LM_image_acquisition_secs,
                                               self._model.odemis_cli, self._model.lm_images_output_folder, self._model.lm_images_prefix,
-                                              self._model.lm_do_autofocus, self._model.lm_max_autofocus_change_microns)
+                                              self._model.lm_do_autofocus, self._model.lm_max_autofocus_change_nanometers)
 
         # Have Fiji execute a macro for aligning the LM images
         # using Fiji's Plugins > Registration > Linear Stack Alignment with SIFT
@@ -370,7 +370,8 @@ class ApplicationFrame(wx.Frame):
         # but use the more accurate stage offsets (obtained from slice mapping + SIFT registration).
         secom_tools.acquire_microscope_images('EM',
                                               self._model.combined_offsets_microns, self._model.delay_between_EM_image_acquisition_secs,
-                                              self._model.odemis_cli, self._model.em_images_output_folder, self._model.em_images_prefix)
+                                              self._model.odemis_cli, self._model.em_images_output_folder, self._model.em_images_prefix,
+                                              do_autofocus = False, max_focus_change_nanometers = 0.0)  # No EM autofocus for now, since not sure if needed.
 
         # Enable/disable menu entries
         self._em_image_acquisition_item.Enable(False)
