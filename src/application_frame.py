@@ -173,7 +173,7 @@ class ApplicationFrame(wx.Frame):
     @staticmethod
     def _find_ribbons(ribbons_mask_path):
         img = tools.read_image(ribbons_mask_path)
-        print(f'Ribbons mask image: shape={img.shape} type={img.dtype}')
+        print('Ribbons mask image: shape={} type={}'.format(img.shape, img.dtype))
 
         # e.g. our test image E:\git\bits\bioimaging\Secom\tomo\data\10x_lens\SET_6stitched-0_10xlens_ribbons_mask.tif
         #      has background pixels with value 0, and foreground pixels (=the ribbons) with value 255
@@ -191,7 +191,7 @@ class ApplicationFrame(wx.Frame):
             _, ribbons, _ = cv2.findContours(img_gray, cv2.RETR_LIST, method = cv2.CHAIN_APPROX_SIMPLE)
 
         # Note: findContours(..., cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE) returns a list of numpy arrays of shape (numvertices, 1, 2)
-        print(f'Found {len(ribbons)} ribbons')
+        print('Found {} ribbons'.format(len(ribbons)))
 
         return (img, ribbons)
 
@@ -240,7 +240,7 @@ class ApplicationFrame(wx.Frame):
         simplified_ribbons = []
         for ribbon in ribbons:
             estimated_num_slices_in_ribbon = round(tools.polygon_area(ribbon) / tools.polygon_area(template_slice_contour))
-            print(f'Estimated number of slices in ribbon: {estimated_num_slices_in_ribbon}')
+            print('Estimated number of slices in ribbon: {}'.format(estimated_num_slices_in_ribbon))
             desired_num_vertices_in_ribbon = estimated_num_slices_in_ribbon * 6  # we want at least 4 points per slice, plus some extra to handle accidental dents in the slice shape
             simplified_ribbon = polygon_simplification.reduce_polygon(ribbon, desired_num_vertices_in_ribbon)
             simplified_ribbons.append(simplified_ribbon)
@@ -266,7 +266,7 @@ class ApplicationFrame(wx.Frame):
 
         # Save slices to JSON
         filename = r'E:\git\bits\bioimaging\Secom\tomo\data\10x_lens\auto_slices.json'
-        print(f'Saving segmented slices to {filename}')
+        print('Saving segmented slices to {}'.format(filename))
         tools.json_save_polygons(filename, slices)
 
         # Show each slice, with slice numbers

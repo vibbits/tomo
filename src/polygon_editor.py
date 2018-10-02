@@ -11,7 +11,7 @@ class PolygonEditor:
         self._canvas.Bind(FloatCanvas.EVT_LEFT_UP, self._on_left_mouse_button_up)
 
     def _print_coords(self, text, event):
-        print(f'{text} coords={event.Coords}')
+        print('{} coords={}'.format(text, event.Coords))
 
     # TODO: while editing a polygon, if we already have a point or an edge,
     #       listen to backspace and delete the most recently added point/edge

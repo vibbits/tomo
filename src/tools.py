@@ -150,7 +150,7 @@ def json_save_polygons(filename, polygons_list):
             f.write('[\n')
             for j, vertex in enumerate(polygon):
                 x, y = vertex
-                f.write(f'[{x}, {y}]')
+                f.write('[{}, {}]'.format(x, y))
                 if j < len(polygon) - 1:
                     f.write(',')
                 f.write('\n')
@@ -234,7 +234,9 @@ def show_offsets_table(slice_offsets_microns, sift_offsets_microns, combined_off
     print('      |         dx              dy      |         dx              dy      |         dx              dy      |')
     print('+-----+---------------------------------+---------------------------------+---------------------------------+')
     for i in range(0, num_slices):
-        print('| {:3d} | {:15f} {:15f} | {:15f} {:15f} | {:15f} {:15f} |'.format(i+1, *slice_offsets_microns[i], *sift_offsets_microns[i], *combined_offsets_microns[i]))
+        print('| {:3d} | {:15f} {:15f} | {:15f} {:15f} | {:15f} {:15f} |'.format(i+1, slice_offsets_microns[i][0], slice_offsets_microns[i][1],
+                                                                                      sift_offsets_microns[i][0], sift_offsets_microns[i][1],
+                                                                                      combined_offsets_microns[i][0], combined_offsets_microns[i][1]))
     print('+-----+---------------------------------+---------------------------------+---------------------------------+')
 
 
