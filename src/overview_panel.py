@@ -4,14 +4,22 @@
 
 import wx
 from wx.lib.floatcanvas import NavCanvas, FloatCanvas
+from polygon_editor import PolygonEditor
 
 class OverviewPanel(NavCanvas.NavCanvas):
     _poi_lines = []
     _slice_outlines = []
     _image = None
 
+    # PROTOTYPE - for polygon editing
+    _polygon_editor = None
+    # END PROTOTYPE
+
     def __init__(self, parent):
         NavCanvas.NavCanvas.__init__(self, parent)
+        # PROTOTYPE - for polygon editing
+        # _polygon_editor = PolygonEditor(self.Canvas)
+        # END PROTOTYPE
         wx.CallAfter(self.Canvas.ZoomToBB) # so it will get called after everything is created and sized
 
     def set_image(self, filename):
