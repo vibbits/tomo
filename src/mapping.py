@@ -10,11 +10,11 @@ import numpy as np
 # relative to a square centered on the origin and with corners (-/+1, -/+1).
 def normalize_point_position(quad, p):
     # note: y-axis gets flipped
-    p_x = p[0]; p_y = -p[1]
-    x1 = quad[0][0]; y1 = -quad[0][1]
-    x2 = quad[1][0]; y2 = -quad[1][1]
-    x3 = quad[2][0]; y3 = -quad[2][1]
-    x4 = quad[3][0]; y4 = -quad[3][1]
+    p_x = float(p[0]); p_y = float(-p[1])
+    x1 = float(quad[0][0]); y1 = float(-quad[0][1])
+    x2 = float(quad[1][0]); y2 = float(-quad[1][1])
+    x3 = float(quad[2][0]); y3 = float(-quad[2][1])
+    x4 = float(quad[3][0]); y4 = float(-quad[3][1])
 
     A = -x1 + x2 + x3 - x4
     B = -x1 - x2 + x3 + x4
@@ -40,7 +40,7 @@ def normalize_point_position(quad, p):
     eta = (-bb - math.sqrt(discriminant)) / (2 * aa)
     xi = (G - B * eta) / (A + C * eta)
 
-    print(f"A={A} B={B} C={C} D={D} E={E} F={F} G={G} H={H} a={a} b={b} c={c} a'={aa} b'={bb} c'={cc} raiz={discriminant} eta={eta} xi={xi}")
+    print("A={} B={} C={} D={} E={} F={} G={} H={} a={} b={} c={} a'={} b'={} c'={} raiz={} eta={} xi={}".format(A, B, C, D, E, F, G, H, a, b, c, aa, bb, cc, discriminant, eta, xi))
 
     return np.array([xi, eta])
 
@@ -49,13 +49,13 @@ def normalize_point_position(quad, p):
 # onto the quad.
 def unnormalize_point_position(quad, p_normalized):
     # note: quad y-axis gets flipped (p_normalized already assumes a flipped y-axis)
-    x1 = quad[0][0]; y1 = -quad[0][1]
-    x2 = quad[1][0]; y2 = -quad[1][1]
-    x3 = quad[2][0]; y3 = -quad[2][1]
-    x4 = quad[3][0]; y4 = -quad[3][1]
+    x1 = float(quad[0][0]); y1 = float(-quad[0][1])
+    x2 = float(quad[1][0]); y2 = float(-quad[1][1])
+    x3 = float(quad[2][0]); y3 = float(-quad[2][1])
+    x4 = float(quad[3][0]); y4 = float(-quad[3][1])
 
-    xi = p_normalized[0]
-    eta = p_normalized[1]
+    xi = float(p_normalized[0])
+    eta = float(p_normalized[1])
 
     Ni_1 = (1 - xi) * (1 - eta) / 4.0
     Ni_2 = (1 + xi) * (1 - eta) / 4.0
@@ -65,7 +65,7 @@ def unnormalize_point_position(quad, p_normalized):
     x = Ni_1 * x1 + Ni_2 * x2 + Ni_3 * x3 + Ni_4 * x4
     y = Ni_1 * y1 + Ni_2 * y2 + Ni_3 * y3 + Ni_4 * y4
 
-    print(f"eta={eta} xi={xi} Ni_1={Ni_1} Ni_2={Ni_2} Ni_3={Ni_3} Ni_4={Ni_4} x={x} y={y}")
+    print("eta={} xi={} Ni_1={} Ni_2={} Ni_3={} Ni_4={} x={} y={}".format(eta, xi, Ni_1, Ni_2, Ni_3, Ni_4, x, y))
 
     return np.array([x, -y])
 
