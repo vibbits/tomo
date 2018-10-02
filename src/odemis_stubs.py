@@ -36,11 +36,13 @@ class model:
 
 
 class align:
-    def Autofocus(det, emt, focuser, good_focus, rng_focus, method):
-        z = random.uniform(rng_focus[0], rng_focus[1])
-        lvl = 666 # TODO: realistic focus level number
-        focuser.set_position(z)
-        return autofocus_future(z, lvl)
+    class autofocus:
+        MTD_BINARY = 0
+        def AutoFocus(det, emt, focuser, good_focus, rng_focus, method):
+            z = random.uniform(rng_focus[0], rng_focus[1])
+            lvl = 666 # TODO: realistic focus level number
+            focuser.set_position(z)
+            return autofocus_future(z, lvl)
 
 
 class future:

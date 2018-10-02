@@ -14,31 +14,32 @@ from application_frame import ApplicationFrame
 #   Elsewhere we assume a coordinate system with the y-axis point "up". Hence, occasionally we will flip the sign of
 #   the y-coordinate of our points.
 #
-# - Installing Python packages and setting up environment:
+# - Setting up a development environment On Windows (using stubbed Odemis API calls):
+#   (We use Python 2.7 because on the actual SECOM computer we will be calling Odemis Python API functions,
+#   and Odemis uses Python 2.7)
 #
 #   1. Install Miniconda
 #
-#   2. conda create -n tomo-py37 python=3.7
-#   3. source activate tomo-py37
+#   2. conda create -n tomo-py27 python=2.7
+#   3. source activate tomo-py27
 #
-#   4. pip install numpy
-#   5. pip install opencv-python
-#   6. conda install -c anaconda wxpython
-#   7. pip install PyPubSub
+#   4. pip install opencv-python
+#   5. pip install wxpython                  # (this is not needed: conda install -c anaconda wxpython)
+#   6. pip install pypubsub==3.3.0           # we use an old version of PyPubSub because newer versions are Python 3 only (https://github.com/schollii/pypubsub/issues/9)
+#   7. pip install networkx
 #   8. pip install joblib
+#   9. pip install pathlib2
+#   Note that on Windows we do *not* install Odemis (presumably it does not work or is hard to install on Windows.)
+#
+#   On the actual SECOM computer running Ubuntu, where we have installed a full Odemis, we do *not* use Anaconda
+#   because using Anaconda would mean also installing Odemis in an Anaconda environment, which is
+#   annoying. (Odemis is not a single package installation...)
 
 def main():
-    # Check that we're running Python 3.6+
-    if sys.version_info[0] < 3:
-        raise Exception("Must be running Python 3.6 or higher")
-    else:
-        if sys.version_info[1] < 6:
-            raise Exception("Must be running Python 3.6 or higher")
-
-    print('Environment:\n  Python: {}.{}.{}\n  OpenCV: {}\n  wxWindows: {}'.format(*sys.version_info[:3], cv2.__version__, wx.version()))
+    print('Environment:\n  Python: {}.{}.{}\n  OpenCV: {}\n  wxWindows: {}'.format(sys.version_info[:3][0], sys.version_info[:3][1], sys.version_info[:3][2], cv2.__version__, wx.version()))
 
     app = wx.App()
-    frame = ApplicationFrame(None, wx.ID_ANY, "Tomography")
+    frame = ApplicationFrame(None, wx.ID_ANY, "Tomography Prototype")
     frame.CenterOnScreen()
     frame.Show(True)
     app.MainLoop()
