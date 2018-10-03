@@ -52,7 +52,7 @@ class ApplicationFrame(wx.Frame):
         self._load_slice_polygons_item = file_menu.Append(wx.NewId(), "Load Slice Polygons...")
         self._load_slice_polygons_item.Enable(False)
         self._load_ribbons_mask_item = file_menu.Append(wx.NewId(), "Load Ribbons Mask...")
-        self._load_slice_polygons_item.Enable(True)
+        self._load_ribbons_mask_item.Enable(False)   # Disabled because experimental
         exit_menu_item = file_menu.Append(wx.NewId(), "Exit")
 
         edit_menu = wx.Menu()
