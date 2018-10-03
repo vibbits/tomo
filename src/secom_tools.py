@@ -43,9 +43,10 @@ def acquire_microscope_images(mode, physical_offsets_microns, delay_between_imag
         # Acquire an LM/EM image and save it to the output folder
         image_path = os.path.join(images_output_folder, '{}{}.ome.tiff'.format(images_prefix, i))
         if mode == "LM":
-            commandline_exec([odemis_cli, "--acquire", "ccd", "--output", image_path])
+            detector = "ccd"
         else:  # EM
-            commandline_exec([odemis_cli, "--se-detector", "--output", image_path])
+            detector = "se-detector"
+        commandline_exec([odemis_cli, "--acquire", detector, "--output", image_path])
 
         # Wait a short time for the image acquisition to finish
         # CHECKME: Is this needed? Maybe odemis_cli will automatically buffer commands until it is finished?
