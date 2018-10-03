@@ -151,8 +151,10 @@ class ApplicationFrame(wx.Frame):
                                                                                    self._model.overview_image_mm_per_pixel))
 
         # Add and draw the overview image
+        wait = wx.BusyInfo("Loading overview image...")
         self._image_panel.set_image(self._model.overview_image_path)
         self._image_panel.zoom_to_fit()
+        del wait
 
         # Enable the menu item for loading the slice outlines
         # (We can now use it because we've got the pixel size of the overview image (really needed????))
@@ -302,7 +304,6 @@ class ApplicationFrame(wx.Frame):
         self._em_image_acquisition_item.Enable(False)  # After changing the POI we need to acquire LM images first to obtain SIFT-corrected stage movements.
 
     def _do_lm_acquire(self):
-        # TODO: show wait message during LM acquisition
 
         # Calculate the physical displacements on the sample required for moving between the points of interest.
         overview_image_pixelsize_in_microns = 1000.0 / self._model.overview_image_mm_per_pixel
@@ -311,16 +312,17 @@ class ApplicationFrame(wx.Frame):
         print('Rough offset from slice polygons (in microns): ' + repr(self._model.slice_offsets_microns))
 
         # Now acquire an LM image at the point of interest location in each slice.
+        wait = wx.BusyInfo("Acquiring LM images...")
         secom_tools.acquire_microscope_images('LM',
                                               self._model.slice_offsets_microns, self._model.delay_between_LM_image_acquisition_secs,
                                               self._model.odemis_cli, self._model.lm_images_output_folder, self._model.lm_images_prefix,
                                               self._model.lm_do_autofocus, self._model.lm_max_autofocus_change_nanometers)
+        del wait
 
-        # Have Fiji execute a macro for aligning the LM images
+        # Now tell Fiji to execute a macro that (i) reads the LM images, (ii) merges them into a stack,
+        # (iii) saves the stack to TIFF, (iv) aligns the slices in this stack
         # using Fiji's Plugins > Registration > Linear Stack Alignment with SIFT
-        # https://imagej.net/Headless#Running_macros_in_headless_mode
-        
-        # TODO: show wait message during SIFT alignment
+        # and (v) saves the aligned stack to TIFF.
 
         print('Aligning LM images')
         print('Starting a headless Fiji and calling the SIFT image registration plugin. Please be patient...')
@@ -329,11 +331,14 @@ class ApplicationFrame(wx.Frame):
         else: # On Ubuntu
             script_args = '"srcdir=\'{}\',dstdir=\'{}\',prefix=\'{}\'"'.format(self._model.sift_input_folder, self._model.sift_output_folder, self._model.lm_images_prefix)
 
+        # Info about headless ImageJ: https://imagej.net/Headless#Running_macros_in_headless_mode
+        wait = wx.BusyInfo("Aligning LM images...")
         retcode, out, err = tools.commandline_exec(
             [self._model.fiji_path, "-Dpython.console.encoding=UTF-8", "--ij2", "--headless", "--console", "--run",
              self._model.sift_registration_script, script_args])
 
         print('retcode={}\nstdout=\n{}\nstderr={}\n'.format(retcode, out, err))
+        del wait
 
         # Parse the output of the SIFT registration plugin and extract
         # the transformation matrices to register each slice onto the next.
@@ -373,10 +378,12 @@ class ApplicationFrame(wx.Frame):
 
         # Now acquire an EM image at the same point of interest location in each slice,
         # but use the more accurate stage offsets (obtained from slice mapping + SIFT registration).
+        wait = wx.BusyInfo("Acquiring EM images...")
         secom_tools.acquire_microscope_images('EM',
                                               self._model.combined_offsets_microns, self._model.delay_between_EM_image_acquisition_secs,
                                               self._model.odemis_cli, self._model.em_images_output_folder, self._model.em_images_prefix,
                                               do_autofocus = False, max_focus_change_nanometers = 0.0)  # No EM autofocus for now, since not sure if needed.
+        del wait
 
         # Note: since the user needs to manually position the EM microscope over the POI in the first slice,
         # multiple series of EM image acquisition using _do_em_acquire() are perfectly fine.
