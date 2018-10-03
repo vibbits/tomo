@@ -8,6 +8,7 @@ from wx.lib.floatcanvas import FloatCanvas
 
 import numpy as np
 import cv2
+import platform
 
 import polygon_simplification
 import tools
@@ -297,9 +298,12 @@ class ApplicationFrame(wx.Frame):
         self._image_panel.redraw()
 
         # Enable/disable menu entries
-        self._lm_image_acquisition_item.Enable(True)   # we've got points of interest now, so we can acquire LM images
+        self._lm_image_acquisition_item.Enable(True)   # We've got points of interest now, so we can acquire LM images.
+        self._em_image_acquisition_item.Enable(False)  # After changing the POI we need to acquire LM images first to obtain SIFT-corrected stage movements.
 
     def _do_lm_acquire(self):
+        # TODO: show wait message during LM acquisition
+
         # Calculate the physical displacements on the sample required for moving between the points of interest.
         overview_image_pixelsize_in_microns = 1000.0 / self._model.overview_image_mm_per_pixel
         self._model.slice_offsets_microns = tools.physical_point_of_interest_offsets_in_microns(self._model.all_points_of_interest,
@@ -315,12 +319,20 @@ class ApplicationFrame(wx.Frame):
         # Have Fiji execute a macro for aligning the LM images
         # using Fiji's Plugins > Registration > Linear Stack Alignment with SIFT
         # https://imagej.net/Headless#Running_macros_in_headless_mode
+        
+        # TODO: show wait message during SIFT alignment
+
         print('Aligning LM images')
         print('Starting a headless Fiji and calling the SIFT image registration plugin. Please be patient...')
+        if platform.system() == "Windows":
+            script_args = "srcdir='{}',dstdir='{}',prefix='{}'".format(self._model.sift_input_folder, self._model.sift_output_folder, self._model.lm_images_prefix)
+        else: # On Ubuntu
+            script_args = '"srcdir=\'{}\',dstdir=\'{}\',prefix=\'{}\'"'.format(self._model.sift_input_folder, self._model.sift_output_folder, self._model.lm_images_prefix)
+
         retcode, out, err = tools.commandline_exec(
             [self._model.fiji_path, "-Dpython.console.encoding=UTF-8", "--ij2", "--headless", "--console", "--run",
-             self._model.sift_registration_script,
-             "srcdir='{}',dstdir='{}',prefix='{}'".format(self._model.sift_input_folder, self._model.sift_output_folder, self._model.lm_images_prefix)])
+             self._model.sift_registration_script, script_args])
+
         print('retcode={}\nstdout=\n{}\nstderr={}\n'.format(retcode, out, err))
 
         # Parse the output of the SIFT registration plugin and extract
@@ -353,25 +365,19 @@ class ApplicationFrame(wx.Frame):
 
         # Enable/disable menu entries
         self._em_image_acquisition_item.Enable(True)
-        self._lm_image_acquisition_item.Enable(False)
 
     def _do_em_acquire(self):
-        # Calculate the cumulative movement of the stage from the point of interest on the first slice
-        # to the point of interest on the last slice. (This movement occurred while acquiring LM images).
-        total_movement = sum(self._model.combined_offsets_microns)
+        # At this point the user should have vented the EM chamber and positioned the EM microscope
+        # precisely on the (sub-cellular) feature of interest, close to the original point-of-interest
+        # on the first slice.
 
-        # Move the stage back to the point of interest on the first slice.
-        # so can then acquire EM images on those same points of interest in the different slices
-        # but using the more accurate offsets.
-        print('Move stage back to point of interest in first slice')
-        secom_tools.move_stage(self._model.odemis_cli, -total_movement)
-
-        # Now acquire an EM image at the samen point of interest location in each slice,
+        # Now acquire an EM image at the same point of interest location in each slice,
         # but use the more accurate stage offsets (obtained from slice mapping + SIFT registration).
         secom_tools.acquire_microscope_images('EM',
                                               self._model.combined_offsets_microns, self._model.delay_between_EM_image_acquisition_secs,
                                               self._model.odemis_cli, self._model.em_images_output_folder, self._model.em_images_prefix,
                                               do_autofocus = False, max_focus_change_nanometers = 0.0)  # No EM autofocus for now, since not sure if needed.
 
-        # Enable/disable menu entries
-        self._em_image_acquisition_item.Enable(False)
+        # Note: since the user needs to manually position the EM microscope over the POI in the first slice,
+        # multiple series of EM image acquisition using _do_em_acquire() are perfectly fine.
+        # (As long as the user did at least one LM image acquisition so we could calculate SIFT-corrected stage movements.)
