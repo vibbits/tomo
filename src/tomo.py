@@ -25,7 +25,7 @@ from application_frame import ApplicationFrame
 #
 #   4. pip install opencv-python
 #   5. pip install wxpython                  # (this is not needed: conda install -c anaconda wxpython)
-#   6. pip install pypubsub==3.3.0           # we use an old version of PyPubSub because newer versions are Python 3 only (https://github.com/schollii/pypubsub/issues/9)
+#   (6. pip install pypubsub==3.3.0          # we use an old version of PyPubSub because newer versions are Python 3 only (https://github.com/schollii/pypubsub/issues/9)) - probably not used anymore in tomo
 #   7. pip install networkx
 #   8. pip install joblib
 #   9. pip install pathlib2

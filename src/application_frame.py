@@ -3,7 +3,6 @@
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
 
 import wx
-from wx.lib.pubsub import pub
 from wx.lib.floatcanvas import FloatCanvas
 
 import numpy as np
@@ -96,13 +95,6 @@ class ApplicationFrame(wx.Frame):
         # TODO: IMPORTANT improvement: especially for the numeric fields, deal with situation where the input field is
         # temporarily empty (while entering a number), and also forbid leaving the edit field if the value is not acceptable (or replace it with the last acceptable value)
 
-        pub.subscribe(self._do_import_overview_image, 'overviewimage.import')
-        pub.subscribe(self._do_load_slice_polygons, 'slicepolygons.load')
-        pub.subscribe(self._do_load_ribbons_mask, 'ribbonsmask.load')
-        pub.subscribe(self._do_set_point_of_interest, 'pointofinterest.set')
-        pub.subscribe(self._do_lm_acquire, 'lm.acquire')
-        pub.subscribe(self._do_em_acquire, 'em.acquire')
-
     def _on_mouse_move_over_image(self, event):
         self._status_label.SetLabelText("Pos: %i, %i" % (event.Coords[0], -event.Coords[1]))  # flip y so we have the y-axis pointing down and (0,0)= top left corner of the image
 
@@ -110,43 +102,42 @@ class ApplicationFrame(wx.Frame):
         with OverviewImageDialog(self._model, None, wx.ID_ANY, "Overview Image") as dlg:
             dlg.CenterOnScreen()
             if dlg.ShowModal() == wx.ID_OK:
-                pub.sendMessage('overviewimage.import')  # FIXME: call directly
+                self._do_import_overview_image()
 
     def _on_load_slice_polygons(self, event):
         with RibbonOutlineDialog(self._model, None, wx.ID_ANY, "Slice Polygons") as dlg:
             dlg.CenterOnScreen()
             if dlg.ShowModal() == wx.ID_OK:
-                pub.sendMessage('slicepolygons.load') # FIXME: call directly
+                self._do_load_slice_polygons()
 
     def _on_load_ribbons_mask(self, event):
         with RibbonsMaskDialog(self._model, None, wx.ID_ANY, "Ribbons Mask") as dlg:
             dlg.CenterOnScreen()
             if dlg.ShowModal() == wx.ID_OK:
-                pub.sendMessage('ribbonsmask.load') # FIXME: call directly
+                self._do_load_ribbons_mask()
 
     def _on_edit_preferences(self, event):
         with PreferencesDialog(self._model, None, wx.ID_ANY, "Preferences") as dlg:
             dlg.CenterOnScreen()
-            if dlg.ShowModal() == wx.ID_OK:
-                pass  # pub.sendMessage('overviewimage.import')  # FIXME: call directly
+            dlg.ShowModal()
 
     def _on_set_point_of_interest(self, event):
         with PointOfInterestDialog(self._model, None, wx.ID_ANY, "Point of Interest") as dlg:
             dlg.CenterOnScreen()
             if dlg.ShowModal() == wx.ID_OK:
-                pub.sendMessage('pointofinterest.set')  # FIXME: call directly
+                self._do_set_point_of_interest()
 
     def _on_lm_image_acquisition(self, event):
         with LMAcquisitionDialog(self._model, None, wx.ID_ANY, "Acquire LM Images") as dlg:
             dlg.CenterOnScreen()
             if dlg.ShowModal() == wx.ID_OK:
-                pub.sendMessage('lm.acquire')  # FIXME: call directly
+                self._do_lm_acquire()
 
     def _on_em_image_acquisition(self, event):
         with EMAcquisitionDialog(self._model, None, wx.ID_ANY, "Acquire EM Images") as dlg:
             dlg.CenterOnScreen()
             if dlg.ShowModal() == wx.ID_OK:
-                pub.sendMessage('em.acquire')  # FIXME: call directly
+                self._do_lm_acquire()
 
     def _on_exit(self, event):
         self.Close()   # CHECKME: needed?
