@@ -159,7 +159,7 @@ class ApplicationFrame(wx.Frame):
         wx.adv.AboutBox(info)
 
     def _on_exit(self, event):
-        self.Close()   # CHECKME: needed?
+        self.Close()
 
     def _do_import_overview_image(self):
         # Display overview image pixel size information
