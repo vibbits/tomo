@@ -15,11 +15,16 @@ class component:
         self.role = role
 
 
+class axis:
+    range = (-999.0, 999.0)
+
+
 class focuser_component(component):
     position = focuser_position()
+    axes = { "z": axis }
 
     def __init__(self, role):
-        super().__init__(role)
+        super(focuser_component, self).__init__(role)
 
     def set_position(self, z):
         self.position.value["z"] = z
@@ -36,13 +41,12 @@ class model:
 class align:
     def AutoFocus(det, emt, focuser, good_focus, rng_focus, method):
         z = random.uniform(rng_focus[0], rng_focus[1])
-        lvl = 666  # TODO: realistic focus level number
+        lvl = 999  # arbitrary focus level number
         focuser.set_position(z)
         return autofocus_future(z, lvl)
 
     class autofocus:
         MTD_BINARY = 0
-
 
 
 class future:
@@ -60,7 +64,7 @@ class autofocus_future(future):
     def __init__(self, foc_pos, fm_final):
         self.foc_pos = foc_pos
         self.fm_final = fm_final
-        super().__init__()
+        super(future, self).__init__()
 
     def result(self, t):
         return self.foc_pos, self.fm_final
