@@ -30,6 +30,12 @@ class PointOfInterestDialog(wx.Dialog):
         fgs.Add(point_of_interest_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(poiSizer, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
+        instructions_label = wx.StaticText(self, wx.ID_ANY, (
+            "Specify the coordinates of the point-of-interest in the first slice of the first ribbon. "
+            "Afterwards, press the Set button. The selected point of interest will be marked with a green cross, "
+            "and predicted analogous points in the other slices with a red cross."))
+        instructions_label.Wrap(450)  # Force line wrapping of the instructions text
+
         self._set_button = wx.Button(self, wx.ID_ANY, "Set")
 
         box = wx.StaticBox(self, wx.ID_ANY)
@@ -39,6 +45,7 @@ class PointOfInterestDialog(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self._on_set_button_click, self._set_button)
 
         contents = wx.BoxSizer(wx.VERTICAL)
+        contents.Add(instructions_label, 0, wx.ALL | wx.CENTER, border = 5)
         contents.Add(sizer, 0, wx.ALL | wx.EXPAND, border = 5)
         contents.Add(self._set_button, 0, wx.ALL | wx.CENTER, border = 5)
 

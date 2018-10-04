@@ -127,7 +127,7 @@ class ApplicationFrame(wx.Frame):
         dlg.Show(True)
 
     def _on_set_point_of_interest(self, event):
-        dlg = PointOfInterestDialog(self._model, None, wx.ID_ANY, "Point of Interest in First Slice")
+        dlg = PointOfInterestDialog(self._model, None, wx.ID_ANY, "Point of Interest")
         dlg.CenterOnScreen()
         dlg.Show(True)
 

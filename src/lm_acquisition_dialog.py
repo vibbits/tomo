@@ -108,6 +108,13 @@ class LMAcquisitionDialog(wx.Dialog):
         sift_sizer = wx.StaticBoxSizer(sift_box, wx.VERTICAL)
         sift_sizer.Add(sift_fgs, 0, wx.ALL|wx.CENTER, 10)
 
+        instructions_label = wx.StaticText(self, wx.ID_ANY, ("Prepare the LM microscope and position it over the point-of-interest in the first slice. "
+                                                             "Afterwards, press the button below to start image acquisition. " 
+                                                             "The microscope will successively acquire LM images at the point-of-interest on each slice "
+                                                             "and align them with SIFT image registration. Furthermore, the image offsets calculated during "
+                                                             "registration are used to improve the predicted point-of-interest positions in the different slices."))
+        instructions_label.Wrap(650)  # Force line wrapping of the instructions text (max 650 pixels per line).
+
         self._acquire_button = wx.Button(self, wx.ID_ANY, "Acquire LM Images")
 
         self.Bind(wx.EVT_TEXT, self._on_lm_images_output_folder_change, self._lm_images_output_folder_edit)
@@ -123,10 +130,12 @@ class LMAcquisitionDialog(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self._on_sift_output_folder_browse_button_click, self._sift_output_folder_button)
         self.Bind(wx.EVT_BUTTON, self._on_acquire_button_click, self._acquire_button)
 
+        b = 5 # border size
         contents = wx.BoxSizer(wx.VERTICAL)
-        contents.Add(lm_sizer, 0, wx.ALL | wx.EXPAND, border = 5)
-        contents.Add(sift_sizer, 0, wx.ALL | wx.EXPAND, border = 5)
-        contents.Add(self._acquire_button, 0, wx.ALL | wx.CENTER, border = 5)
+        contents.Add(lm_sizer, 0, wx.ALL | wx.EXPAND, border = b)
+        contents.Add(sift_sizer, 0, wx.ALL | wx.EXPAND, border = b)
+        contents.Add(instructions_label, 0, wx.ALL | wx.CENTER, border = b)
+        contents.Add(self._acquire_button, 0, wx.ALL | wx.CENTER, border = b)
 
         self.SetSizer(contents)
         contents.Fit(self)

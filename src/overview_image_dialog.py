@@ -38,6 +38,11 @@ class OverviewImageDialog(wx.Dialog):
         fgs.Add(overview_pixel_size_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(self._overview_pixel_size_edit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
+        instructions_label = wx.StaticText(self, wx.ID_ANY, (
+            "Please select an overview image of the sample. It will be used for coarse microscope navigation. "
+            "It should show the ribbons with the sample slices. Typically it will be a 10x or 20x LM image."))
+        instructions_label.Wrap(650)  # Force line wrapping of the instructions text
+
         self._import_button = wx.Button(self, wx.ID_ANY, "Import")
 
         box = wx.StaticBox(self, wx.ID_ANY)
@@ -49,9 +54,11 @@ class OverviewImageDialog(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self._on_import_button_click, self._import_button)
         self.Bind(wx.EVT_BUTTON, self._on_browse_button_click, self._browse_button)
 
+        b = 5  # border size
         contents = wx.BoxSizer(wx.VERTICAL)
-        contents.Add(sizer, 0, wx.ALL | wx.EXPAND, border = 5)
-        contents.Add(self._import_button, 0, wx.ALL | wx.CENTER, border = 5)
+        contents.Add(sizer, 0, wx.ALL | wx.EXPAND, border = b)
+        contents.Add(instructions_label, 0, wx.ALL | wx.CENTER, border = b)
+        contents.Add(self._import_button, 0, wx.ALL | wx.CENTER, border = b)
 
         self.SetSizer(contents)
         contents.Fit(self)

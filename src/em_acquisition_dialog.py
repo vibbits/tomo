@@ -51,7 +51,10 @@ class EMAcquisitionDialog(wx.Dialog):
         em_sizer = wx.StaticBoxSizer(em_box, wx.VERTICAL)
         em_sizer.Add(em_fgs, 0, wx.ALL | wx.CENTER, 10)
 
-        instructions_label = wx.StaticText(self, wx.ID_ANY, "Prepare the EM microscope and position it on the feature of interest on the first slice. The most accurate stage positioning will be obtained if this point is located close to the original point of interest that was tracked over all slices via LM. Afterwards, press the button below to start image acquisition.")
+        instructions_label = wx.StaticText(self, wx.ID_ANY, ("Prepare the EM microscope and position it on the feature of interest on the first slice. "
+                                                             "The most accurate stage positioning will be obtained if this point is located close to "
+                                                             "the original point of interest that was tracked over all slices via LM. "
+                                                             "Afterwards, press the button below to start image acquisition."))
         instructions_label.Wrap(650)  # Force line wrapping of the instructions text (max 650 pixels per line).
 
         self._acquire_button = wx.Button(self, wx.ID_ANY, "Acquire EM Images")
