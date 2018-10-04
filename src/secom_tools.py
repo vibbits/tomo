@@ -1,10 +1,22 @@
 import os
 import time
 from tools import commandline_exec
+
 try:
     from pathlib import Path
 except ImportError:
     from pathlib2 import Path # Python 2 backport
+
+# For autofocus
+import platform
+if platform.system() == "Windows":
+    # Stubs
+    from odemis_stubs import model
+    from odemis_stubs import align
+else:
+    from odemis import model
+    from odemis.acq import align
+
 
 # This function uses the Odemis command line tool to repeatedly move the stage and acquire an LM or EM image.
 # It assumes that the microscope parameters are already set correctly in Odemis, and that the stage is positioned
@@ -27,6 +39,7 @@ def acquire_microscope_images(mode, physical_offsets_microns, delay_between_imag
     # Get current focus
     z = focuser.position.value["z"]  # CHECKME: is this the focus position in meter?
     print("Original focus position: {} m".format(z))
+    print("DEBUG: focus range %s" % (focuser.axes["z"].range,))
 
     print('Acquiring {} images'.format(mode))
     for i, offset_microns in enumerate(physical_offsets_microns):
@@ -37,7 +50,7 @@ def acquire_microscope_images(mode, physical_offsets_microns, delay_between_imag
         if do_autofocus:
             if i > 0:
                 max_z_change = max_focus_change_nanometers * 1e-9  # FIXME - good value? (probably should be a user option) + what units, meters?
-                z = autofocus(det, emt, focuser, good_focus = z, focus_range = (z - max_z_change, z + max_z_change))
+                z = autofocus(det, emt, focuser, good_focus = z, focus_range = (z - max_z_change, z + max_z_change))  # looking at Odemis source code, it seems focus_range[0] must be < focus_range[1]
                 print('... autofocus sanity check: {} ?= {}'.format(z, focuser.position.value["z"]))  # CHECKME: on the actual SECOM both values are *not* the same
 
         # Acquire an LM/EM image and save it to the output folder
@@ -57,18 +70,6 @@ def move_stage(odemis_cli, offset_microns):
     dx_microns, dy_microns = offset_microns
     commandline_exec([odemis_cli, "--move", "stage", "x", str(dx_microns)])
     commandline_exec([odemis_cli, "--move", "stage", "y", str(dy_microns)])
-
-
-# For autofocus
-import platform
-if platform.system() == "Windows":
-    # Stubs
-    from odemis_stubs import model
-    from odemis_stubs import align
-else:
-    from odemis import model
-    from odemis.acq import align
-
 
 
 def setup_autofocus():
@@ -101,10 +102,11 @@ def autofocus(det, emt, focuser, good_focus = None, focus_range = None, focus_me
     # See https://github.com/delmic/odemis/blob/master/scripts/autofocus.py
     # and https://github.com/delmic/odemis/blob/master/src/odemis/acq/align/autofocus.py
     try:
-        future = align.AutoFocus(det, emt, focuser, good_focus = good_focus, rng_focus = focus_range, method = focus_method)
+        print('Autofocussing...')
+        future = align.AutoFocus(det, emt, focuser, good_focus = good_focus, rng_focus = focus_range, method = focus_method)  # IMPORTANT TODO: try without rng_focus, we might be setting it too small; also try both autofocus methods
         foc_pos, fm_final = future.result(1000)  # putting a timeout allows to get KeyboardInterrupts
         print("Focus level after applying autofocus: {} @ {} m".format(fm_final, foc_pos))
-        # fm_final is the "focus level", I don't know what that means...!
+        # fm_final is the "focus level", I don't know what that means... Some value indicating how well the focus is? What does it mean physically?
         # foc_pos is the focus z-position
         return foc_pos
     except KeyboardInterrupt:
