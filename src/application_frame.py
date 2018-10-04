@@ -3,6 +3,7 @@
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
 
 import wx
+import wx.adv
 from wx.lib.floatcanvas import FloatCanvas
 
 import numpy as np
@@ -37,6 +38,7 @@ class ApplicationFrame(wx.Frame):
     _lm_image_acquisition_item = None
     _em_image_acquisition_item = None
     _load_ribbons_mask_item = None
+    _about_item = None
 
     def __init__(self, parent, ID, title, size = (1024, 1024), pos = wx.DefaultPosition):
         wx.Frame.__init__(self, parent, ID, title, pos, size)
@@ -66,9 +68,13 @@ class ApplicationFrame(wx.Frame):
         self._em_image_acquisition_item = microscope_menu.Append(wx.NewId(), "Acquire EM Images...")
         self._em_image_acquisition_item.Enable(False)
 
+        help_menu = wx.Menu()
+        self._about_item = help_menu.Append(wx.NewId(), "About")
+
         menu_bar.Append(file_menu, "&File")
         menu_bar.Append(edit_menu, "&Edit")
         menu_bar.Append(microscope_menu, "&Microscope")
+        menu_bar.Append(help_menu, "&Help")
 
         self.Bind(wx.EVT_MENU, self._on_exit, exit_menu_item)
         self.Bind(wx.EVT_MENU, self._on_edit_preferences, prefs_menu_item)
@@ -78,6 +84,7 @@ class ApplicationFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_lm_image_acquisition, self._lm_image_acquisition_item)
         self.Bind(wx.EVT_MENU, self._on_em_image_acquisition, self._em_image_acquisition_item)
         self.Bind(wx.EVT_MENU, self._on_load_ribbons_mask, self._load_ribbons_mask_item)
+        self.Bind(wx.EVT_MENU, self._on_about, self._about_item)
 
         self.SetMenuBar(menu_bar)
 
@@ -138,6 +145,18 @@ class ApplicationFrame(wx.Frame):
             dlg.CenterOnScreen()
             if dlg.ShowModal() == wx.ID_OK:
                 self._do_lm_acquire()
+
+    def _on_about(self, event):
+        info = wx.adv.AboutDialogInfo()
+        info.SetName('Tomo')
+        info.SetVersion('1.0')
+        info.SetDescription("Prototype application for tomography on SECOM")
+        info.SetCopyright('(c) 2018 VIB - Vlaams Instituut voor Biotechnologie')  # Not shown in the dialog on Windows?
+        info.SetWebSite('http://www.vib.be')
+        info.SetLicence("Proprietary. Copyright VIB, 2018.")
+        # info.SetIcon(wx.Icon('tomo.png', wx.BITMAP_TYPE_PNG)) # TODO - design an application icon; also make sure this icon is used when tomo is minimized / shown in the dock.
+        # info.AddDeveloper('Frank Vernaillen')
+        wx.adv.AboutBox(info)
 
     def _on_exit(self, event):
         self.Close()   # CHECKME: needed?
