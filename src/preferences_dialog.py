@@ -11,10 +11,18 @@ class PreferencesDialog(wx.Dialog):
     _registration_script_file_edit = None
     _fiji_path_edit = None
 
+    # Staging area for model, will be copied into _model if user presses OK, will be discarded on Cancel
+    _odemis_cli = None
+    _fiji_path = None
+    _sift_registration_script = None
+
     def __init__(self, model, parent, ID, title, size = wx.DefaultSize, pos = wx.DefaultPosition, style = wx.DEFAULT_DIALOG_STYLE):
         wx.Dialog.__init__(self, parent, ID, title, pos, size, style)
 
         self._model = model
+        self._odemis_cli = self._model.odemis_cli
+        self._fiji_path = self._model.fiji_path
+        self._sift_registration_script = self._model.sift_registration_script
 
         w = 450
 
@@ -30,36 +38,55 @@ class PreferencesDialog(wx.Dialog):
         # Environment
         env_fgs = wx.FlexGridSizer(cols = 2, vgap = 4, hgap = 8)
         env_fgs.Add(fiji_path_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        env_fgs.Add(self._fiji_path_edit, flag =wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        env_fgs.Add(self._fiji_path_edit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
         env_fgs.Add(odemis_cli_path_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        env_fgs.Add(self._odemis_cli_path_edit, flag =wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        env_fgs.Add(self._odemis_cli_path_edit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
         env_fgs.Add(registration_script_file_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         env_fgs.Add(self._registration_script_file_edit, flag =wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
         env_box = wx.StaticBox(self, -1, 'Environment')
         env_sizer = wx.StaticBoxSizer(env_box, wx.VERTICAL)
-        env_sizer.Add(env_fgs, 0, wx.ALL|wx.CENTER, 10)
+        env_sizer.Add(env_fgs, 0, wx.ALL | wx.CENTER, 10)
+
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        ok_button = wx.Button(self, label = 'OK')
+        cancel_button = wx.Button(self, label = 'Cancel')
+        hbox.Add(cancel_button)
+        hbox.Add(ok_button, flag = wx.LEFT, border = 5)
 
         self.Bind(wx.EVT_TEXT, self._on_odemis_cli_path_change, self._odemis_cli_path_edit)
         self.Bind(wx.EVT_TEXT, self._on_fiji_path_change, self._fiji_path_edit)
         self.Bind(wx.EVT_TEXT, self._on_registration_script_change, self._registration_script_file_edit)
+        self.Bind(wx.EVT_BUTTON, self._on_ok, ok_button)
+        self.Bind(wx.EVT_BUTTON, self._on_cancel, cancel_button)
+        # TODO: pressing x should also cancel
 
         contents = wx.BoxSizer(wx.VERTICAL)
         contents.Add(env_sizer, 0, wx.ALL | wx.EXPAND, border = 5)
+        contents.Add(hbox, flag = wx.ALIGN_CENTER | wx.TOP | wx.BOTTOM, border = 10)
 
         self.SetSizer(contents)
         contents.Fit(self)
 
-        # TODO: OK/Cancel buttons? Disable x button in window?
+    def _on_ok(self, event):
+        self._model.odemis_cli = self._odemis_cli
+        self._model.fiji_path = self._fiji_path
+        self._model.sift_registration_script = self._sift_registration_script
+        self._model.write_parameters()
+        self.EndModal(wx.OK)
+
+    def _on_cancel(self, event):
+        # We want to discard the changes, so don't copy staging values into self._model
+        self.EndModal(wx.CANCEL)
 
     def _on_odemis_cli_path_change(self, event):
-        self._model.odemis_cli = self._odemis_cli_path_edit.GetValue()
-        print('odemis_cli={}'.format(self._model.odemis_cli))
+        self._odemis_cli = self._odemis_cli_path_edit.GetValue()
+        print('temp odemis_cli={}'.format(self._odemis_cli))
 
     def _on_fiji_path_change(self, event):
-        self._model.fiji_path = self._fiji_path_edit.GetValue()
-        print('fiji={}'.format(self._model.fiji_path))
+        self._fiji_path = self._fiji_path_edit.GetValue()
+        print('temp fiji={}'.format(self._fiji_path))
 
     def _on_registration_script_change(self, event):
-        self._model.sift_registration_script = self._registration_script_file_edit.GetValue()
-        print('sift_registration_script={}'.format(self._model.sift_registration_script))
+        self._sift_registration_script = self._registration_script_file_edit.GetValue()
+        print('temp sift_registration_script={}'.format(self._sift_registration_script))
