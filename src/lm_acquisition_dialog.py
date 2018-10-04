@@ -3,7 +3,6 @@
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
 
 import wx
-from wx.lib.pubsub import pub
 
 class LMAcquisitionDialog(wx.Dialog):
     _model = None
@@ -148,36 +147,31 @@ class LMAcquisitionDialog(wx.Dialog):
 
     def _on_lm_output_folder_browse_button_click(self, event):
         defaultPath = self._model.lm_images_output_folder
-        dlg = wx.DirDialog(self, "Select the output directory for LM images", defaultPath)
-        if dlg.ShowModal() == wx.ID_OK:
-            path = dlg.GetPath()
-            self._model.lm_images_output_folder = path
-            self._lm_images_output_folder_edit.SetLabelText(path)
-        dlg.Destroy()
+        with wx.DirDialog(self, "Select the output directory for LM images", defaultPath) as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
+                path = dlg.GetPath()
+                self._model.lm_images_output_folder = path
+                self._lm_images_output_folder_edit.SetLabelText(path)
 
     def _on_sift_input_folder_browse_button_click(self, event):
         defaultPath = self._model.sift_input_folder
-        dlg = wx.DirDialog(self, "Select the SIFT input directory", defaultPath)
-        if dlg.ShowModal() == wx.ID_OK:
-            path = dlg.GetPath()
-            self._model.sift_input_folder = path
-            self._sift_input_folder_edit.SetLabelText(path)
-        dlg.Destroy()
+        with wx.DirDialog(self, "Select the SIFT input directory", defaultPath) as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
+                path = dlg.GetPath()
+                self._model.sift_input_folder = path
+                self._sift_input_folder_edit.SetLabelText(path)
 
     def _on_sift_output_folder_browse_button_click(self, event):
         defaultPath = self._model.sift_output_folder
-        dlg = wx.DirDialog(self, "Select the SIFT output directory", defaultPath)
-        if dlg.ShowModal() == wx.ID_OK:
-            path = dlg.GetPath()
-            self._model.sift_output_folder = path
-            self._sift_output_folder_edit.SetLabelText(path)
-        dlg.Destroy()
+        with wx.DirDialog(self, "Select the SIFT output directory", defaultPath) as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
+                path = dlg.GetPath()
+                self._model.sift_output_folder = path
+                self._sift_output_folder_edit.SetLabelText(path)
 
     def _on_acquire_button_click(self, event):
-        self.Show(False)
         self._model.write_parameters()
-        pub.sendMessage('lm.acquire')
-        self.Destroy()
+        self.EndModal(wx.ID_OK)
 
     def _on_lm_images_output_folder_change(self, event):
         self._model.lm_images_output_folder = self._lm_images_output_folder_edit.GetValue()

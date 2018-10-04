@@ -4,7 +4,6 @@
 
 import wx
 import os
-from wx.lib.pubsub import pub
 
 class OverviewImageDialog(wx.Dialog):
     _model = None
@@ -67,20 +66,17 @@ class OverviewImageDialog(wx.Dialog):
         path = self._model.overview_image_path
         defaultDir = os.path.dirname(path)
         defaultFile = os.path.basename(path)
-        dlg = wx.FileDialog(self, "Select the overview image",
-                            defaultDir, defaultFile,
-                            wildcard = "TIFF files (*.tif;*.tiff)|*.tif;*.tiff|PNG files (*.png)|*.png|JPEG files (*.jpg;*.jpeg)|*.jpg;*.jpeg")
-        if dlg.ShowModal() == wx.ID_OK:
-            path = dlg.GetPath()
-            self._model.overview_image_path = path
-            self._overview_image_path_edit.SetLabelText(path)
-        dlg.Destroy()
+        with wx.FileDialog(self, "Select the overview image",
+                           defaultDir, defaultFile,
+                           wildcard = "TIFF files (*.tif;*.tiff)|*.tif;*.tiff|PNG files (*.png)|*.png|JPEG files (*.jpg;*.jpeg)|*.jpg;*.jpeg") as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
+                path = dlg.GetPath()
+                self._model.overview_image_path = path
+                self._overview_image_path_edit.SetLabelText(path)
 
     def _on_import_button_click(self, event):
-        self.Show(False)
         self._model.write_parameters()
-        pub.sendMessage('overviewimage.import')
-        self.Destroy()
+        self.EndModal(wx.ID_OK)
 
     def _on_overview_image_path_change(self, event):
         self._model.overview_image_path = self._overview_image_path_edit.GetValue()

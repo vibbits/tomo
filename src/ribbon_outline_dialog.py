@@ -3,7 +3,6 @@
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
 
 import wx
-from wx.lib.pubsub import pub
 import os
 
 class RibbonOutlineDialog(wx.Dialog):
@@ -62,20 +61,17 @@ class RibbonOutlineDialog(wx.Dialog):
         path = self._model.slice_polygons_path
         defaultDir = os.path.dirname(path)
         defaultFile = os.path.basename(path)
-        dlg = wx.FileDialog(self, "Select the slice outlines file",
+        with wx.FileDialog(self, "Select the slice outlines file",
                             defaultDir, defaultFile,
-                            wildcard = "JSON files (*.json)|*.json")
-        if dlg.ShowModal() == wx.ID_OK:
-            path = dlg.GetPath()
-            self._model.slice_polygons_path = path
-            self._slice_polygons_path_edit.SetLabelText(path)
-        dlg.Destroy()
+                            wildcard = "JSON files (*.json)|*.json") as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
+                path = dlg.GetPath()
+                self._model.slice_polygons_path = path
+                self._slice_polygons_path_edit.SetLabelText(path)
 
     def _on_load_button_click(self, event):
-        self.Show(False)
         self._model.write_parameters()
-        pub.sendMessage('slicepolygons.load')
-        self.Destroy()
+        self.EndModal(wx.ID_OK)
 
     def _on_slice_polygons_path_change(self, event):
         self._model.slice_polygons_path = self._slice_polygons_path_edit.GetValue()

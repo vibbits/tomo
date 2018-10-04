@@ -107,42 +107,49 @@ class ApplicationFrame(wx.Frame):
         self._status_label.SetLabelText("Pos: %i, %i" % (event.Coords[0], -event.Coords[1]))  # flip y so we have the y-axis pointing down and (0,0)= top left corner of the image
 
     def _on_import_overview_image(self, event):
-        dlg = OverviewImageDialog(self._model, None, wx.ID_ANY, "Overview Image")
-        dlg.CenterOnScreen()
-        dlg.Show(True)
+        with OverviewImageDialog(self._model, None, wx.ID_ANY, "Overview Image") as dlg:
+            dlg.CenterOnScreen()
+            if dlg.ShowModal() == wx.ID_OK:
+                pub.sendMessage('overviewimage.import')  # FIXME: call directly
 
     def _on_load_slice_polygons(self, event):
-        dlg = RibbonOutlineDialog(self._model, None, wx.ID_ANY, "Slice Polygons")
-        dlg.CenterOnScreen()
-        dlg.Show(True)
+        with RibbonOutlineDialog(self._model, None, wx.ID_ANY, "Slice Polygons") as dlg:
+            dlg.CenterOnScreen()
+            if dlg.ShowModal() == wx.ID_OK:
+                pub.sendMessage('slicepolygons.load') # FIXME: call directly
 
     def _on_load_ribbons_mask(self, event):
-        dlg = RibbonsMaskDialog(self._model, None, wx.ID_ANY, "Ribbons Mask")
-        dlg.CenterOnScreen()
-        dlg.Show(True)
+        with RibbonsMaskDialog(self._model, None, wx.ID_ANY, "Ribbons Mask") as dlg:
+            dlg.CenterOnScreen()
+            if dlg.ShowModal() == wx.ID_OK:
+                pub.sendMessage('ribbonsmask.load') # FIXME: call directly
 
     def _on_edit_preferences(self, event):
-        dlg = PreferencesDialog(self._model, None, wx.ID_ANY, "Preferences")
-        dlg.CenterOnScreen()
-        dlg.Show(True)
+        with PreferencesDialog(self._model, None, wx.ID_ANY, "Preferences") as dlg:
+            dlg.CenterOnScreen()
+            if dlg.ShowModal() == wx.ID_OK:
+                pass  # pub.sendMessage('overviewimage.import')  # FIXME: call directly
 
     def _on_set_point_of_interest(self, event):
-        dlg = PointOfInterestDialog(self._model, None, wx.ID_ANY, "Point of Interest")
-        dlg.CenterOnScreen()
-        dlg.Show(True)
+        with PointOfInterestDialog(self._model, None, wx.ID_ANY, "Point of Interest") as dlg:
+            dlg.CenterOnScreen()
+            if dlg.ShowModal() == wx.ID_OK:
+                pub.sendMessage('pointofinterest.set')  # FIXME: call directly
 
     def _on_lm_image_acquisition(self, event):
-        dlg = LMAcquisitionDialog(self._model, None, wx.ID_ANY, "Acquire LM Images")
-        dlg.CenterOnScreen()
-        dlg.Show(True)
+        with LMAcquisitionDialog(self._model, None, wx.ID_ANY, "Acquire LM Images") as dlg:
+            dlg.CenterOnScreen()
+            if dlg.ShowModal() == wx.ID_OK:
+                pub.sendMessage('lm.acquire')  # FIXME: call directly
 
     def _on_em_image_acquisition(self, event):
-        dlg = EMAcquisitionDialog(self._model, None, wx.ID_ANY, "Acquire EM Images")
-        dlg.CenterOnScreen()
-        dlg.Show(True)
+        with EMAcquisitionDialog(self._model, None, wx.ID_ANY, "Acquire EM Images") as dlg:
+            dlg.CenterOnScreen()
+            if dlg.ShowModal() == wx.ID_OK:
+                pub.sendMessage('em.acquire')  # FIXME: call directly
 
     def _on_exit(self, event):
-        self.Close()
+        self.Close()   # CHECKME: needed?
 
     def _do_import_overview_image(self):
         # Display overview image pixel size information

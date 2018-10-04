@@ -3,7 +3,6 @@
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
 
 import wx
-from wx.lib.pubsub import pub
 import os
 
 class RibbonsMaskDialog(wx.Dialog):
@@ -82,20 +81,17 @@ class RibbonsMaskDialog(wx.Dialog):
         path = self._model.template_slice_path
         defaultDir = os.path.dirname(path)
         defaultFile = os.path.basename(path)
-        dlg = wx.FileDialog(self, "Select the template slice contour file",
+        with wx.FileDialog(self, "Select the template slice contour file",
                             defaultDir, defaultFile,
-                            wildcard = "JSON files (*.json)|*.json")
-        if dlg.ShowModal() == wx.ID_OK:
-            path = dlg.GetPath()
-            self._model.template_slice_path = path
-            self._template_slice_path_edit.SetLabelText(path)
-        dlg.Destroy()
+                            wildcard = "JSON files (*.json)|*.json") as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
+                path = dlg.GetPath()
+                self._model.template_slice_path = path
+                self._template_slice_path_edit.SetLabelText(path)
 
     def _on_load_button_click(self, event):
-        self.Show(False)
         self._model.write_parameters()
-        pub.sendMessage('ribbonsmask.load')
-        self.Destroy()
+        self.EndModal(wx.ID_OK)
 
     def _on_ribbons_mask_path_change(self, event):
         self._model.ribbons_mask_path = self._ribbons_mask_path_edit.GetValue()

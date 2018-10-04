@@ -3,7 +3,6 @@
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
 
 import wx
-from wx.lib.pubsub import pub
 
 class PointOfInterestDialog(wx.Dialog):
     _model = None
@@ -53,10 +52,7 @@ class PointOfInterestDialog(wx.Dialog):
         contents.Fit(self)
 
     def _on_set_button_click(self, event):
-        self.Show(False)
         self._model.original_point_of_interest[0] = float(self._point_of_interest_x_edit.GetValue())
         self._model.original_point_of_interest[1] = float(self._point_of_interest_y_edit.GetValue())
         self._model.write_parameters()
-        print('original_point_of_interest={},{}'.format(self._model.original_point_of_interest[0], self._model.original_point_of_interest[1]))
-        pub.sendMessage('pointofinterest.set')
-        self.Destroy()
+        self.EndModal(wx.ID_OK)

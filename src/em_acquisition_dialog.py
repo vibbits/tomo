@@ -3,7 +3,6 @@
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
 
 import wx
-from wx.lib.pubsub import pub
 
 class EMAcquisitionDialog(wx.Dialog):
     _model = None
@@ -75,18 +74,15 @@ class EMAcquisitionDialog(wx.Dialog):
 
     def _on_em_output_folder_browse_button_click(self, event):
         defaultPath = self._model.em_images_output_folder
-        dlg = wx.DirDialog(self, "Select the output directory for EM images", defaultPath)
-        if dlg.ShowModal() == wx.ID_OK:
-            path = dlg.GetPath()
-            self._model.em_images_output_folder = path
-            self._em_images_output_folder_edit.SetLabelText(path)
-        dlg.Destroy()
+        with wx.DirDialog(self, "Select the output directory for EM images", defaultPath) as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
+                path = dlg.GetPath()
+                self._model.em_images_output_folder = path
+                self._em_images_output_folder_edit.SetLabelText(path)
 
     def _on_acquire_button_click(self, event):
-        self.Show(False)
         self._model.write_parameters()
-        pub.sendMessage('em.acquire')
-        self.Destroy()
+        self.EndModal(wx.ID_OK)
 
     def _on_em_images_output_folder_change(self, event):
         self._model.em_images_output_folder = self._em_images_output_folder_edit.GetValue()
