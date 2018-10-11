@@ -25,6 +25,7 @@ from ribbons_mask_dialog import RibbonsMaskDialog
 from point_of_interest_dialog import PointOfInterestDialog
 from segmentation_panel import SegmentationPanel
 from ribbon_splitter import segment_contours_into_slices, draw_contour_numbers
+from contour_finder import ContourFinder
 
 class ApplicationFrame(wx.Frame):
     _model = None
@@ -53,8 +54,6 @@ class ApplicationFrame(wx.Frame):
         self._import_overview_image_item = file_menu.Append(wx.NewId(), "Import Overview Image...")
         self._load_slice_polygons_item = file_menu.Append(wx.NewId(), "Load Slice Polygons...")
         self._load_slice_polygons_item.Enable(False)
-        self._load_ribbons_mask_item = file_menu.Append(wx.NewId(), "Load Ribbons Mask...")
-        self._load_ribbons_mask_item.Enable(False)   # Disabled because experimental
         exit_menu_item = file_menu.Append(wx.NewId(), "Exit")
 
         edit_menu = wx.Menu()
@@ -71,9 +70,13 @@ class ApplicationFrame(wx.Frame):
         help_menu = wx.Menu()
         self._about_item = help_menu.Append(wx.NewId(), "About")
 
+        experimental_menu = wx.Menu()
+        self._load_ribbons_mask_item = experimental_menu.Append(wx.NewId(), "Load Ribbons Mask...")
+
         menu_bar.Append(file_menu, "&File")
         menu_bar.Append(edit_menu, "&Edit")
         menu_bar.Append(microscope_menu, "&Microscope")
+        menu_bar.Append(experimental_menu, "&Experimental")
         menu_bar.Append(help_menu, "&Help")
 
         self.Bind(wx.EVT_MENU, self._on_exit, exit_menu_item)
@@ -245,6 +248,16 @@ class ApplicationFrame(wx.Frame):
 
         wx.Yield()  # give wxPython opportunity to redraw the frame
 
+        #######################################
+
+        # cf = ContourFinder()
+        # gray_image = read_grayscale_image('xxxx')
+        # initial_contour = template_slice_contour
+        # # TODO: randomly disturb initial_contour a bit for testing, and see if the optimization manages to find the template_slice_contour again.
+        # cf.optimize_contour(self, gray_image, initial_contour)
+
+        #######################################
+
         # ribbon splitting code: "F:\Manual Backups\Ubuntu_26sep2018\development\DetectSlices\SplitRibbon\SplitRibbon.py"
         # OpenCV watershed: https://docs.opencv.org/3.1.0/d3/db4/tutorial_py_watershed.html (maybe it can be used to imitate Fiji > Process > Binary > Watershed ?)
 
@@ -384,6 +397,8 @@ class ApplicationFrame(wx.Frame):
 
         # Show overview of the offsets
         tools.show_offsets_table(self._model.slice_offsets_microns, sift_offsets_microns, self._model.combined_offsets_microns)
+
+        # TODO FIXME move stage back to the first slice (using the inverse movements)
 
         # Enable/disable menu entries
         self._em_image_acquisition_item.Enable(True)
