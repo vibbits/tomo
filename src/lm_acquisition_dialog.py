@@ -111,7 +111,8 @@ class LMAcquisitionDialog(wx.Dialog):
                                                              "Afterwards, press the button below to start image acquisition. " 
                                                              "The microscope will successively acquire LM images at the point-of-interest on each slice "
                                                              "and align them with SIFT image registration. Furthermore, the image offsets calculated during "
-                                                             "registration are used to improve the predicted point-of-interest positions in the different slices."))
+                                                             "registration are used to improve the predicted point-of-interest positions in the different slices. "
+                                                             "After imaging the last slice, the stage will be moved back to the point-of-interest on the first slice."))
         instructions_label.Wrap(650)  # Force line wrapping of the instructions text (max 650 pixels per line).
 
         self._acquire_button = wx.Button(self, wx.ID_ANY, "Acquire LM Images")
