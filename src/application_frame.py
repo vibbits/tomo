@@ -148,7 +148,7 @@ class ApplicationFrame(wx.Frame):
         with EMAcquisitionDialog(self._model, None, wx.ID_ANY, "Acquire EM Images") as dlg:
             dlg.CenterOnScreen()
             if dlg.ShowModal() == wx.ID_OK:
-                self._do_lm_acquire()
+                self._do_em_acquire()
 
     def _on_about(self, event):
         info = wx.adv.AboutDialogInfo()
@@ -347,8 +347,7 @@ class ApplicationFrame(wx.Frame):
         wait = wx.BusyInfo("Acquiring LM images...")
         secom_tools.acquire_microscope_images('LM',
                                               self._model.slice_offsets_microns, self._model.delay_between_LM_image_acquisition_secs,
-                                              self._model.odemis_cli, self._model.lm_images_output_folder, self._model.lm_images_prefix,
-                                              self._model.lm_do_autofocus, self._model.lm_max_autofocus_change_nanometers)
+                                              self._model.odemis_cli, self._model.lm_images_output_folder, self._model.lm_images_prefix)
         del wait
 
         # Now tell Fiji to execute a macro that (i) reads the LM images, (ii) merges them into a stack,
@@ -415,8 +414,7 @@ class ApplicationFrame(wx.Frame):
         wait = wx.BusyInfo("Acquiring EM images...")
         secom_tools.acquire_microscope_images('EM',
                                               self._model.combined_offsets_microns, self._model.delay_between_EM_image_acquisition_secs,
-                                              self._model.odemis_cli, self._model.em_images_output_folder, self._model.em_images_prefix,
-                                              do_autofocus = False, max_focus_change_nanometers = 0.0)  # No EM autofocus for now, since not sure if needed.
+                                              self._model.odemis_cli, self._model.em_images_output_folder, self._model.em_images_prefix)
         del wait
 
         # Note: since the user needs to manually position the EM microscope over the POI in the first slice,

@@ -18,9 +18,9 @@ class LMAcquisitionDialog(wx.Dialog):
     _sift_output_folder_button = None
     _lm_images_output_folder_button = None
     _acquire_button = None
-    _lm_max_autofocus_change_label = None
-    _lm_max_autofocus_change_edit = None
-    _lm_do_autofocus_checkbox = None
+    # _lm_max_autofocus_change_label = None
+    # _lm_max_autofocus_change_edit = None
+    # _lm_do_autofocus_checkbox = None
 
     def __init__(self, model, parent, ID, title, size = wx.DefaultSize, pos = wx.DefaultPosition, style = wx.DEFAULT_DIALOG_STYLE):
         wx.Dialog.__init__(self, parent, ID, title, pos, size, style)
@@ -47,13 +47,13 @@ class LMAcquisitionDialog(wx.Dialog):
 
         empty_label = wx.StaticText(self, wx.ID_ANY, "")
 
-        self._lm_do_autofocus_checkbox = wx.CheckBox(self, wx.ID_ANY, "Perform Autofocus")
-        self._lm_do_autofocus_checkbox.SetValue(self._model.lm_do_autofocus)
-
-        self._lm_max_autofocus_change_label = wx.StaticText(self, wx.ID_ANY, "Max. Autofocus Change (nanometer):")
-        self._lm_max_autofocus_change_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.lm_max_autofocus_change_nanometers), size = (50, -1))
-
-        self._enable_autofocus_edit_field(self._model.lm_do_autofocus)
+        # self._lm_do_autofocus_checkbox = wx.CheckBox(self, wx.ID_ANY, "Perform Autofocus")
+        # self._lm_do_autofocus_checkbox.SetValue(self._model.lm_do_autofocus)
+        #
+        # self._lm_max_autofocus_change_label = wx.StaticText(self, wx.ID_ANY, "Max. Autofocus Change (nanometer):")
+        # self._lm_max_autofocus_change_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.lm_max_autofocus_change_nanometers), size = (50, -1))
+        #
+        # self._enable_autofocus_edit_field(self._model.lm_do_autofocus)
 
         #
         sift_input_folder_label = wx.StaticText(self, wx.ID_ANY, "Input Folder:")
@@ -86,9 +86,9 @@ class LMAcquisitionDialog(wx.Dialog):
         lm_fgs.Add(lm_acquisition_delay_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         lm_fgs.Add(self._lm_acquisition_delay_edit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
         lm_fgs.Add(empty_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        lm_fgs.Add(self._lm_do_autofocus_checkbox, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        lm_fgs.Add(self._lm_max_autofocus_change_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        lm_fgs.Add(self._lm_max_autofocus_change_edit, flag =wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        # lm_fgs.Add(self._lm_do_autofocus_checkbox, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        # lm_fgs.Add(self._lm_max_autofocus_change_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        # lm_fgs.Add(self._lm_max_autofocus_change_edit, flag =wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
         lm_box = wx.StaticBox(self, -1, 'LM Image Acquisition')
         lm_sizer = wx.StaticBoxSizer(lm_box, wx.VERTICAL)
@@ -122,8 +122,8 @@ class LMAcquisitionDialog(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self._on_sift_input_folder_change, self._sift_input_folder_edit)
         self.Bind(wx.EVT_TEXT, self._on_sift_output_folder_change, self._sift_output_folder_edit)
         self.Bind(wx.EVT_TEXT, self._on_sift_pixel_size_change, self._sift_pixel_size_edit)
-        self.Bind(wx.EVT_CHECKBOX, self._on_lm_do_autofocus_change, self._lm_do_autofocus_checkbox)
-        self.Bind(wx.EVT_TEXT, self._on_lm_max_autofocus_change, self._lm_max_autofocus_change_edit)
+        # self.Bind(wx.EVT_CHECKBOX, self._on_lm_do_autofocus_change, self._lm_do_autofocus_checkbox)
+        # self.Bind(wx.EVT_TEXT, self._on_lm_max_autofocus_change, self._lm_max_autofocus_change_edit)
         self.Bind(wx.EVT_BUTTON, self._on_lm_output_folder_browse_button_click, self._lm_images_output_folder_button)
         self.Bind(wx.EVT_BUTTON, self._on_sift_input_folder_browse_button_click, self._sift_input_folder_button)
         self.Bind(wx.EVT_BUTTON, self._on_sift_output_folder_browse_button_click, self._sift_output_folder_button)
@@ -139,9 +139,9 @@ class LMAcquisitionDialog(wx.Dialog):
         self.SetSizer(contents)
         contents.Fit(self)
 
-    def _enable_autofocus_edit_field(self, enable):
-        self._lm_max_autofocus_change_label.Enable(enable)
-        self._lm_max_autofocus_change_edit.Enable(enable)
+    # def _enable_autofocus_edit_field(self, enable):
+    #     self._lm_max_autofocus_change_label.Enable(enable)
+    #     self._lm_max_autofocus_change_edit.Enable(enable)
 
     # TODO: try to generalize/unify the 3 functions below (and similar ones in other ui source files)
 
@@ -185,14 +185,14 @@ class LMAcquisitionDialog(wx.Dialog):
         self._model.delay_between_LM_image_acquisition_secs = float(self._lm_acquisition_delay_edit.GetValue())
         print('delay_between_LM_image_acquisition_secs={}'.format(self._model.delay_between_LM_image_acquisition_secs))
 
-    def _on_lm_do_autofocus_change(self, event):
-        self._model.lm_do_autofocus = self._lm_do_autofocus_checkbox.IsChecked()
-        print('lm_do_autofocus={}'.format(self._model.lm_do_autofocus))
-        self._enable_autofocus_edit_field(self._model.lm_do_autofocus)
-
-    def _on_lm_max_autofocus_change(self, event):
-        self._model.lm_max_autofocus_change_nanometers = float(self._lm_max_autofocus_change_edit.GetValue())
-        print('lm_max_autofocus_change_nanometers={}'.format(self._model.lm_max_autofocus_change_nanometers))
+    # def _on_lm_do_autofocus_change(self, event):
+    #     self._model.lm_do_autofocus = self._lm_do_autofocus_checkbox.IsChecked()
+    #     print('lm_do_autofocus={}'.format(self._model.lm_do_autofocus))
+    #     self._enable_autofocus_edit_field(self._model.lm_do_autofocus)
+    #
+    # def _on_lm_max_autofocus_change(self, event):
+    #     self._model.lm_max_autofocus_change_nanometers = float(self._lm_max_autofocus_change_edit.GetValue())
+    #     print('lm_max_autofocus_change_nanometers={}'.format(self._model.lm_max_autofocus_change_nanometers))
 
     def _on_sift_input_folder_change(self, event):
         self._model.sift_input_folder = self._sift_input_folder_edit.GetValue()
