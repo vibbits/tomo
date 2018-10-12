@@ -6,23 +6,18 @@
 import sys
 import math
 
-# from ij import IJ
-# from ij.plugin.frame import RoiManager
-# from ij.gui import Roi
-# from ij.gui import PolygonRoi
-
-
 
 # input:
 # - poly: input polygon (a list of vertex (x,y) pairs)
 # - num: desired number of vertices in the reduced polygon
+# - acute_threshold: XXXX
 # output:
 # - output polygon with 'num' vertices (or the input polygon in case it had fewer than 'num' vertices already)
-def reduce_polygon(poly, num):
+def reduce_polygon(poly, num, acute_threshold = 0):
     numv = len(poly)
 
     # Calculate initial importance of each vertex
-    imp = [vertex_importance(v, poly, numv) for v in range(0, numv)]
+    imp = [vertex_importance(v, poly, numv, acute_threshold) for v in range(0, numv)]
 
     # Repeatedly remove the least important vertex until we end up
     # with a reduced polygon with the desired number of vertices.
@@ -40,8 +35,8 @@ def reduce_polygon(poly, num):
         vm = (i - 1) % numv
         vp = i % numv
 
-        imp[vp] = vertex_importance(vp, poly, numv)
-        imp[vm] = vertex_importance(vm, poly, numv)
+        imp[vp] = vertex_importance(vp, poly, numv, acute_threshold)
+        imp[vm] = vertex_importance(vm, poly, numv, acute_threshold)
 
     # Return the reduced polygon
     return poly
@@ -50,10 +45,11 @@ def reduce_polygon(poly, num):
 #    v: index of vertex whose importance we will calculate
 #    poly: list [(x,y)] with vertex coordinates; only the first numv element are valid
 #    numv: number of vertices in the polygon (poly may have more element near the end, but they are obsolete)
+#    acute_threshold: XXXX
 # returns:
 #    The importance of the vertex (a scalar value).
 #    Vertices with low importance are likely to be removed during polygon simplification.
-def vertex_importance(v, poly, numv):
+def vertex_importance(v, poly, numv, acute_threshold):
     # Indices of vertices adjacent to the vertex with index v
     vp = (v + 1) % numv
     vm = (v - 1) % numv
@@ -76,48 +72,9 @@ def vertex_importance(v, poly, numv):
         # Due to numeric inaccuracies a is sometimes slightly outside this interval
         a = max(-1, min(a, 1))
 
-        return abs(math.acos(a)) * len1_len2
-
-
-
-# def vertex_list_from_roi_polygon(polygon):
-#     vertex_list = []
-#     for i in range(polygon.npoints):
-#         IJ.log("{} {}".format(polygon.xpoints[i], polygon.ypoints[i]))
-#         vertex_list.append((polygon.xpoints[i], polygon.ypoints[i]))
-#     return vertex_list
-
-
-# image = IJ.getImage()
-# if image == None:
-#     sys.exit("No open image")
-#
-# roi = image.getRoi()
-# if roi == None:
-#     sys.exit("Image has no ROI")
-# old_roi_name = roi.getName()
-#
-# polygon = roi.getPolygon()
-# if polygon == None:
-#     sys.exit("ROI has no polygon??")
-#
-# IJ.log("ROI polygon has {} points".format(polygon.npoints))
-# poly = vertex_list_from_roi_polygon(polygon)
-#
-# # print(poly)
-# print("Reducing number of vertices...")
-# desired_num_vertices = 4  # desired number of vertices in the reduced polygon
-# reduced_poly = reduce_polygon(poly, desired_num_vertices)
-#
-# # Get a handle to the ROI manager
-# roiManager = RoiManager.getInstance()
-# if not roiManager:
-#     roiManager = RoiManager()
-#
-# # Add reduced polygon as a new ROI to the ROI manager
-# xs, ys = zip(*reduced_poly)
-# roi = PolygonRoi(xs, ys, Roi.POLYGON)
-# roiManager.addRoi(roi)
-# print("Reduced ROI {} to {}".format(old_roi_name, roi.getName()))
-# print("Reduced ROI coordinates: {}".format(reduced_poly))
-# print("Done")
+        angle = math.acos(a)    # 0 <= angle <= pi
+        # print(math.degrees(angle))
+        if angle > math.pi - acute_threshold:
+            return 0
+        else:
+            return angle * len1_len2

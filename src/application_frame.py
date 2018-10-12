@@ -9,6 +9,7 @@ from wx.lib.floatcanvas import FloatCanvas
 import numpy as np
 import cv2
 import platform
+import math
 
 import polygon_simplification
 import tools
@@ -274,7 +275,7 @@ class ApplicationFrame(wx.Frame):
         for ribbon in ribbons:
             estimated_num_slices_in_ribbon = round(tools.polygon_area(ribbon) / tools.polygon_area(template_slice_contour))
             print('Estimated number of slices in ribbon: {}'.format(estimated_num_slices_in_ribbon))
-            desired_num_vertices_in_ribbon = estimated_num_slices_in_ribbon * 6  # we want at least 4 points per slice, plus some extra to handle accidental dents in the slice shape
+            desired_num_vertices_in_ribbon = estimated_num_slices_in_ribbon * 5  # we want at least 4 points per slice, plus some extra to handle accidental dents in the slice shape
             simplified_ribbon = polygon_simplification.reduce_polygon(ribbon, desired_num_vertices_in_ribbon)
             simplified_ribbons.append(simplified_ribbon)
         del wait
@@ -293,9 +294,10 @@ class ApplicationFrame(wx.Frame):
 
         # Simplify each slice
         # TODO: check if it is possible to end up with a slice that has fewer than 4 vertices...
+        acute_threshold_radians = 0 # 30 * math.pi / 180.0
         simplify_slices = True
         if simplify_slices:
-            slices = [polygon_simplification.reduce_polygon(slice, 4) for slice in slices]
+            slices = [polygon_simplification.reduce_polygon(slice, 4, acute_threshold_radians) for slice in slices]
 
         # Save slices to JSON
         filename = r'E:\git\bits\bioimaging\Secom\tomo\data\10x_lens\auto_slices.json'

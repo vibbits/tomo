@@ -67,6 +67,10 @@ def read_image(filename):
 
     return img
 
+def read_grayscale_image(filename):
+    img = cv.imread(filename)
+    print(img.shape)
+    return img
 
 def polygon_area(polygon):  # polygon is a list of (x,y) coordinates
     pts = np.asarray(polygon).astype(np.float)
