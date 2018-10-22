@@ -45,17 +45,43 @@ class ScatteredDataInterpolator:
         return z
 
 if __name__ == '__main__':
+
+    # Example 1: 2 scatter points
+    
     data = np.array([[0, 0, 0],
                      [100, 100, 1]])
     print(data)
 
-    sdi = ScatteredDataInterpolator(data, k = 1)
+    sdi = ScatteredDataInterpolator(data, k=1)
 
     p1 = np.array([  0,   0]); print(p1, sdi.interpolate(p1))
     p3 = np.array([100, 100]); print(p3, sdi.interpolate(p3))
 
-    p2 = np.array([50, 50]); print(p2, sdi.interpolate(p2))
+    p8 = np.array([10, 10]); print(p8, sdi.interpolate(p8))
+    p6 = np.array([25, 25]); print(p6, sdi.interpolate(p6))
+    p7 = np.array([50, 50]); print(p7, sdi.interpolate(p7))
+    p2 = np.array([75, 75]); print(p2, sdi.interpolate(p2))
+
     p4 = np.array([  200,   200]); print(p4, sdi.interpolate(p4))
     p5 = np.array([ 2000,  2000]); print(p5, sdi.interpolate(p5))
 
+    # Example 2: 4 scatter points
 
+    data2 = np.array([[  0,   0, 0],
+                      [100,   0, 2],
+                      [  0, 100, 1],
+                      [100, 100, 1]])
+    print(data2)
+
+    sdi = ScatteredDataInterpolator(data2, k=1)
+
+    p1 = np.array([  0,   0]); print(p1, sdi.interpolate(p1))
+    p3 = np.array([100, 100]); print(p3, sdi.interpolate(p3))
+
+    p8 = np.array([10, 10]); print(p8, sdi.interpolate(p8))
+    p6 = np.array([25, 25]); print(p6, sdi.interpolate(p6))
+    p7 = np.array([50, 50]); print(p7, sdi.interpolate(p7))  # returns the average of the values at the 4 points
+    p2 = np.array([75, 75]); print(p2, sdi.interpolate(p2))
+
+    p4 = np.array([  200,   200]); print(p4, sdi.interpolate(p4))
+    p5 = np.array([ 2000,  2000]); print(p5, sdi.interpolate(p5))
