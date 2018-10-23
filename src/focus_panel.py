@@ -28,9 +28,14 @@ class FocusPanel(wx.Panel):
         self._canvas = canvas
         self._focus_map = FocusMap()
 
-        button_size = (125, -1)
+        title = wx.StaticText(self, wx.ID_ANY, "Focus")
+        title.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD))
+        separator = wx.StaticLine(self, wx.ID_ANY)
+
         label = wx.StaticText(self, wx.ID_ANY, "In Odemis, move the stage and manually focus the microscope. Then press 'Remember focus'. Repeat this for several points on the sample and then press 'Done'.")
         label.Wrap(180)  # force line wrapping
+
+        button_size = (125, -1)
         set_focus_button = wx.Button(self, wx.ID_ANY, "Remember focus", size = button_size)
         self.done_button = wx.Button(self, wx.ID_ANY, "Done", size = button_size)  # Not this panel but the ApplicationFame will listen to clicks on this button.
         discard_all_button = wx.Button(self, wx.ID_ANY, "Discard all", size = button_size)
@@ -40,7 +45,8 @@ class FocusPanel(wx.Panel):
 
         b = 5  # border size
         contents = wx.BoxSizer(wx.VERTICAL)
-        # TODO: add a sidebar title with perhaps a line underneath
+        contents.Add(title, 0, wx.ALL | wx.EXPAND, border = b)
+        contents.Add(separator, 0, wx.ALL | wx.EXPAND, border = b)
         contents.Add(label, 0, wx.ALL | wx.EXPAND, border = b)
         contents.Add(set_focus_button, 0, wx.ALL | wx.CENTER, border = b)
         contents.Add(discard_all_button, 0, wx.ALL | wx.CENTER, border = b)
