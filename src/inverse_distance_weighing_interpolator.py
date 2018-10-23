@@ -30,6 +30,9 @@ class InverseDistanceWeighingInterpolator:
         :param eps:
         :return:
         """
+        if not self._data:
+            return None
+
         posi = self._data[:, 0:2]
         di = np.sqrt(np.sum((posi - pos) ** 2, axis = 1))  # di = Euclidean distance from pos to each data point
 
