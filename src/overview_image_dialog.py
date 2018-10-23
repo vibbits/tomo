@@ -43,6 +43,7 @@ class OverviewImageDialog(wx.Dialog):
         instructions_label.Wrap(650)  # Force line wrapping of the instructions text
 
         self._import_button = wx.Button(self, wx.ID_ANY, "Import")
+        self._import_button.SetFocus()
 
         box = wx.StaticBox(self, wx.ID_ANY)
         sizer = wx.StaticBoxSizer(box, wx.VERTICAL)

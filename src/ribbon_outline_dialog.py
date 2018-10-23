@@ -39,6 +39,8 @@ class RibbonOutlineDialog(wx.Dialog):
         instructions_label.Wrap(650)  # Force line wrapping of the instructions text
 
         self._load_button = wx.Button(self, wx.ID_ANY, "Load Slice Polygons")
+        self._load_button.SetFocus()
+
 
         box = wx.StaticBox(self, wx.ID_ANY)
         sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
