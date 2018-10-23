@@ -67,10 +67,12 @@ def read_image(filename):
 
     return img
 
+
 def read_grayscale_image(filename):
-    img = cv.imread(filename)
+    img = cv2.imread(filename)
     print(img.shape)
     return img
+
 
 def polygon_area(polygon):  # polygon is a list of (x,y) coordinates
     pts = np.asarray(polygon).astype(np.float)
@@ -106,6 +108,31 @@ def polygon_center(polygon):
 
     six_area = 6.0 * polygon_area(polygon)
     return (cx / six_area, cy / six_area)
+
+
+# def is_inside(polygon, point):
+#     inside = cv2.pointPolygonTest(polygon, point, measureDist = False)
+#     return inside >= 0
+
+
+# def interpolate_along_line_segment(pos1, val1, pos2, val2, pos):
+#     """
+#     Returns a scalar value linearly interpolated between val1 and val2.
+#     :param pos1: numpy array; x,y coords of starting point of line segment
+#     :param val1: scalar value at starting point
+#     :param pos2: numpy array; x,y coords of end point of line segment
+#     :param val2: scalar value at end point
+#     :param pos: numpy array; x,y coords of point where we want to estimate an interpolated scalar value
+#     :return:
+#     """
+#     segment_length = np.linalg.norm(pos2, pos1)
+#     if segment_length < 1e-10:
+#         return (val1 + val2) / 2.0
+#     else:
+#         proj_length = np.dot(pos - pos1, pos2 - pos1) / segment_length  # distance to pos1 of pos projected onto the line pos1-pos2
+#         t = proj_length / segment_length
+#         t = min(1, max(0, t))   # clamp t to [0, 1]
+#         return val1 + t * (val2 - val1)
 
 
 def draw_slice_polygons(img, slice_polygons):
