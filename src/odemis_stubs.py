@@ -5,8 +5,12 @@ import random
 
 print('USING ODEMIS STUBS - ONLY FOR TESTING - NOT FOR USE ON ACTUAL SECOM DEVICE')
 
-class focuser_position:
+class focus_position:
     value = {"z" : 0.0}
+
+
+class stage_position:
+    value = {"x" : 0.0, "y" : 0.0}
 
 
 class component:
@@ -19,23 +23,35 @@ class axis:
     range = (-999.0, 999.0)
 
 
-class focuser_component(component):
-    position = focuser_position()
+class focus_component(component):
+    position = focus_position()
     axes = { "z": axis }
 
     def __init__(self, role):
-        super(focuser_component, self).__init__(role)
+        component.__init__(self, role)
 
     def set_position(self, z):
         self.position.value["z"] = z
 
 
+class stage_component(component):
+    position = stage_position()
+    axes = { "x": axis, "y": axis }
+
+    def __init__(self, role):
+        component.__init__(self, role)
+
+
 class model:
+    @staticmethod
     def getComponent(role):
         if role == "focus":
-            return focuser_component(role)
+            return focus_component(role)
         else:
-            return component(role)
+            if role == "stage":
+                return stage_component(role)
+            else:
+                return component(role)
 
 
 class align:
@@ -64,7 +80,7 @@ class autofocus_future(future):
     def __init__(self, foc_pos, fm_final):
         self.foc_pos = foc_pos
         self.fm_final = fm_final
-        super(future, self).__init__()
+        future.__init__(self)
 
     def result(self, t):
         return self.foc_pos, self.fm_final

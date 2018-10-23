@@ -3,12 +3,13 @@
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
 
 import wx
-import wx.adv
+# import wx.adv  # not available in the wxpython version on the SECOM computer
 from wx.lib.floatcanvas import FloatCanvas
 
 import numpy as np
 import cv2
 import platform
+import os
 import math
 
 import polygon_simplification
@@ -25,14 +26,17 @@ from ribbon_outline_dialog import RibbonOutlineDialog
 from ribbons_mask_dialog import RibbonsMaskDialog
 from point_of_interest_dialog import PointOfInterestDialog
 from segmentation_panel import SegmentationPanel
+from focus_panel import FocusPanel
 from ribbon_splitter import segment_contours_into_slices, draw_contour_numbers
 from contour_finder import ContourFinder
+# from sample import Sample
 
 class ApplicationFrame(wx.Frame):
     _model = None
 
-    _image_panel = None
+    _canvas_panel = None
     _status_label = None
+    _focus_panel = None
 
     # Menu
     _import_overview_image_item = None
@@ -40,13 +44,23 @@ class ApplicationFrame(wx.Frame):
     _lm_image_acquisition_item = None
     _em_image_acquisition_item = None
     _load_ribbons_mask_item = None
+    _set_point_of_interest_item = None
+    _set_focus_item = None
     _about_item = None
+
+    _menu_state = None  # a tuple with enabled/disabled flags for various menu items; used when a side panel is visible and we want to behave in a modal fashion
 
     def __init__(self, parent, ID, title, size = (1024, 1024), pos = wx.DefaultPosition):
         wx.Frame.__init__(self, parent, ID, title, pos, size)
         self.SetBackgroundColour(wx.Colour(240, 240, 240))  # TODO: the same default background color as for wx.Dialog - can we set it automatically, or via some style?
 
         self._model = TomoModel()
+
+        # Set application icon
+        # (See also https://www.blog.pythonlibrary.org/2008/05/23/wxpython-embedding-an-image-in-your-title-bar/)
+        icon_path = os.path.join(os.path.dirname(__file__), 'tomo.ico')
+        icon = wx.Icon(icon_path, wx.BITMAP_TYPE_ICO)
+        self.SetIcon(icon)
 
         # Menu
         menu_bar = wx.MenuBar()
@@ -63,6 +77,8 @@ class ApplicationFrame(wx.Frame):
         microscope_menu = wx.Menu()
         self._set_point_of_interest_item = microscope_menu.Append(wx.NewId(), "Set point of interest...")
         self._set_point_of_interest_item.Enable(False)
+        self._set_focus_item = microscope_menu.Append(wx.NewId(), "Set focus...")
+        ####self._set_focus_item.Enable(False)  # we need slice outlines before we can define user-specified focus points (because we relate them to slices - CHECKME: why actually? can we not define focus z values in n arbitrary points and fit some kind of z-surface through them?)
         self._lm_image_acquisition_item = microscope_menu.Append(wx.NewId(), "Acquire LM Images...")
         self._lm_image_acquisition_item.Enable(False)
         self._em_image_acquisition_item = microscope_menu.Append(wx.NewId(), "Acquire EM Images...")
@@ -88,6 +104,7 @@ class ApplicationFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_lm_image_acquisition, self._lm_image_acquisition_item)
         self.Bind(wx.EVT_MENU, self._on_em_image_acquisition, self._em_image_acquisition_item)
         self.Bind(wx.EVT_MENU, self._on_load_ribbons_mask, self._load_ribbons_mask_item)
+        self.Bind(wx.EVT_MENU, self._on_set_focus, self._set_focus_item)
         self.Bind(wx.EVT_MENU, self._on_about, self._about_item)
 
         self.SetMenuBar(menu_bar)
@@ -95,11 +112,21 @@ class ApplicationFrame(wx.Frame):
         self._status_label = wx.StaticText(self, wx.ID_ANY, "")
 
         # Image Panel
-        self._image_panel = OverviewPanel(self)
-        self._image_panel.Bind(FloatCanvas.EVT_MOTION, self._on_mouse_move_over_image)
+        self._canvas_panel = OverviewPanel(self)
+        self._canvas_panel.Bind(FloatCanvas.EVT_MOTION, self._on_mouse_move_over_image)
+
+        # Focus panel (on the right)
+        self._focus_panel = FocusPanel(self, self._canvas_panel)
+        self._focus_panel.Show(False)  # Hide for now. Note: this doesn't work well, after showing the layout is broken until a resize
+
+        self.Bind(wx.EVT_BUTTON, self._on_focus_done_button_click, self._focus_panel.done_button)
+
+        hori = wx.BoxSizer(wx.HORIZONTAL)
+        hori.Add(self._canvas_panel, 1, wx.ALL | wx.EXPAND, border = 5)
+        hori.Add(self._focus_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border = 5)
 
         contents = wx.BoxSizer(wx.VERTICAL)
-        contents.Add(self._image_panel, 1, wx.ALL | wx.EXPAND, border = 5) # note: proportion=1 here is crucial, 0 will not work
+        contents.Add(hori, 1, wx.EXPAND)  # note: proportion=1 here is crucial, 0 will not work
         contents.Add(self._status_label, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border = 5)
         self.SetSizer(contents)
 
@@ -150,20 +177,61 @@ class ApplicationFrame(wx.Frame):
             if dlg.ShowModal() == wx.ID_OK:
                 self._do_em_acquire()
 
+    def _on_set_focus(self, event):
+        self._show_side_panel(self._focus_panel, True)
+
+    def _on_focus_done_button_click(self, event):
+        self._show_side_panel(self._focus_panel, False)
+
+    def _show_side_panel(self, side_panel, show):
+        side_panel.Show(show)
+        self.GetTopLevelParent().Layout()
+
+        self._canvas_panel.zoom_to_fit()
+        self._canvas_panel.redraw()
+
+        # Disable/Re-enable the menu depending on whether the side panel is active or not.
+        # While the side panel is shown, the application behaves more or less like modal.
+        if show:
+            self._menu_state = self._disable_menu()
+        else:
+            self._enable_menu(self._menu_state)
+
     def _on_about(self, event):
-        info = wx.adv.AboutDialogInfo()
-        info.SetName('Tomo')
-        info.SetVersion('1.0')
-        info.SetDescription("Prototype application for tomography on SECOM")
-        info.SetCopyright('(c) 2018 VIB - Vlaams Instituut voor Biotechnologie')  # Not shown in the dialog on Windows?
-        info.SetWebSite('http://www.vib.be')
-        info.SetLicence("Proprietary. Copyright VIB, 2018.")
-        # info.SetIcon(wx.Icon('tomo.png', wx.BITMAP_TYPE_PNG)) # TODO - design an application icon; also make sure this icon is used when tomo is minimized / shown in the dock.
-        # info.AddDeveloper('Frank Vernaillen')
-        wx.adv.AboutBox(info)
+        print('About...')
+        # info = wx.adv.AboutDialogInfo()
+        # info.SetName('Tomo')
+        # info.SetVersion('1.0')
+        # info.SetDescription("Prototype application for tomography on SECOM")
+        # info.SetCopyright('(c) 2018 VIB - Vlaams Instituut voor Biotechnologie')  # Not shown in the dialog on Windows?
+        # info.SetWebSite('http://www.vib.be')
+        # info.SetLicence("Proprietary. Copyright VIB, 2018.")
+        # # info.SetIcon(wx.Icon('tomo.png', wx.BITMAP_TYPE_PNG)) # TODO - design an application icon; also make sure this icon is used when tomo is minimized / shown in the dock.
+        # # info.AddDeveloper('Frank Vernaillen')
+        # wx.adv.AboutBox(info)
 
     def _on_exit(self, event):
         self.Close()
+
+    def _disable_menu(self):
+        e1 = self._import_overview_image_item.IsEnabled(); self._import_overview_image_item.Enable(False)
+        e2 = self._lm_image_acquisition_item.IsEnabled(); self._lm_image_acquisition_item.Enable(False)
+        e3 = self._em_image_acquisition_item.IsEnabled(); self._em_image_acquisition_item.Enable(False)
+        e4 = self._load_ribbons_mask_item.IsEnabled(); self._load_ribbons_mask_item.Enable(False)
+        e5 = self._load_slice_polygons_item.IsEnabled(); self._load_slice_polygons_item.Enable(False)
+        e6 = self._set_focus_item.IsEnabled(); self._set_focus_item.Enable(False)
+        e7 = self._set_point_of_interest_item.IsEnabled(); self._set_point_of_interest_item.Enable(False)
+        return (e1, e2, e3, e4, e5, e6, e7)
+
+    def _enable_menu(self, state):
+        e1, e2, e3, e4, e5, e6, e7 = state
+        self._import_overview_image_item.Enable(e1)
+        self._lm_image_acquisition_item.Enable(e2)
+        self._em_image_acquisition_item.Enable(e3)
+        self._load_ribbons_mask_item.Enable(e4)
+        self._load_slice_polygons_item.Enable(e5)
+        self._set_focus_item.Enable(e6)
+        self._set_point_of_interest_item.Enable(e7)
 
     def _do_import_overview_image(self):
         # Display overview image pixel size information
@@ -173,8 +241,8 @@ class ApplicationFrame(wx.Frame):
 
         # Add and draw the overview image
         wait = wx.BusyInfo("Loading overview image...")
-        self._image_panel.set_image(self._model.overview_image_path)
-        self._image_panel.zoom_to_fit()
+        self._canvas_panel.set_image(self._model.overview_image_path)
+        self._canvas_panel.zoom_to_fit()
         del wait
 
         # Enable the menu item for loading the slice outlines
@@ -187,8 +255,8 @@ class ApplicationFrame(wx.Frame):
         print('Loaded {} slice polygons from {}'.format(len(self._model.slice_polygons), self._model.slice_polygons_path))
 
         # Add and draw the slice outlines
-        self._image_panel.set_slice_outlines(self._model.slice_polygons)
-        self._image_panel.redraw()
+        self._canvas_panel.set_slice_outlines(self._model.slice_polygons)
+        self._canvas_panel.redraw()
 
         # Enable the menu item for acquiring LM images
         # (We can now use it because we've got POIs)
@@ -328,12 +396,18 @@ class ApplicationFrame(wx.Frame):
         self._model.all_points_of_interest = [original_point_of_interest] + transformed_points_of_interest
 
         # Draw the points of interest
-        self._image_panel.set_points_of_interest(self._model.all_points_of_interest)
-        self._image_panel.redraw()
+        self._canvas_panel.set_points_of_interest(self._model.all_points_of_interest)
+        self._canvas_panel.redraw()
+
+        # TODO/CHECKME/FIXME: how will we get the transformation between overview image and absolute stage position?
+        #                     we need to do something in Odemis (move the stage to the poi) _and_ also in tomo (click on the corresponding poi on the overview image)?
 
         # Enable/disable menu entries
         self._lm_image_acquisition_item.Enable(True)   # We've got points of interest now, so we can acquire LM images.
         self._em_image_acquisition_item.Enable(False)  # After changing the POI we need to acquire LM images first to obtain SIFT-corrected stage movements.
+        self._set_focus_item.Enable(True) # Once we have an overview image and a point of interest, the user can specify focus points in them.
+                                          # (The image is needed because we would like to show the focus points on it, and the point-of-interest is needed
+                                          # because it provides us the (approximate) transformation between stage coordinates and overview image coordinates.)
 
     def _do_lm_acquire(self):
 
@@ -347,7 +421,8 @@ class ApplicationFrame(wx.Frame):
         wait = wx.BusyInfo("Acquiring LM images...")
         secom_tools.acquire_microscope_images('LM',
                                               self._model.slice_offsets_microns, self._model.delay_between_LM_image_acquisition_secs,
-                                              self._model.odemis_cli, self._model.lm_images_output_folder, self._model.lm_images_prefix)
+                                              self._model.odemis_cli, self._model.lm_images_output_folder, self._model.lm_images_prefix,
+                                              self._focus_panel.get_focus_map())
         del wait
 
         # Now tell Fiji to execute a macro that (i) reads the LM images, (ii) merges them into a stack,

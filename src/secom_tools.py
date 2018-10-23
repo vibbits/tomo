@@ -26,29 +26,23 @@ else:
 # (physical_offsets_microns: an offset per slice; with the first slice always having offset (0,0))
 # The 'mode' must be 'EM' or 'LM' to acquire electron resp. light microscope images.
 def acquire_microscope_images(mode, physical_offsets_microns, delay_between_image_acquisition_secs,
-                              odemis_cli, images_output_folder, images_prefix):
+                              odemis_cli, images_output_folder, images_prefix, focus_map = None):
 
     # Ensure that the output folder for the images exists
     Path(images_output_folder).mkdir(exist_ok = True)
-
-    # Prepare for focus interpolation
-    # det, emt, focuser = setup_autofocus()
-
-    # Get current focus
-    # z = focuser.position.value["z"]  # CHECKME: is this the focus position in meter?
-    # print("Original focus position: {} m (?)".format(z))
 
     print('Acquiring {} images'.format(mode))
     for i, offset_microns in enumerate(physical_offsets_microns):
         # Move the stage
         move_stage(odemis_cli, offset_microns)
 
-        # TODO: set focus at interpolated focus value
-        # if do_autofocus:
-        #     if i > 0:
-        #         max_z_change = max_focus_change_nanometers * 1e-9  # FIXME - good value? (probably should be a user option) + what units, meters?
-        #         z = autofocus(det, emt, focuser, good_focus = z, focus_range = (z - max_z_change, z + max_z_change))  # looking at Odemis source code, it seems focus_range[0] must be < focus_range[1]
-        #         print('... autofocus sanity check: {} ?= {}'.format(z, focuser.position.value["z"]))  # CHECKME: on the actual SECOM both values are *not* the same
+        # Improve the focus (if we have user-defined focus points in the neighborhood of our current x,y position)
+        # (Currently only for LM imaging.)
+        if focus_map:
+            pos = get_stage_position()
+            z = focus_map.get_focus(pos)
+            if z != None:
+                set_focus_z_position(z)
 
         # Acquire an LM/EM image and save it to the output folder
         image_path = os.path.join(images_output_folder, '{}{}.ome.tiff'.format(images_prefix, i))
@@ -63,11 +57,57 @@ def acquire_microscope_images(mode, physical_offsets_microns, delay_between_imag
         time.sleep(delay_between_image_acquisition_secs)
 
 
-def move_stage(odemis_cli, offset_microns):
+def move_stage(odemis_cli, offset_microns):   # move the stage a certain distance relative to its current position
     dx_microns, dy_microns = offset_microns
     commandline_exec([odemis_cli, "--move", "stage", "x", str(dx_microns)])
     commandline_exec([odemis_cli, "--move", "stage", "y", str(dy_microns)])
+    # Better alternative - TO BE TESTED/CHECKED
+    # stage = model.getComponent(role = "stage")   # CHECKME: it could instead be "name" instead if "role"
+    # stage.moveRel({"x": dx_microns, "y": dy_microns})   # in what units is x and y?? Possibly meters instead of microns
+    #  # CHECKME: moveRelSync or moveRel ?
 
+
+def get_stage_position():   # return the (x,y) stage postion - CHECKME: in what units???
+    stage = model.getComponent(role = "stage")   # CHECKME: it could instead be "name" instead if "role"
+    x = stage.position.value["x"]   # in meters?  CHECKME
+    y = stage.position.value["y"]   # in meters?
+    return (x , y)       # in ???
+
+
+def get_focus_z_position():    # returns the focus z value (IN ???)
+    focus = model.getComponent(role = "focus")   # CHECKME: it could instead be "name" instead if "role"
+    z = focus.position.value["z"]  # z in what units???
+    return z                 # z in ??? CHECKME
+
+
+def set_focus_z_position(z):      # z is the absolute focus value  (in ???)
+    focus = model.getComponent(role = "focus")   # CHECKME: it could instead be "name" instead if "role"
+    focus.moveAbs({"z": z})   # CHECKME: what units should z be???
+    # CHECKME: or should we use moveAbsSync() instead of moveAbs() ?
+
+######################################################################################################################
+# Command line to get the current focus z-value:
+#    odemis-cli --list-prop focus
+# which returns several lines:
+# ...
+# position(RO Vigilant Attribute)
+# value: {'z': 5.5256e-05}   ---> in meters
+# ...
+######################################################################################################################
+# Command line to set the absolute focus z:
+#    odemis-cli --position focus z -0.05            <--- in microns ??
+######################################################################################################################
+# Command line for getting the stage position:
+#    odemis-cli --list-prop stage
+# which returns several lines:
+# ...
+# position(RO Vigilant Attribute)
+# value: {'x': -0.007078522, 'y': 0.005740546} (unit: m)
+# ...
+######################################################################################################################
+# API examples for setting/getting values: the odemis-cli source code:
+#    odemis/src/odemis/cli/main.py
+######################################################################################################################
 
 # def setup_autofocus():
 #     try:
