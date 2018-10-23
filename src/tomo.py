@@ -36,7 +36,7 @@ from application_frame import ApplicationFrame
 #   annoying. (Odemis is not a single package installation...)
 
 def main():
-    print('Environment:\n  Python: {}.{}.{}\n  OpenCV: {}\n  wxWindows: {}'.format(sys.version_info[:3][0], sys.version_info[:3][1], sys.version_info[:3][2], cv2.__version__, wx.version()))
+    print('Environment:\n  Python: {}.{}.{}\n  OpenCV: {}\n  wxPython: {}'.format(sys.version_info[:3][0], sys.version_info[:3][1], sys.version_info[:3][2], cv2.__version__, wx.version()))
 
     app = wx.App()
     frame = ApplicationFrame(None, wx.ID_ANY, "Tomography Prototype")
