@@ -8,13 +8,16 @@ import numpy as np
 # http://molly.magic.rit.edu/~mac/test/paper_pdf.pdf
 # We do inverse distance weighing, see section 3 in this paper.
 
-class ScatteredDataInterpolator:
+# Note: we could also use the MetPy package:
+# https://unidata.github.io/MetPy/latest/api/generated/metpy.interpolate.inverse_distance_to_points.html#metpy.interpolate.inverse_distance_to_points
+
+class InverseDistanceWeighingInterpolator:
     _data = []
     def __init__(self, data, k = 1.0):
         """
         XXXXX
         :param data: an n x 3 numpy array; each row is a data point, and the columns are x, y and z respectively; given a new (x,y) we want to calculate an interpolated z
-        :param k: exponent for inverse distance weigthing function; k >= 1; larger k yields an interpolated surface with bigger "plateaus" around the sample points
+        :param k: exponent for inverse distance weighing function; k >= 1; larger k yields an interpolated surface with bigger "plateaus" around the sample points
         """
         assert k >= 1.0
         self._k = k
@@ -38,7 +41,7 @@ class ScatteredDataInterpolator:
         else:
             hi = 1.0 / (di ** self._k) # hi = inverse distances
             wi = hi / np.sum(hi)       # wi = interpolation weights
-            # print(np.sum(wi))          # FOR TESTING - SHOULD BE 1
+            # print(np.sum(wi))        # FOR TESTING - SHOULD BE 1
             zi = self._data[:, 2]      # zi = sample data z
             z = np.dot(wi, zi)         # z = inverse distance weighted
 
@@ -52,18 +55,18 @@ if __name__ == '__main__':
                      [100, 100, 1]])
     print(data)
 
-    sdi = ScatteredDataInterpolator(data, k=1)
+    idwi = InverseDistanceWeighingInterpolator(data, k=1)
 
-    p1 = np.array([  0,   0]); print(p1, sdi.interpolate(p1))
-    p3 = np.array([100, 100]); print(p3, sdi.interpolate(p3))
+    p1 = np.array([  0,   0]); print(p1, idwi.interpolate(p1))
+    p3 = np.array([100, 100]); print(p3, idwi.interpolate(p3))
 
-    p8 = np.array([10, 10]); print(p8, sdi.interpolate(p8))
-    p6 = np.array([25, 25]); print(p6, sdi.interpolate(p6))
-    p7 = np.array([50, 50]); print(p7, sdi.interpolate(p7))
-    p2 = np.array([75, 75]); print(p2, sdi.interpolate(p2))
+    p8 = np.array([10, 10]); print(p8, idwi.interpolate(p8))
+    p6 = np.array([25, 25]); print(p6, idwi.interpolate(p6))
+    p7 = np.array([50, 50]); print(p7, idwi.interpolate(p7))
+    p2 = np.array([75, 75]); print(p2, idwi.interpolate(p2))
 
-    p4 = np.array([  200,   200]); print(p4, sdi.interpolate(p4))
-    p5 = np.array([ 2000,  2000]); print(p5, sdi.interpolate(p5))
+    p4 = np.array([  200,   200]); print(p4, idwi.interpolate(p4))
+    p5 = np.array([ 2000,  2000]); print(p5, idwi.interpolate(p5))
 
     # Example 2: 4 scatter points
 
@@ -73,15 +76,15 @@ if __name__ == '__main__':
                       [100, 100, 1]])
     print(data2)
 
-    sdi = ScatteredDataInterpolator(data2, k=1)
+    idwi = InverseDistanceWeighingInterpolator(data2, k=1)
 
-    p1 = np.array([  0,   0]); print(p1, sdi.interpolate(p1))
-    p3 = np.array([100, 100]); print(p3, sdi.interpolate(p3))
+    p1 = np.array([  0,   0]); print(p1, idwi.interpolate(p1))
+    p3 = np.array([100, 100]); print(p3, idwi.interpolate(p3))
 
-    p8 = np.array([10, 10]); print(p8, sdi.interpolate(p8))
-    p6 = np.array([25, 25]); print(p6, sdi.interpolate(p6))
-    p7 = np.array([50, 50]); print(p7, sdi.interpolate(p7))  # returns the average of the values at the 4 points
-    p2 = np.array([75, 75]); print(p2, sdi.interpolate(p2))
+    p8 = np.array([10, 10]); print(p8, idwi.interpolate(p8))
+    p6 = np.array([25, 25]); print(p6, idwi.interpolate(p6))
+    p7 = np.array([50, 50]); print(p7, idwi.interpolate(p7))  # returns the average of the values at the 4 points
+    p2 = np.array([75, 75]); print(p2, idwi.interpolate(p2))
 
-    p4 = np.array([  200,   200]); print(p4, sdi.interpolate(p4))
-    p5 = np.array([ 2000,  2000]); print(p5, sdi.interpolate(p5))
+    p4 = np.array([  200,   200]); print(p4, idwi.interpolate(p4))
+    p5 = np.array([ 2000,  2000]); print(p5, idwi.interpolate(p5))
