@@ -14,26 +14,29 @@
 # Acquiring focus at a couple of positions up-front is optional.
 
 import wx
+import wx.grid
 import secom_tools
 from focus_map import FocusMap
 
 class FocusPanel(wx.Panel):
     _canvas = None
     _focus_map = None  # CHECKME: should the focus_map be part of _model?
+    _table = None  # table with user-defined focus (x, y, z)
 
     done_button = None
 
     def __init__(self, parent, canvas):
-        wx.Panel.__init__(self, parent, size = (200, -1))
+        wx.Panel.__init__(self, parent, size = (350, -1))
         self._canvas = canvas
         self._focus_map = FocusMap()
+        self._table = self._make_table()
 
         title = wx.StaticText(self, wx.ID_ANY, "Focus")
         title.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD))
         separator = wx.StaticLine(self, wx.ID_ANY)
 
-        label = wx.StaticText(self, wx.ID_ANY, "In Odemis, move the stage and manually focus the microscope. Then press 'Remember focus'. Repeat this for several points on the sample and then press 'Done'.")
-        label.Wrap(180)  # force line wrapping
+        label = wx.StaticText(self, wx.ID_ANY, "In Odemis, move the stage and manually focus the microscope. Then press 'Remember focus'. Repeat this for several points on the sample and finally press 'Done'.")
+        label.Wrap(330)  # force line wrapping
 
         button_size = (125, -1)
         set_focus_button = wx.Button(self, wx.ID_ANY, "Remember focus", size = button_size)
@@ -43,6 +46,8 @@ class FocusPanel(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self._on_set_focus_button_click, set_focus_button)
         self.Bind(wx.EVT_BUTTON, self._on_discard_all_button_click, discard_all_button)
 
+        table_title = wx.StaticText(self, wx.ID_ANY, "User defined focus positions:")
+
         b = 5  # border size
         contents = wx.BoxSizer(wx.VERTICAL)
         contents.Add(title, 0, wx.ALL | wx.EXPAND, border = b)
@@ -51,16 +56,47 @@ class FocusPanel(wx.Panel):
         contents.Add(set_focus_button, 0, wx.ALL | wx.CENTER, border = b)
         contents.Add(discard_all_button, 0, wx.ALL | wx.CENTER, border = b)
         contents.Add(self.done_button, 0, wx.ALL | wx.CENTER, border = b)
-
-        # TODO: add a spreadsheet like table; see https://groups.google.com/forum/#!msg/wxpython-users/CsII2JsSEOI/DkectFCHAewJ
+        contents.Add(table_title, 0, wx.ALL, border = b)
+        contents.Add(self._table, 0, wx.ALL, border = b)
 
         self.SetSizer(contents)
         contents.Fit(self)
+
+    def _make_table(self):
+        # Make a spreadsheet like table.
+        # See https://groups.google.com/forum/#!msg/wxpython-users/CsII2JsSEOI/DkectFCHAewJ
+        # and https://wxpython.org/Phoenix/docs/html/wx.grid.Grid.html
+        num_rows = 1  # empty initial roww, for cosmetic reason
+        num_cols = 3
+        table = wx.grid.Grid(self, wx.ID_ANY)
+        table.SetDefaultCellAlignment(wx. ALIGN_CENTRE, wx. ALIGN_CENTRE)
+        table.CreateGrid(num_rows, num_cols)
+        table.SetColLabelValue(0, "stage x")
+        table.SetColLabelValue(1, "stage y")
+        table.SetColLabelValue(2, "focus z")
+        table.EnableEditing(False)
+        table.SetRowLabelSize(40)  # width of the column that displays the row number
+        # IMPROVEME? Support deleting rows?
+        return table
 
     def reset(self):
         self._focus_map.reset()
         self._canvas.remove_focus_positions()
         self._canvas.redraw()
+        self._clear_table()
+
+    def _clear_table(self):
+        num_rows = self._table.GetNumberRows()
+        self._table.DeleteRows(0, num_rows)
+        self._table.InsertRows(0, 1)  # add an empty row - it looks nicer than just a table with only a header
+        self.GetTopLevelParent().Layout()
+
+    def _add_to_table(self, x, y, z):
+        row = len(self._focus_map.get_user_defined_focus_positions()) - 1
+        self._table.InsertRows(row)
+        self._table.SetCellValue(row, 0, str(x))
+        self._table.SetCellValue(row, 1, str(y))
+        self._table.SetCellValue(row, 2, str(z))
 
     def get_focus_map(self):
         return self._focus_map
@@ -73,9 +109,14 @@ class FocusPanel(wx.Panel):
         # Remember focus
         self._focus_map.add_user_defined_focus_position(pos, z)
 
+        # Update table
+        self._add_to_table(pos[0], pos[1], z)
+        self.GetTopLevelParent().Layout()
+
         # Draw the position where focus was acquired on the overview image
-        self._canvas.add_focus_position(pos)
+        self._canvas.add_focus_position(pos)  # FIXME: we need to convert the stage position to overview image pixel coordinates to draw on the canvas!
         self._canvas.redraw()
+        # IMPROVEME? draw number of focus position on canvas too?
 
     def _on_discard_all_button_click(self, event):
         dlg = wx.MessageDialog(self, "Discard all user defined focus positions?", "Discard all", style = wx.YES | wx.NO)
