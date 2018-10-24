@@ -199,6 +199,7 @@ class ApplicationFrame(wx.Frame):
 
     def _on_about(self, event):
         print('About...')
+        # TODO: write a custom implementation. We don't have wx.adv (=Phoenix) on the SECOM computer
         # info = wx.adv.AboutDialogInfo()
         # info.SetName('Tomo')
         # info.SetVersion('1.0')
@@ -206,7 +207,7 @@ class ApplicationFrame(wx.Frame):
         # info.SetCopyright('(c) 2018 VIB - Vlaams Instituut voor Biotechnologie')  # Not shown in the dialog on Windows?
         # info.SetWebSite('http://www.vib.be')
         # info.SetLicence("Proprietary. Copyright VIB, 2018.")
-        # # info.SetIcon(wx.Icon('tomo.png', wx.BITMAP_TYPE_PNG)) # TODO - design an application icon; also make sure this icon is used when tomo is minimized / shown in the dock.
+        # # info.SetIcon(wx.Icon('tomo.png', wx.BITMAP_TYPE_PNG))
         # # info.AddDeveloper('Frank Vernaillen')
         # wx.adv.AboutBox(info)
 
