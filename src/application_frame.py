@@ -478,7 +478,7 @@ class ApplicationFrame(wx.Frame):
         # Move stage back to the first slice (using the inverse coarse movements)
         print('Moving stage back to the point-of-interest on the first slice.')
         total_stage_movement_microns = sum(self._model.slice_offsets_microns)
-        secom_tools.move_stage(self._model.odemis_cli, -total_stage_movement_microns)
+        secom_tools.move_stage_relative(self._model.odemis_cli, -total_stage_movement_microns)
 
         # Enable/disable menu entries
         self._em_image_acquisition_item.Enable(True)

@@ -75,6 +75,7 @@ class FocusPanel(wx.Panel):
         table.SetColLabelValue(1, "stage y")
         table.SetColLabelValue(2, "focus z")
         table.EnableEditing(False)
+        table.DisableDragRowSize()
         table.SetRowLabelSize(40)  # width of the column that displays the row number
         # IMPROVEME? Support deleting rows?
         return table
@@ -103,8 +104,8 @@ class FocusPanel(wx.Panel):
 
     def _on_set_focus_button_click(self, event):
         # Query stage position and focus height
-        pos = secom_tools.get_stage_position()
-        z = secom_tools.get_focus_z_position()
+        pos = secom_tools.get_absolute_stage_position()
+        z = secom_tools.get_absolute_focus_z_position()
 
         # Remember focus
         self._focus_map.add_user_defined_focus_position(pos, z)

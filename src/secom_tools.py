@@ -18,13 +18,15 @@ else:
     from odemis.acq import align
 
 
-# This function uses the Odemis command line tool to repeatedly move the stage and acquire an LM or EM image.
+# This function automatically acquires multiple LM or EM images.
 # It assumes that the microscope parameters are already set correctly in Odemis, and that the stage is positioned
-# at the initial point of interest. It the repeatedly moves the stage and acquires an LM/EM image. The image is saved
+# at the initial point of interest. It then repeatedly moves the stage and acquires an LM/EM image. The image is saved
 # to 'images_output_folder' with filename images_prefix + number + ome.tiff. The stage movement distances
 # are specified in 'physical_offsets_microns'.
 # (physical_offsets_microns: an offset per slice; with the first slice always having offset (0,0))
 # The 'mode' must be 'EM' or 'LM' to acquire electron resp. light microscope images.
+# If the user manually acquired focus z-values in a couple of positions these values will be interpolated
+# and used as focus-z for each image.
 def acquire_microscope_images(mode, physical_offsets_microns, delay_between_image_acquisition_secs,
                               odemis_cli, images_output_folder, images_prefix, focus_map = None):
 
@@ -34,15 +36,15 @@ def acquire_microscope_images(mode, physical_offsets_microns, delay_between_imag
     print('Acquiring {} images'.format(mode))
     for i, offset_microns in enumerate(physical_offsets_microns):
         # Move the stage
-        move_stage(odemis_cli, offset_microns)
+        move_stage_relative(odemis_cli, offset_microns)
 
         # Improve the focus (if we have user-defined focus points in the neighborhood of our current x,y position)
         # (Currently only for LM imaging.)
         if focus_map:
-            pos = get_stage_position()
+            pos = get_absolute_stage_position()
             z = focus_map.get_focus(pos)
             if z != None:
-                set_focus_z_position(z)
+                set_absolute_focus_z_position(z)
 
         # Acquire an LM/EM image and save it to the output folder
         image_path = os.path.join(images_output_folder, '{}{}.ome.tiff'.format(images_prefix, i))
@@ -50,14 +52,14 @@ def acquire_microscope_images(mode, physical_offsets_microns, delay_between_imag
             detector = "ccd"
         else:  # EM
             detector = "se-detector"
-        commandline_exec([odemis_cli, "--acquire", detector, "--output", image_path])
+        commandline_exec([odemis_cli, "--acquire", detector, "--output", image_path])  # IMPROVEME: use the Odemis Python API instead of odemis_cli
 
         # Wait a short time for the image acquisition to finish
         # CHECKME: Is this needed? Maybe odemis_cli will automatically buffer commands until it is finished?
         time.sleep(delay_between_image_acquisition_secs)
 
 
-def move_stage(odemis_cli, offset_microns):   # move the stage a certain distance relative to its current position
+def move_stage_relative(odemis_cli, offset_microns):   # move the stage a certain distance relative to its current position
     dx_microns, dy_microns = offset_microns
     commandline_exec([odemis_cli, "--move", "stage", "x", str(dx_microns)])
     commandline_exec([odemis_cli, "--move", "stage", "y", str(dy_microns)])
@@ -67,22 +69,22 @@ def move_stage(odemis_cli, offset_microns):   # move the stage a certain distanc
     #  # CHECKME: moveRelSync or moveRel ?
 
 
-def get_stage_position():   # return the (x,y) stage postion - CHECKME: in what units???
+def get_absolute_stage_position():   # return the (x,y) stage postion - CHECKME: in what units???
     stage = model.getComponent(role = "stage")   # CHECKME: it could instead be "name" instead if "role"
-    x = stage.position.value["x"]   # in meters?  CHECKME
-    y = stage.position.value["y"]   # in meters?
-    return (x , y)       # in ???
+    x = stage.position.value["x"]
+    y = stage.position.value["y"]
+    return (x, y)
 
 
-def get_focus_z_position():    # returns the focus z value (IN ???)
+def get_absolute_focus_z_position():    # returns the focus z value (CHECKME: in what units ???)
     focus = model.getComponent(role = "focus")   # CHECKME: it could instead be "name" instead if "role"
-    z = focus.position.value["z"]  # z in what units???
-    return z                 # z in ??? CHECKME
+    z = focus.position.value["z"]
+    return z
 
 
-def set_focus_z_position(z):      # z is the absolute focus value  (in ???)
+def set_absolute_focus_z_position(z):      # z is the absolute focus value  (CHECKME: in what units ???)
     focus = model.getComponent(role = "focus")   # CHECKME: it could instead be "name" instead if "role"
-    focus.moveAbs({"z": z})   # CHECKME: what units should z be???
+    focus.moveAbs({"z": z})
     # CHECKME: or should we use moveAbsSync() instead of moveAbs() ?
 
 ######################################################################################################################
