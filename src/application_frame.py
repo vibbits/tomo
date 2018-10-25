@@ -27,6 +27,7 @@ from ribbons_mask_dialog import RibbonsMaskDialog
 from point_of_interest_dialog import PointOfInterestDialog
 from segmentation_panel import SegmentationPanel
 from focus_panel import FocusPanel
+from contour_finder_panel import ContourFinderPanel
 from ribbon_splitter import segment_contours_into_slices, draw_contour_numbers
 from contour_finder import ContourFinder
 # from sample import Sample
@@ -37,6 +38,7 @@ class ApplicationFrame(wx.Frame):
     _canvas_panel = None
     _status_label = None
     _focus_panel = None
+    _contour_finder_panel = None
 
     # Menu
     _import_overview_image_item = None
@@ -89,6 +91,8 @@ class ApplicationFrame(wx.Frame):
 
         experimental_menu = wx.Menu()
         self._load_ribbons_mask_item = experimental_menu.Append(wx.NewId(), "Load Ribbons Mask...")
+        self._contour_finder_item = experimental_menu.Append(wx.NewId(), "Find slice contours...")
+        self._contour_finder_item.Enable(False)
 
         menu_bar.Append(file_menu, "&File")
         menu_bar.Append(edit_menu, "&Edit")
@@ -104,6 +108,7 @@ class ApplicationFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_lm_image_acquisition, self._lm_image_acquisition_item)
         self.Bind(wx.EVT_MENU, self._on_em_image_acquisition, self._em_image_acquisition_item)
         self.Bind(wx.EVT_MENU, self._on_load_ribbons_mask, self._load_ribbons_mask_item)
+        self.Bind(wx.EVT_MENU, self._on_find_contours, self._contour_finder_item)
         self.Bind(wx.EVT_MENU, self._on_set_focus, self._set_focus_item)
         self.Bind(wx.EVT_MENU, self._on_about, self._about_item)
 
@@ -115,15 +120,20 @@ class ApplicationFrame(wx.Frame):
         self._canvas_panel = OverviewPanel(self)
         self._canvas_panel.Bind(FloatCanvas.EVT_MOTION, self._on_mouse_move_over_image)
 
-        # Focus panel (on the right)
+        # Focus side panel
         self._focus_panel = FocusPanel(self, self._canvas_panel)
-        self._focus_panel.Show(False)  # Hide for now. Note: this doesn't work well, after showing the layout is broken until a resize
-
+        self._focus_panel.Show(False)
         self.Bind(wx.EVT_BUTTON, self._on_focus_done_button_click, self._focus_panel.done_button)
+
+        # Contour finder side panel
+        self._contour_finder_panel = ContourFinderPanel(self, self._model, self._canvas_panel)
+        self._contour_finder_panel.Show(False)
+        self.Bind(wx.EVT_BUTTON, self._on_find_contours_done_button_click, self._contour_finder_panel.done_button)
 
         hori = wx.BoxSizer(wx.HORIZONTAL)
         hori.Add(self._canvas_panel, 1, wx.ALL | wx.EXPAND, border = 5)
         hori.Add(self._focus_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border = 5)
+        hori.Add(self._contour_finder_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border = 5)
 
         contents = wx.BoxSizer(wx.VERTICAL)
         contents.Add(hori, 1, wx.EXPAND)  # note: proportion=1 here is crucial, 0 will not work
@@ -183,6 +193,12 @@ class ApplicationFrame(wx.Frame):
     def _on_focus_done_button_click(self, event):
         self._show_side_panel(self._focus_panel, False)
 
+    def _on_find_contours(self, event):
+        self._show_side_panel(self._contour_finder_panel, True)
+
+    def _on_find_contours_done_button_click(self, event):
+        self._show_side_panel(self._contour_finder_panel, False)
+
     def _show_side_panel(self, side_panel, show):
         side_panel.Show(show)
         self.GetTopLevelParent().Layout()
@@ -199,7 +215,7 @@ class ApplicationFrame(wx.Frame):
 
     def _on_about(self, event):
         print('About...')
-        # TODO: write a custom implementation. We don't have wx.adv (=Phoenix) on the SECOM computer
+        # TODO: write a custom implementation. We don't have wx.adv (=Phoenix) on the SECOM computer. Or does it exist somewhere else?
         # info = wx.adv.AboutDialogInfo()
         # info.SetName('Tomo')
         # info.SetVersion('1.0')
@@ -250,6 +266,9 @@ class ApplicationFrame(wx.Frame):
         # (We can now use it because we've got the pixel size of the overview image (really needed????))
         self._load_slice_polygons_item.Enable(True)
 
+        # Experimental: gradient descent slice contour finding (needs an overview image and, for now, ground truth slice outlines for comparison)
+        self._contour_finder_item.Enable(True)
+
     def _do_load_slice_polygons(self):
         # Read slice polygon coordinates
         self._model.slice_polygons = tools.json_load_polygons(self._model.slice_polygons_path)
@@ -263,9 +282,10 @@ class ApplicationFrame(wx.Frame):
         # (We can now use it because we've got POIs)
         self._set_point_of_interest_item.Enable(True)
 
+
     @staticmethod
     def _find_ribbons(ribbons_mask_path):
-        img = tools.read_image(ribbons_mask_path)
+        img = tools.read_image_as_color_image(ribbons_mask_path)
         print('Ribbons mask image: shape={} type={}'.format(img.shape, img.dtype))
 
         # e.g. our test image E:\git\bits\bioimaging\Secom\tomo\data\10x_lens\SET_6stitched-0_10xlens_ribbons_mask.tif

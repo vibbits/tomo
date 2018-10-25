@@ -52,11 +52,11 @@ def list_to_opencv_contour(coords_list):
     return np.expand_dims(np.asarray(coords_list), axis = 1)
 
 
-def read_image(filename):
+def read_image_as_color_image(filename):
     """
     Reads an image file and returns it as an OpenCV image object.
     :param filename: full file path of the image to read
-    :return: an OpenCV image object, or None on error
+    :return: an OpenCV _color_ image object, or None on error
     """
     # Read overview image with the ribbon
     # (We read it as a color image so we can draw colored contours on it later.)
@@ -68,8 +68,15 @@ def read_image(filename):
     return img
 
 
-def read_grayscale_image(filename):
-    img = cv2.imread(filename)
+def read_image_as_grayscale(filename):
+    """
+    Reads an image file and returns it as an OpenCV image object.
+    This may be preferable over reading it through wxPython since (I think) wxPython expands grayscale images to RGB,
+    and this is not ideal since we are dealing with potentially large images.
+    :param filename: full file path of the image to read
+    :return: an OpenCV grayscale image object, or None on error
+    """
+    img = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
     print(img.shape)
     return img
 
