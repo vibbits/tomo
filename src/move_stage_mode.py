@@ -5,7 +5,7 @@ import resources
 
 class MoveStageMode(GUIMode.GUIBase):
     # Mode label, shown in the tool bar.
-    LABEL = "Move Stage"
+    NAME = "Move Stage"
 
     # Event types
     EVT_TYPE_TOMO_MOVESTAGE_LEFT_DOWN = wx.NewEventType()
@@ -21,9 +21,18 @@ class MoveStageMode(GUIMode.GUIBase):
 
     def MakeMoveStageCursor(self):
         img = resources.movestage.GetImage()
-        img.SetOption(wx.IMAGE_OPTION_CUR_HOTSPOT_X, 11)
-        img.SetOption(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, 23)
-        return wx.Cursor(img)
+        hotspot_x = 11
+        hotspot_y = 23
+        if wx.Platform == '__WXMSW__':
+            img.SetOption(wx.IMAGE_OPTION_CUR_HOTSPOT_X, hotspot_x)
+            img.SetOption(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, hotspot_y)
+            return wx.Cursor(img)
+        elif wx.Platform == '__WXGTK__':
+            img.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_X, hotspot_x)
+            img.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, hotspot_y)
+            return wx.CursorFromImage(img)
+        else:
+            return None
 
     def OnLeftDown(self, event):
         # print('Mark tool: left mouse button down {} {}'.format(event, event.GetPosition()))

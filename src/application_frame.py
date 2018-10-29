@@ -55,7 +55,7 @@ class ApplicationFrame(wx.Frame):
 
     _menu_state = None  # a tuple with enabled/disabled flags for various menu items; used when a side panel is visible and we want to behave in a modal fashion
 
-    def __init__(self, parent, ID, title, size = (1280, 1024), pos = wx.DefaultPosition):
+    def __init__(self, parent, ID, title, size=(1280, 1024), pos = wx.DefaultPosition):
         wx.Frame.__init__(self, parent, ID, title, pos, size)
         self.SetBackgroundColour(wx.Colour(240, 240, 240))  # TODO: the same default background color as for wx.Dialog - can we set it automatically, or via some style?
 
@@ -71,15 +71,15 @@ class ApplicationFrame(wx.Frame):
 
         # Custom tool modes definition. They will be associated with tools in the toolbar.
         # We can listen to mouse events when such a mode is active.
-        custom_modes = [(MarkMode.LABEL, MarkMode(self), resources.crosshair.GetBitmap()),
-                        (MoveStageMode.LABEL, MoveStageMode(self), resources.movestage.GetBitmap())]
+        custom_modes = [(MarkMode.NAME, MarkMode(self), resources.crosshair.GetBitmap()),
+                        (MoveStageMode.NAME, MoveStageMode(self), resources.movestage.GetBitmap())]
 
         # Image Panel
         self._canvas_panel = OverviewPanel(self, custom_modes)
 
         # By default disable the custom modes, they are only active when their corresponding side panel is visible
         for mode in custom_modes:
-            tool = self._canvas_panel.FindToolByLabel(mode[0])
+            tool = self._canvas_panel.FindToolByName(mode[0])
             self._canvas_panel.ToolBar.EnableTool(tool.GetId(), False)
 
         # Listen to mouse movements so we can show the mouse position in the status bar.
@@ -110,14 +110,14 @@ class ApplicationFrame(wx.Frame):
         #            with a "deck" of side panel cards? Does wxPython have this concept?
 
         hori = wx.BoxSizer(wx.HORIZONTAL)
-        hori.Add(self._canvas_panel, 1, wx.ALL | wx.EXPAND, border = 5)
-        hori.Add(self._focus_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border = 5)
-        hori.Add(self._contour_finder_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border = 5)
-        hori.Add(self._stage_alignment_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border = 5)
+        hori.Add(self._canvas_panel, 1, wx.ALL | wx.EXPAND, border=5)
+        hori.Add(self._focus_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
+        hori.Add(self._contour_finder_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
+        hori.Add(self._stage_alignment_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
 
         contents = wx.BoxSizer(wx.VERTICAL)
         contents.Add(hori, 1, wx.EXPAND)  # note: proportion=1 here is crucial, 0 will not work
-        contents.Add(self._status_label, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border = 5)
+        contents.Add(self._status_label, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
         self.SetSizer(contents)
 
         # TODO: IMPORTANT improvement: especially for the numeric fields, deal with situation where the input field is
@@ -223,12 +223,12 @@ class ApplicationFrame(wx.Frame):
 
     def _on_set_focus(self, event):
         self._show_side_panel(self._focus_panel, True)
-        self._canvas_panel.EnableToolByLabel(MoveStageMode.LABEL, True)
+        self._canvas_panel.EnableToolByName(MoveStageMode.NAME, True)
 
     def _on_focus_done_button_click(self, event):
         self._show_side_panel(self._focus_panel, False)
-        self._canvas_panel.EnableToolByLabel(MoveStageMode.LABEL, False)
-        self._canvas_panel.SetMode(self._canvas_panel.FindToolByLabel("Pointer"))
+        self._canvas_panel.EnableToolByName(MoveStageMode.NAME, False)
+        self._canvas_panel.SetMode(self._canvas_panel.FindToolByName("Pointer"))
 
     def _on_find_contours(self, event):
         self._show_side_panel(self._contour_finder_panel, True)
@@ -238,12 +238,12 @@ class ApplicationFrame(wx.Frame):
 
     def _on_align_stage(self, event):
         self._show_side_panel(self._stage_alignment_panel, True)
-        self._canvas_panel.EnableToolByLabel(MarkMode.LABEL, True)
+        self._canvas_panel.EnableToolByName(MarkMode.NAME, True)
 
     def _on_stage_alignment_done_button_click(self, event):
         self._show_side_panel(self._stage_alignment_panel, False)
-        self._canvas_panel.EnableToolByLabel(MarkMode.LABEL, False)
-        self._canvas_panel.SetMode(self._canvas_panel.FindToolByLabel("Pointer"))
+        self._canvas_panel.EnableToolByName(MarkMode.NAME, False)
+        self._canvas_panel.SetMode(self._canvas_panel.FindToolByName("Pointer"))
         self._set_focus_item.Enable(not(self._model.overview_image_to_stage_coord_trf is None))  # note that == applied to a numpy array would perform elementwise comparison
 
     def _show_side_panel(self, side_panel, show):

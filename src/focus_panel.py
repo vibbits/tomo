@@ -47,9 +47,9 @@ class FocusPanel(wx.Panel):
         label.Wrap(330)  # force line wrapping
 
         button_size = (125, -1)
-        remember_focus_button = wx.Button(self, wx.ID_ANY, "Remember focus", size = button_size)
+        remember_focus_button = wx.Button(self, wx.ID_ANY, "Remember focus", size=button_size)
         self.done_button = wx.Button(self, wx.ID_ANY, "Done", size = button_size)  # Not this panel but the ApplicationFame will listen to clicks on this button.
-        discard_all_button = wx.Button(self, wx.ID_ANY, "Discard all", size = button_size)
+        discard_all_button = wx.Button(self, wx.ID_ANY, "Discard all", size=button_size)
 
         self.Bind(wx.EVT_BUTTON, self._on_remember_focus_button_click, remember_focus_button)
         self.Bind(wx.EVT_BUTTON, self._on_discard_all_button_click, discard_all_button)
@@ -58,14 +58,14 @@ class FocusPanel(wx.Panel):
 
         b = 5  # border size
         contents = wx.BoxSizer(wx.VERTICAL)
-        contents.Add(title, 0, wx.ALL | wx.EXPAND, border = b)
-        contents.Add(separator, 0, wx.ALL | wx.EXPAND, border = b)
-        contents.Add(label, 0, wx.ALL | wx.EXPAND, border = b)
-        contents.Add(remember_focus_button, 0, wx.ALL | wx.CENTER, border = b)
-        contents.Add(discard_all_button, 0, wx.ALL | wx.CENTER, border = b)
-        contents.Add(self.done_button, 0, wx.ALL | wx.CENTER, border = b)
-        contents.Add(table_title, 0, wx.ALL, border = b)
-        contents.Add(self._table, 0, wx.ALL, border = b)
+        contents.Add(title, 0, wx.ALL | wx.EXPAND, border=b)
+        contents.Add(separator, 0, wx.ALL | wx.EXPAND, border=b)
+        contents.Add(label, 0, wx.ALL | wx.EXPAND, border=b)
+        contents.Add(remember_focus_button, 0, wx.ALL | wx.CENTER, border=b)
+        contents.Add(discard_all_button, 0, wx.ALL | wx.CENTER, border=b)
+        contents.Add(self.done_button, 0, wx.ALL | wx.CENTER, border=b)
+        contents.Add(table_title, 0, wx.ALL, border=b)
+        contents.Add(self._table, 0, wx.ALL, border=b)
 
         self.SetSizer(contents)
         contents.Fit(self)
@@ -79,8 +79,8 @@ class FocusPanel(wx.Panel):
         table = wx.grid.Grid(self, wx.ID_ANY)
         table.SetDefaultCellAlignment(wx. ALIGN_CENTRE, wx. ALIGN_CENTRE)
         table.CreateGrid(num_rows, num_cols)
-        table.SetColLabelValue(0, "stage x")
-        table.SetColLabelValue(1, "stage y")
+        table.SetColLabelValue(0, "stage x (m)")
+        table.SetColLabelValue(1, "stage y (m)")
         table.SetColLabelValue(2, "focus z")
         table.EnableEditing(False)
         table.DisableDragRowSize()

@@ -24,7 +24,7 @@ class StageAlignmentPanel(wx.Panel):
     _alignment_state = None
 
     def __init__(self, parent, model, canvas):
-        wx.Panel.__init__(self, parent, size = (350, -1))
+        wx.Panel.__init__(self, parent, size=(350, -1))
 
         self._canvas = canvas
         self._model = model
@@ -42,7 +42,7 @@ class StageAlignmentPanel(wx.Panel):
         label0.Wrap(w)  # force line wrapping
 
         overview_pixel_size_label = wx.StaticText(self, wx.ID_ANY, "Pixel size (mm/pixel):")
-        self._overview_pixel_size_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.overview_image_mm_per_pixel), size = (100, -1))
+        self._overview_pixel_size_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.overview_image_mm_per_pixel), size=(100, -1))
 
         pixel_size_sizer = wx.BoxSizer(wx.HORIZONTAL)
         pixel_size_sizer.AddSpacer(30)
@@ -56,19 +56,19 @@ class StageAlignmentPanel(wx.Panel):
         self._alignment_state = wx.StaticText(self, wx.ID_ANY, "The stage is not aligned yet.")
 
         button_size = (125, -1)
-        self.done_button = wx.Button(self, wx.ID_ANY, "Done", size = button_size)  # The ApplicationFame will listen to clicks on this button.
+        self.done_button = wx.Button(self, wx.ID_ANY, "Done", size=button_size)  # The ApplicationFame will listen to clicks on this button.
 
         self.Bind(wx.EVT_TEXT, self._on_overview_pixel_size_change, self._overview_pixel_size_edit)
 
         b = 5  # border size
         contents = wx.BoxSizer(wx.VERTICAL)
-        contents.Add(title, 0, wx.ALL | wx.EXPAND, border = b)
-        contents.Add(separator, 0, wx.ALL | wx.EXPAND, border = b)
-        contents.Add(label0, 0, wx.ALL | wx.EXPAND, border = b)
-        contents.Add(pixel_size_sizer, 0, wx.ALL | wx.EXPAND, border = b)
-        contents.Add(label, 0, wx.ALL | wx.EXPAND, border = b)
-        contents.Add(self._alignment_state, 0, wx.ALL | wx.EXPAND, border = b)
-        contents.Add(self.done_button, 0, wx.ALL | wx.CENTER, border = b)
+        contents.Add(title, 0, wx.ALL | wx.EXPAND, border=b)
+        contents.Add(separator, 0, wx.ALL | wx.EXPAND, border=b)
+        contents.Add(label0, 0, wx.ALL | wx.EXPAND, border=b)
+        contents.Add(pixel_size_sizer, 0, wx.ALL | wx.EXPAND, border=b)
+        contents.Add(label, 0, wx.ALL | wx.EXPAND, border=b)
+        contents.Add(self._alignment_state, 0, wx.ALL | wx.EXPAND, border=b)
+        contents.Add(self.done_button, 0, wx.ALL | wx.CENTER, border=b)
 
         self.SetSizer(contents)
         contents.Fit(self)
@@ -87,14 +87,14 @@ class StageAlignmentPanel(wx.Panel):
     def _place_landmark(self, landmark_image_pos):
         """
         Called when user clicks on the overview image to specify the landmark
-        :param pos: landmark position in overview image coordinates (xi, yi in principle >= 0)
+        :param landmark_image_pos: landmark position in overview image coordinates (xi, yi in principle >= 0)
         :return:
         """
         # Calculate the alignment of stage and overview image.
-        pixel_size = self._model.overview_image_mm_per_pixel
-        landmark_stage_pos = secom_tools.get_absolute_stage_position()
-        self._model.overview_image_to_stage_coord_trf = self._calculate_overview_image_to_stage_transformation_matrix(landmark_stage_pos, landmark_image_pos, pixel_size)
-        print('Overview image and stage are now aligned. Landmark position stage={} image={}. Pixel size={} mm. Image to stage trf={}'.format(landmark_stage_pos, landmark_image_pos, pixel_size, self._model.overview_image_to_stage_coord_trf))
+        pixel_size_meters = self._model.overview_image_mm_per_pixel / 1000.0
+        landmark_stage_pos = secom_tools.get_absolute_stage_position()  # in meters
+        self._model.overview_image_to_stage_coord_trf = self._calculate_overview_image_to_stage_transformation_matrix(landmark_stage_pos, landmark_image_pos, pixel_size_meters)
+        print('Overview image and stage are now aligned. Landmark position stage={} image={}. Pixel size={} m. Image to stage trf={}'.format(landmark_stage_pos, landmark_image_pos, pixel_size_meters, self._model.overview_image_to_stage_coord_trf))
 
         # Show alignment state in user interface
         self._update_alignment_state_text(landmark_stage_pos, landmark_image_pos)
@@ -124,12 +124,12 @@ class StageAlignmentPanel(wx.Panel):
             [ xs ]   [ s   0  tx ] [ xi ]
             [ ys ] = [ 0  -s  ty ] [ yi ]   (note the minus sign in -s, it flips the y-axis)
             [  1 ]   [ 0   0   1 ] [  1 ]
-        where s is the pixel size (in mm/pixel), xs and ys are expressed in mm, and xi and yi are expressed in pixels.
+        where s is the pixel size (in meter/pixel), xs and ys are expressed in meters, and xi and yi are expressed in pixels.
         By specifying the correspondance of a single landmark and the pixel size, the translation tx, ty can be determined
         and the transformation matrix is then known.
-        :param landmark_stage_pos: (xs, ys) position of the stage (in mm) when exactly over a landmark
+        :param landmark_stage_pos: (xs, ys) position of the stage (in meters) when exactly over a landmark
         :param landmark_image_pos: (xi, yi) position in the overview image (in pixels) of that same landmark
-        :param pixel_size: size in mm of a pixel in the overview image
+        :param pixel_size: size in meter of a pixel in the overview image
         :return: a numpy 2x6 matrix, specifying the transformation from image coordinates to stage coordinates
         """
 

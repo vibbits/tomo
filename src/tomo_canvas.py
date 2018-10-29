@@ -13,19 +13,21 @@ class TomoCanvas(NavCanvas.NavCanvas):
 
     def BuildToolbar(self):  # overrides implementation in NavCanvas
         self.Modes.extend(self._custom_modes)
+        for mode in self.Modes:
+            print("mode: {}".format(mode))
         super(TomoCanvas, self).BuildToolbar()
 
-    def EnableToolByLabel(self, label, enable):
-        tool = self.FindToolByLabel(label)
+    def EnableToolByName(self, name, enable):
+        tool = self.FindToolByName(name)
         if tool:
             self.ToolBar.EnableTool(tool.GetId(), enable)
 
-    def FindToolByLabel(self, label):
+    def FindToolByName(self, name):
         tb = self.ToolBar
         num_tools = tb.GetToolsCount()
         for pos in range(num_tools):
             tool = tb.GetToolByPos(pos)
-            # print("tool {}: {}".format(pos, tool.GetLabel()))
-            if tool.GetLabel() == label:
+            print("tool {}: label='{}' shortHelp='{}' id={}".format(pos, tool.GetLabel(), tool.GetShortHelp(), tool.GetId()))
+            if tool.GetShortHelp() == name:
                 return tool
         return None

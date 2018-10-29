@@ -34,6 +34,9 @@ from application_frame import ApplicationFrame
 #   On the actual SECOM computer running Ubuntu, where we have installed a full Odemis, we do *not* use Anaconda
 #   because using Anaconda would mean also installing Odemis in an Anaconda environment, which is
 #   annoying. (Odemis is not a single package installation...)
+#
+# - On Ubuntu, the wxPython sources are installed here: 
+#   /usr/lib/python2.7/dist-packages/wx-3.0-gtk2/wx
 
 def main():
     print('Environment:\n  Python: {}.{}.{}\n  OpenCV: {}\n  wxPython: {}'.format(sys.version_info[0], sys.version_info[1], sys.version_info[2], cv2.__version__, wx.version()))

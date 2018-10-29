@@ -30,7 +30,7 @@ def acquire_microscope_images(mode, physical_offsets_microns, delay_between_imag
                               odemis_cli, images_output_folder, images_prefix, focus_map = None):
 
     # Ensure that the output folder for the images exists
-    Path(images_output_folder).mkdir(exist_ok = True)
+    Path(images_output_folder).mkdir(exist_ok=True)
 
     print('Acquiring {} images'.format(mode))
     for i, offset_microns in enumerate(physical_offsets_microns):
@@ -63,36 +63,46 @@ def move_stage_relative(odemis_cli, offset_microns):   # move the stage a certai
     commandline_exec([odemis_cli, "--move", "stage", "x", str(dx_microns)])
     commandline_exec([odemis_cli, "--move", "stage", "y", str(dy_microns)])
     # Better alternative - TO BE TESTED/CHECKED
-    # stage = model.getComponent(role = "stage")   # CHECKME: it could instead be "name" instead if "role"
+    # stage = model.getComponent(role = "stage")
     # stage.moveRel({"x": dx_microns, "y": dy_microns})   # in what units is x and y?? Possibly meters instead of microns
-    #  # CHECKME: moveRelSync or moveRel ?
+    # CHECKME: moveRelSync or moveRel ?
+    # CHECKME: moveRel() returns a future?? Do we need to apply
 
-def set_absolute_stage_position(pos):  # TODO: define in what units pos is specified!
-    stage = model.getComponent(role = "stage")   # CHECKME: it could instead be "name" instead if "role"
+def set_absolute_stage_position(pos):  # move the stage to the specified absolute position (in meters)
+    stage = model.getComponent(role="stage")
     x, y = pos
-    print("Moving stage to absolute position x={} y={}".format(x, y))
-    stage.moveAbs({"x": x, "y": y})
+    print("(Not) Moving stage to absolute position x={} y={}".format(x, y))
+    #######stage.moveAbs({"x": x, "y": y})
+    # CHECKME: moveAbs() actually returns a future, need to do something special?
+    # <ClientFuture at 0x7f5d91218c50 for Proxy of Component 'Sample Stage'>
 
-def get_absolute_stage_position():   # return the (x,y) stage postion - CHECKME: in what units???
-    stage = model.getComponent(role = "stage")   # CHECKME: it could instead be "name" instead if "role"
+    # IMPROVEME: is there a way to protect against stage movements that are too large (and will jam the stage)?
+    #            this could happen if for example the user clicks outside the overview image (FIXME: need to protect against that)
+    #            but also if the overview image resolution entered by the user is too large.
+
+def get_absolute_stage_position():   # return the absolute (x,y) stage position (in meters)
+    stage = model.getComponent(role="stage")
     x = stage.position.value["x"]
     y = stage.position.value["y"]
-    print("Get stage absolute position: x={} y={}".format(x, y))
-    return (x, y)
+    print("Get stage absolute position: x={} y={} (unit: m)".format(x, y))
+    return x, y
 
 
-def get_absolute_focus_z_position():    # returns the focus z value (CHECKME: in what units ???)
-    focus = model.getComponent(role = "focus")   # CHECKME: it could instead be "name" instead if "role"
+def get_absolute_focus_z_position():    # returns the focus z value (CHECKME: in what units?)
+    focus = model.getComponent(role="focus")
     z = focus.position.value["z"]
     print("Get focus absolute position: z={}".format(z))
     return z
 
 
-def set_absolute_focus_z_position(z):      # z is the absolute focus value  (CHECKME: in what units ???)
-    focus = model.getComponent(role = "focus")   # CHECKME: it could instead be "name" instead if "role"
-    focus.moveAbs({"z": z})
+def set_absolute_focus_z_position(z):      # z is the absolute focus value  (use the same units as get_absolute_focus_z_position...)
+                                           # (CHECKME: in what units ???)
+    focus = model.getComponent(role="focus")
     print("Setting focus absolute position to z={}".format(z))
-    # CHECKME: or should we use moveAbsSync() instead of moveAbs() ?
+    focus.moveAbs({"z": z})    # CHECKME: should we use moveAbsSync() instead of moveAbs() ?
+                               # CHECKME: moveAbs() actually returns a future, need to do something special?
+                               # <ClientFuture at 0x7f5d91c6c410 for Proxy of Component 'Optical Focus'>
+
 
 ######################################################################################################################
 # Command line to get the current focus z-value:

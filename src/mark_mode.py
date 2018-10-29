@@ -5,7 +5,7 @@ import resources
 
 class MarkMode(GUIMode.GUIBase):
     # Mode label, shown in the tool bar.
-    LABEL = "Mark"
+    NAME = "Mark"
 
     # Event types
     EVT_TYPE_TOMO_MARK_LEFT_DOWN = wx.NewEventType()
@@ -21,9 +21,18 @@ class MarkMode(GUIMode.GUIBase):
 
     def MakeMarkCursor(self):
         img = resources.crosshair.GetImage()
-        img.SetOption(wx.IMAGE_OPTION_CUR_HOTSPOT_X, 12)
-        img.SetOption(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, 12)
-        return wx.Cursor(img)
+        hotspot_x = 12
+        hotspot_y = 12
+        if wx.Platform == '__WXMSW__':
+            img.SetOption(wx.IMAGE_OPTION_CUR_HOTSPOT_X, hotspot_x)
+            img.SetOption(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, hotspot_y)
+            return wx.Cursor(img)
+        elif wx.Platform == '__WXGTK__':
+            img.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_X, hotspot_x)
+            img.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, hotspot_y)
+            return wx.CursorFromImage(img)
+        else:
+            return None
 
     def OnLeftDown(self, event):
         # print('Mark tool: left mouse button down {} {}'.format(event, event.GetPosition()))
