@@ -1,0 +1,4 @@
+To embed imqges into the resources.py file:
+cd src\
+img2py ..\images\crosshair.png resources.py
+img2py -a ..\images\tomo.ico resources.py
