@@ -58,6 +58,7 @@ class TomoModel:
     all_points_of_interest = None
     slice_offsets_microns = None  # stage movements to move from the point-of-interest in slice to to slice i+1, based only on mapping the slice outline quadrilaterals
     combined_offsets_microns = None  # refined stage movement (combining slice outline mapping + SIFT registration of x100 images)
+    overview_image_to_stage_coord_trf = None # a numpy 3 x 3 homogeneous transformation matrix from overview image (pixel) coordinates to stage position coordinates (in mm); the third row of the matrix is [0 0 1], and it transforms a column matrix [xi yi 1] transposed
 
     def __init__(self):
         self._config = wx.Config('be.vib.bits.tomo')

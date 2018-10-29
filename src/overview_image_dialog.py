@@ -9,7 +9,6 @@ class OverviewImageDialog(wx.Dialog):
     _model = None
 
     _overview_image_path_edit = None
-    _overview_pixel_size_edit = None
     _browse_button = None
 
     def __init__(self, model, parent, ID, title, size = wx.DefaultSize, pos = wx.DefaultPosition, style = wx.DEFAULT_DIALOG_STYLE):
@@ -23,24 +22,19 @@ class OverviewImageDialog(wx.Dialog):
         self._overview_image_path_edit = wx.TextCtrl(self, wx.ID_ANY, self._model.overview_image_path, size = (w, -1))
         self._browse_button = wx.Button(self, wx.ID_ANY, "Browse")
 
-        overview_pixel_size_label = wx.StaticText(self, wx.ID_ANY, "Pixel size (mm/pixel):")
-        self._overview_pixel_size_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.overview_image_mm_per_pixel), size = (100, -1))
-
         path_sizer = wx.BoxSizer(wx.HORIZONTAL)
         path_sizer.Add(self._overview_image_path_edit, flag = wx.ALIGN_CENTER_VERTICAL)
         path_sizer.AddSpacer(8)
         path_sizer.Add(self._browse_button, flag = wx.ALIGN_CENTER_VERTICAL)
 
-        fgs = wx.FlexGridSizer(cols = 2, vgap = 4, hgap = 8)
+        fgs = wx.FlexGridSizer(cols = 2, vgap = 4, hgap = 8)  # IMPROVEME: FlexGridSizer is now overkill
         fgs.Add(overview_image_path_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(path_sizer, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(overview_pixel_size_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self._overview_pixel_size_edit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
         instructions_label = wx.StaticText(self, wx.ID_ANY, (
             "Please select an overview image of the sample. It will be used for coarse microscope navigation. "
             "It should show the ribbons with the sample slices. Typically it will be a 10x or 20x LM image."))
-        instructions_label.Wrap(650)  # Force line wrapping of the instructions text
+        instructions_label.Wrap(620)  # Force line wrapping of the instructions text
 
         self._import_button = wx.Button(self, wx.ID_ANY, "Import")
         self._import_button.SetFocus()
@@ -50,7 +44,6 @@ class OverviewImageDialog(wx.Dialog):
         sizer.Add(fgs, 0, wx.ALL|wx.CENTER, 10)
 
         self.Bind(wx.EVT_TEXT, self._on_overview_image_path_change, self._overview_image_path_edit)
-        self.Bind(wx.EVT_TEXT, self._on_overview_pixel_size_change, self._overview_pixel_size_edit)
         self.Bind(wx.EVT_BUTTON, self._on_import_button_click, self._import_button)
         self.Bind(wx.EVT_BUTTON, self._on_browse_button_click, self._browse_button)
 
@@ -82,10 +75,5 @@ class OverviewImageDialog(wx.Dialog):
     def _on_overview_image_path_change(self, event):
         self._model.overview_image_path = self._overview_image_path_edit.GetValue()
         print('overview_image_path={}'.format(self._model.overview_image_path))
-
-    def _on_overview_pixel_size_change(self, event):
-        self._model.overview_image_mm_per_pixel = float(self._overview_pixel_size_edit.GetValue())
-        print('overview_image_mm_per_pixel={}'.format(self._model.overview_image_mm_per_pixel))
-
 
 

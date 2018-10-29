@@ -35,7 +35,8 @@ class FocusPanel(wx.Panel):
         title.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD))
         separator = wx.StaticLine(self, wx.ID_ANY)
 
-        label = wx.StaticText(self, wx.ID_ANY, "In Odemis, move the stage and manually focus the microscope. Then press 'Remember focus'. Repeat this for several points on the sample and finally press 'Done'.")
+        # FIXME: we need a tool or a button here for the user to indicate he/she really want to move the stage in Odemis.
+        label = wx.StaticText(self, wx.ID_ANY, "XXX Click on the overview image to move the stage to a specific position. Then manually focus the microscope in Odemis and press 'Remember focus'. Repeat this for several points on the sample and finally press 'Done'.")
         label.Wrap(330)  # force line wrapping
 
         button_size = (125, -1)
@@ -47,6 +48,8 @@ class FocusPanel(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self._on_discard_all_button_click, discard_all_button)
 
         table_title = wx.StaticText(self, wx.ID_ANY, "User defined focus positions:")
+
+        # FIXME: add ability to move the stage from this panel by clicking on the overview image
 
         b = 5  # border size
         contents = wx.BoxSizer(wx.VERTICAL)
@@ -115,9 +118,11 @@ class FocusPanel(wx.Panel):
         self.GetTopLevelParent().Layout()
 
         # Draw the position where focus was acquired on the overview image
-        self._canvas.add_focus_position(pos)  # FIXME: we need to convert the stage position to overview image pixel coordinates to draw on the canvas!
+        # FIXME: we need to convert the stage position 'pos' to overview image pixel coordinates to draw on the canvas!
+        #        see self._model.overview_image_to_stage_coord_trf as calculated in focus_panel.py
+        self._canvas.add_focus_position(pos)
         self._canvas.redraw()
-        # IMPROVEME? draw number of focus position on canvas too?
+        # IMPROVEME? draw the _number_ of focus position on canvas too?
 
     def _on_discard_all_button_click(self, event):
         dlg = wx.MessageDialog(self, "Discard all user defined focus positions?", "Discard all", style = wx.YES | wx.NO)

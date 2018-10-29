@@ -3,7 +3,6 @@
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
 
 import wx
-# import wx.adv  # not available in the wxpython version on the SECOM computer
 from wx.lib.floatcanvas import FloatCanvas
 
 import numpy as np
@@ -16,7 +15,9 @@ import polygon_simplification
 import tools
 import secom_tools
 import mapping
+import resources
 from model import TomoModel
+from mark_mode import MarkMode
 from preferences_dialog import PreferencesDialog
 from overview_image_dialog import OverviewImageDialog
 from lm_acquisition_dialog import LMAcquisitionDialog
@@ -29,8 +30,8 @@ from segmentation_panel import SegmentationPanel
 from focus_panel import FocusPanel
 from contour_finder_panel import ContourFinderPanel
 from ribbon_splitter import segment_contours_into_slices, draw_contour_numbers
+from stage_alignment_panel import StageAlignmentPanel
 from contour_finder import ContourFinder
-# from sample import Sample
 
 class ApplicationFrame(wx.Frame):
     _model = None
@@ -39,6 +40,7 @@ class ApplicationFrame(wx.Frame):
     _status_label = None
     _focus_panel = None
     _contour_finder_panel = None
+    _stage_alignment_panel = None
 
     # Menu
     _import_overview_image_item = None
@@ -59,12 +61,65 @@ class ApplicationFrame(wx.Frame):
         self._model = TomoModel()
 
         # Set application icon
-        # (See also https://www.blog.pythonlibrary.org/2008/05/23/wxpython-embedding-an-image-in-your-title-bar/)
-        icon_path = os.path.join(os.path.dirname(__file__), 'tomo.ico')
-        icon = wx.Icon(icon_path, wx.BITMAP_TYPE_ICO)
+        icon = resources.tomo.GetIcon()
         self.SetIcon(icon)
 
         # Menu
+        menu_bar = self._build_menu_bar()
+        self.SetMenuBar(menu_bar)
+
+        # Custom tool modes definition. They will be associated with tools in the toolbar.
+        # We can listen to mouse events when such a mode is active.
+        custom_modes = [(MarkMode.LABEL, MarkMode(self), resources.crosshair.GetBitmap())]
+
+        # Image Panel
+        self._canvas_panel = OverviewPanel(self, custom_modes)
+
+        # By default disable the MarkMode tool (it should only be active when the stage_alignment_panel is visible).
+        tool = self._canvas_panel.FindToolByLabel(MarkMode.LABEL)
+        self._canvas_panel.ToolBar.EnableTool(tool.GetId(), False)
+
+        # Listen to mouse movements so we can show the mouse position in the status bar.
+        # We also need to listen to mouse movements when the mark mode is active (since regular FloatCanvas events do not happen then).
+        self._canvas_panel.Bind(FloatCanvas.EVT_MOTION, self._on_mouse_move_over_image)
+        self._canvas_panel.Bind(MarkMode.EVT_TOMO_MARK_MOTION, self._on_mouse_move_over_image)
+
+        # Status bar at the bottom of the window
+        self._status_label = wx.StaticText(self, wx.ID_ANY, "")
+
+        # Focus side panel
+        self._focus_panel = FocusPanel(self, self._canvas_panel)
+        self._focus_panel.Show(False)
+        self.Bind(wx.EVT_BUTTON, self._on_focus_done_button_click, self._focus_panel.done_button)
+
+        # Contour finder side panel
+        self._contour_finder_panel = ContourFinderPanel(self, self._model, self._canvas_panel)
+        self._contour_finder_panel.Show(False)
+        self.Bind(wx.EVT_BUTTON, self._on_find_contours_done_button_click, self._contour_finder_panel.done_button)
+
+        # Stage alignment side panel
+        self._stage_alignment_panel = StageAlignmentPanel(self, self._model, self._canvas_panel)
+        self._stage_alignment_panel.Show(False)
+        self.Bind(wx.EVT_BUTTON, self._on_stage_alignment_done_button_click, self._stage_alignment_panel.done_button)
+
+        # IMPROVEME: rather than adding each side panel separately we probably should add just a single side panel
+        #            with a "deck" of side panel cards? Does wxPython have this concept?
+
+        hori = wx.BoxSizer(wx.HORIZONTAL)
+        hori.Add(self._canvas_panel, 1, wx.ALL | wx.EXPAND, border = 5)
+        hori.Add(self._focus_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border = 5)
+        hori.Add(self._contour_finder_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border = 5)
+        hori.Add(self._stage_alignment_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border = 5)
+
+        contents = wx.BoxSizer(wx.VERTICAL)
+        contents.Add(hori, 1, wx.EXPAND)  # note: proportion=1 here is crucial, 0 will not work
+        contents.Add(self._status_label, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border = 5)
+        self.SetSizer(contents)
+
+        # TODO: IMPORTANT improvement: especially for the numeric fields, deal with situation where the input field is
+        # temporarily empty (while entering a number), and also forbid leaving the edit field if the value is not acceptable (or replace it with the last acceptable value)
+
+    def _build_menu_bar(self):
         menu_bar = wx.MenuBar()
 
         file_menu = wx.Menu()
@@ -77,6 +132,8 @@ class ApplicationFrame(wx.Frame):
         prefs_menu_item = edit_menu.Append(wx.NewId(), "Preferences...")
 
         microscope_menu = wx.Menu()
+        self._align_stage_item = microscope_menu.Append(wx.NewId(), "Align stage and overview image...")
+        self._align_stage_item.Enable(False)
         self._set_point_of_interest_item = microscope_menu.Append(wx.NewId(), "Set point of interest...")
         self._set_point_of_interest_item.Enable(False)
         self._set_focus_item = microscope_menu.Append(wx.NewId(), "Set focus...")
@@ -105,6 +162,7 @@ class ApplicationFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_import_overview_image, self._import_overview_image_item)
         self.Bind(wx.EVT_MENU, self._on_load_slice_polygons, self._load_slice_polygons_item)
         self.Bind(wx.EVT_MENU, self._on_set_point_of_interest, self._set_point_of_interest_item)
+        self.Bind(wx.EVT_MENU, self._on_align_stage, self._align_stage_item)
         self.Bind(wx.EVT_MENU, self._on_lm_image_acquisition, self._lm_image_acquisition_item)
         self.Bind(wx.EVT_MENU, self._on_em_image_acquisition, self._em_image_acquisition_item)
         self.Bind(wx.EVT_MENU, self._on_load_ribbons_mask, self._load_ribbons_mask_item)
@@ -112,39 +170,11 @@ class ApplicationFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_set_focus, self._set_focus_item)
         self.Bind(wx.EVT_MENU, self._on_about, self._about_item)
 
-        self.SetMenuBar(menu_bar)
-
-        self._status_label = wx.StaticText(self, wx.ID_ANY, "")
-
-        # Image Panel
-        self._canvas_panel = OverviewPanel(self)
-        self._canvas_panel.Bind(FloatCanvas.EVT_MOTION, self._on_mouse_move_over_image)
-
-        # Focus side panel
-        self._focus_panel = FocusPanel(self, self._canvas_panel)
-        self._focus_panel.Show(False)
-        self.Bind(wx.EVT_BUTTON, self._on_focus_done_button_click, self._focus_panel.done_button)
-
-        # Contour finder side panel
-        self._contour_finder_panel = ContourFinderPanel(self, self._model, self._canvas_panel)
-        self._contour_finder_panel.Show(False)
-        self.Bind(wx.EVT_BUTTON, self._on_find_contours_done_button_click, self._contour_finder_panel.done_button)
-
-        hori = wx.BoxSizer(wx.HORIZONTAL)
-        hori.Add(self._canvas_panel, 1, wx.ALL | wx.EXPAND, border = 5)
-        hori.Add(self._focus_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border = 5)
-        hori.Add(self._contour_finder_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border = 5)
-
-        contents = wx.BoxSizer(wx.VERTICAL)
-        contents.Add(hori, 1, wx.EXPAND)  # note: proportion=1 here is crucial, 0 will not work
-        contents.Add(self._status_label, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border = 5)
-        self.SetSizer(contents)
-
-        # TODO: IMPORTANT improvement: especially for the numeric fields, deal with situation where the input field is
-        # temporarily empty (while entering a number), and also forbid leaving the edit field if the value is not acceptable (or replace it with the last acceptable value)
+        return menu_bar
 
     def _on_mouse_move_over_image(self, event):
         self._status_label.SetLabelText("Pos: %i, %i" % (event.Coords[0], -event.Coords[1]))  # flip y so we have the y-axis pointing down and (0,0)= top left corner of the image
+        event.Skip()  # we're just observing the mouse moves, so pass on the event
 
     def _on_import_overview_image(self, event):
         with OverviewImageDialog(self._model, None, wx.ID_ANY, "Overview Image") as dlg:
@@ -198,6 +228,16 @@ class ApplicationFrame(wx.Frame):
 
     def _on_find_contours_done_button_click(self, event):
         self._show_side_panel(self._contour_finder_panel, False)
+
+    def _on_align_stage(self, event):
+        self._show_side_panel(self._stage_alignment_panel, True)
+        tool = self._canvas_panel.FindToolByLabel(MarkMode.LABEL)
+        self._canvas_panel.ToolBar.EnableTool(tool.GetId(), True)
+
+    def _on_stage_alignment_done_button_click(self, event):
+        self._show_side_panel(self._stage_alignment_panel, False)
+        tool = self._canvas_panel.FindToolByLabel(MarkMode.LABEL)
+        self._canvas_panel.ToolBar.EnableTool(tool.GetId(), False)
 
     def _show_side_panel(self, side_panel, show):
         side_panel.Show(show)
@@ -265,6 +305,10 @@ class ApplicationFrame(wx.Frame):
         # Enable the menu item for loading the slice outlines
         # (We can now use it because we've got the pixel size of the overview image (really needed????))
         self._load_slice_polygons_item.Enable(True)
+
+        # Once we have an overview image the user can use it to identify a landmark on that image
+        # and the same one in Odemis. This constitutes stage - overview image alignment.
+        self._align_stage_item.Enable(True)
 
         # Experimental: gradient descent slice contour finding (needs an overview image and, for now, ground truth slice outlines for comparison)
         self._contour_finder_item.Enable(True)
