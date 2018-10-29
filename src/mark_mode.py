@@ -26,11 +26,11 @@ class MarkMode(GUIMode.GUIBase):
         return wx.Cursor(img)
 
     def OnLeftDown(self, event):
-        print('Mark tool: left mouse button down {} {}'.format(event, event.GetPosition()))
+        # print('Mark tool: left mouse button down {} {}'.format(event, event.GetPosition()))
         EventType = self.EVT_TYPE_TOMO_MARK_LEFT_DOWN
         self.Canvas._RaiseMouseEvent(event, EventType)
 
     def OnMove(self, event):
-        print('Mark tool: mouse move {} {}'.format(event, event.GetPosition()))
+        # print('Mark tool: mouse move {} {}'.format(event, event.GetPosition()))
         EventType = self.EVT_TYPE_TOMO_MARK_MOTION
         self.Canvas._RaiseMouseEvent(event, EventType)

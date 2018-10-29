@@ -30,7 +30,7 @@ class InverseDistanceWeighingInterpolator:
         :param eps:
         :return:
         """
-        if not self._data:
+        if len(self._data) == 0:
             return None
 
         posi = self._data[:, 0:2]

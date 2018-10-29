@@ -3,7 +3,7 @@
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
 
 import wx
-from wx.lib.floatcanvas import FloatCanvas
+from wx.lib.floatcanvas import FloatCanvas, GUIMode
 
 import numpy as np
 import cv2
@@ -18,6 +18,7 @@ import mapping
 import resources
 from model import TomoModel
 from mark_mode import MarkMode
+from move_stage_mode import MoveStageMode
 from preferences_dialog import PreferencesDialog
 from overview_image_dialog import OverviewImageDialog
 from lm_acquisition_dialog import LMAcquisitionDialog
@@ -54,7 +55,7 @@ class ApplicationFrame(wx.Frame):
 
     _menu_state = None  # a tuple with enabled/disabled flags for various menu items; used when a side panel is visible and we want to behave in a modal fashion
 
-    def __init__(self, parent, ID, title, size = (1024, 1024), pos = wx.DefaultPosition):
+    def __init__(self, parent, ID, title, size = (1280, 1024), pos = wx.DefaultPosition):
         wx.Frame.__init__(self, parent, ID, title, pos, size)
         self.SetBackgroundColour(wx.Colour(240, 240, 240))  # TODO: the same default background color as for wx.Dialog - can we set it automatically, or via some style?
 
@@ -70,25 +71,28 @@ class ApplicationFrame(wx.Frame):
 
         # Custom tool modes definition. They will be associated with tools in the toolbar.
         # We can listen to mouse events when such a mode is active.
-        custom_modes = [(MarkMode.LABEL, MarkMode(self), resources.crosshair.GetBitmap())]
+        custom_modes = [(MarkMode.LABEL, MarkMode(self), resources.crosshair.GetBitmap()),
+                        (MoveStageMode.LABEL, MoveStageMode(self), resources.movestage.GetBitmap())]
 
         # Image Panel
         self._canvas_panel = OverviewPanel(self, custom_modes)
 
-        # By default disable the MarkMode tool (it should only be active when the stage_alignment_panel is visible).
-        tool = self._canvas_panel.FindToolByLabel(MarkMode.LABEL)
-        self._canvas_panel.ToolBar.EnableTool(tool.GetId(), False)
+        # By default disable the custom modes, they are only active when their corresponding side panel is visible
+        for mode in custom_modes:
+            tool = self._canvas_panel.FindToolByLabel(mode[0])
+            self._canvas_panel.ToolBar.EnableTool(tool.GetId(), False)
 
         # Listen to mouse movements so we can show the mouse position in the status bar.
-        # We also need to listen to mouse movements when the mark mode is active (since regular FloatCanvas events do not happen then).
+        # We also need to listen to mouse movements when some custom modes are active (since regular FloatCanvas events do not happen then).
         self._canvas_panel.Bind(FloatCanvas.EVT_MOTION, self._on_mouse_move_over_image)
         self._canvas_panel.Bind(MarkMode.EVT_TOMO_MARK_MOTION, self._on_mouse_move_over_image)
+        self._canvas_panel.Bind(MoveStageMode.EVT_TOMO_MOVESTAGE_MOTION, self._on_mouse_move_over_image)
 
         # Status bar at the bottom of the window
         self._status_label = wx.StaticText(self, wx.ID_ANY, "")
 
         # Focus side panel
-        self._focus_panel = FocusPanel(self, self._canvas_panel)
+        self._focus_panel = FocusPanel(self, self._canvas_panel, self._model)
         self._focus_panel.Show(False)
         self.Bind(wx.EVT_BUTTON, self._on_focus_done_button_click, self._focus_panel.done_button)
 
@@ -137,7 +141,7 @@ class ApplicationFrame(wx.Frame):
         self._set_point_of_interest_item = microscope_menu.Append(wx.NewId(), "Set point of interest...")
         self._set_point_of_interest_item.Enable(False)
         self._set_focus_item = microscope_menu.Append(wx.NewId(), "Set focus...")
-        ####self._set_focus_item.Enable(False)  # we need slice outlines before we can define user-specified focus points (because we relate them to slices - CHECKME: why actually? can we not define focus z values in n arbitrary points and fit some kind of z-surface through them?)
+        self._set_focus_item.Enable(False)  # focus setup is only possible after we've aligned stage and overview image
         self._lm_image_acquisition_item = microscope_menu.Append(wx.NewId(), "Acquire LM Images...")
         self._lm_image_acquisition_item.Enable(False)
         self._em_image_acquisition_item = microscope_menu.Append(wx.NewId(), "Acquire EM Images...")
@@ -219,9 +223,12 @@ class ApplicationFrame(wx.Frame):
 
     def _on_set_focus(self, event):
         self._show_side_panel(self._focus_panel, True)
+        self._canvas_panel.EnableToolByLabel(MoveStageMode.LABEL, True)
 
     def _on_focus_done_button_click(self, event):
         self._show_side_panel(self._focus_panel, False)
+        self._canvas_panel.EnableToolByLabel(MoveStageMode.LABEL, False)
+        self._canvas_panel.SetMode(self._canvas_panel.FindToolByLabel("Pointer"))
 
     def _on_find_contours(self, event):
         self._show_side_panel(self._contour_finder_panel, True)
@@ -231,13 +238,13 @@ class ApplicationFrame(wx.Frame):
 
     def _on_align_stage(self, event):
         self._show_side_panel(self._stage_alignment_panel, True)
-        tool = self._canvas_panel.FindToolByLabel(MarkMode.LABEL)
-        self._canvas_panel.ToolBar.EnableTool(tool.GetId(), True)
+        self._canvas_panel.EnableToolByLabel(MarkMode.LABEL, True)
 
     def _on_stage_alignment_done_button_click(self, event):
         self._show_side_panel(self._stage_alignment_panel, False)
-        tool = self._canvas_panel.FindToolByLabel(MarkMode.LABEL)
-        self._canvas_panel.ToolBar.EnableTool(tool.GetId(), False)
+        self._canvas_panel.EnableToolByLabel(MarkMode.LABEL, False)
+        self._canvas_panel.SetMode(self._canvas_panel.FindToolByLabel("Pointer"))
+        self._set_focus_item.Enable(not(self._model.overview_image_to_stage_coord_trf is None))  # note that == applied to a numpy array would perform elementwise comparison
 
     def _show_side_panel(self, side_panel, show):
         side_panel.Show(show)

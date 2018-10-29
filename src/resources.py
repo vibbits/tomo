@@ -16,6 +16,20 @@ crosshair = PyEmbeddedImage(
     "vA/9vuTtO9jeQXK3Gu86BCF4zQWUZiX/gzqevgAAAABJRU5ErkJggg==")
 
 #----------------------------------------------------------------------
+movestage = PyEmbeddedImage(
+    "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAABJGlDQ1BJQ0MgcHJvZmlsZQAA"
+    "KJFjYGAycHRxcmUSYGDIzSspCnJ3UoiIjFJgP8/AxsDMAAaJycUFjgEBPiB2Xn5eKgMG+HaN"
+    "gRFEX9YFmYUpjxdwJRcUlQDpP0BslJJanMzAwGgAZGeXlxQAxRnnANkiSdlg9gYQuygkyBnI"
+    "PgJk86VD2FdA7CQI+wmIXQT0BJD9BaQ+Hcxm4gCbA2HLgNglqRUgexmc8wsqizLTM0oUDC0t"
+    "LRUcU/KTUhWCK4tLUnOLFTzzkvOLCvKLEktSU4BqIe4DA0GIQlCIaQA1WmiS6G+CABQPENbn"
+    "QHD4MoqdQYghQHJpURmUychkTJiPMGOOBAOD/1IGBpY/CDGTXgaGBToMDPxTEWJqhgwMAvoM"
+    "DPvmAADAxk/9TmI01QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAA"
+    "AAd0SU1FB+IKHQ0jJYLut78AAACvSURBVEjH7VZBDsMgDLPR4ML/nwoSHJZd1qmaCAlI7am5"
+    "ktiySQIUEXiCJAG8AUBECGcEXBwPwUNwI4F4B+ZuBa9aK1prakLOGSml4VnvHaUUtTbG6LYH"
+    "X4fkcMvr2PUWbd7dT9mSApJCcptxVB+0RGVdT8FNBec9v6LknPv/VoSBr0skM3DVIi+JBT5t"
+    "U4vEAw4AtFrNssl6n4Oj17kL7p7kEZD3Z7GyKsIqOAB8AMOrZvfL7jhyAAAAAElFTkSuQmCC")
+
+#----------------------------------------------------------------------
 tomo = PyEmbeddedImage(
     "iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAABHNCSVQICAgIfAhkiAAAIABJ"
     "REFUeJzt3Xt8VeW5J/Dfs9beOxdIgIRwJ4SL3OSSEBSEFkiII9ojVq0REryVtrZn5mMdrAdr"

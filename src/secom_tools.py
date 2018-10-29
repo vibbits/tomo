@@ -2,10 +2,9 @@ import os
 import time
 from tools import commandline_exec
 
-try:
-    from pathlib import Path
-except ImportError:
-    from pathlib2 import Path # Python 2 backport
+# We need the Python2 backport pathlib2 (instead of pathlib)
+# so we can use the exist_ok parameter of mkdir()
+from pathlib2 import Path
 
 # For autofocus
 import platform
@@ -68,23 +67,31 @@ def move_stage_relative(odemis_cli, offset_microns):   # move the stage a certai
     # stage.moveRel({"x": dx_microns, "y": dy_microns})   # in what units is x and y?? Possibly meters instead of microns
     #  # CHECKME: moveRelSync or moveRel ?
 
+def set_absolute_stage_position(pos):  # TODO: define in what units pos is specified!
+    stage = model.getComponent(role = "stage")   # CHECKME: it could instead be "name" instead if "role"
+    x, y = pos
+    print("Moving stage to absolute position x={} y={}".format(x, y))
+    stage.moveAbs({"x": x, "y": y})
 
 def get_absolute_stage_position():   # return the (x,y) stage postion - CHECKME: in what units???
     stage = model.getComponent(role = "stage")   # CHECKME: it could instead be "name" instead if "role"
     x = stage.position.value["x"]
     y = stage.position.value["y"]
+    print("Get stage absolute position: x={} y={}".format(x, y))
     return (x, y)
 
 
 def get_absolute_focus_z_position():    # returns the focus z value (CHECKME: in what units ???)
     focus = model.getComponent(role = "focus")   # CHECKME: it could instead be "name" instead if "role"
     z = focus.position.value["z"]
+    print("Get focus absolute position: z={}".format(z))
     return z
 
 
 def set_absolute_focus_z_position(z):      # z is the absolute focus value  (CHECKME: in what units ???)
     focus = model.getComponent(role = "focus")   # CHECKME: it could instead be "name" instead if "role"
     focus.moveAbs({"z": z})
+    print("Setting focus absolute position to z={}".format(z))
     # CHECKME: or should we use moveAbsSync() instead of moveAbs() ?
 
 ######################################################################################################################

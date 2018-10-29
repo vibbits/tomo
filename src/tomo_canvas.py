@@ -15,6 +15,11 @@ class TomoCanvas(NavCanvas.NavCanvas):
         self.Modes.extend(self._custom_modes)
         super(TomoCanvas, self).BuildToolbar()
 
+    def EnableToolByLabel(self, label, enable):
+        tool = self.FindToolByLabel(label)
+        if tool:
+            self.ToolBar.EnableTool(tool.GetId(), enable)
+
     def FindToolByLabel(self, label):
         tb = self.ToolBar
         num_tools = tb.GetToolsCount()

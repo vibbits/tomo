@@ -30,7 +30,7 @@ class focus_component(component):
     def __init__(self, role):
         component.__init__(self, role)
 
-    def set_position(self, z):
+    def moveAbs(self, z):
         self.position.value["z"] = z
 
 
@@ -40,6 +40,10 @@ class stage_component(component):
 
     def __init__(self, role):
         component.__init__(self, role)
+
+    def moveAbs(self, pos):
+        self.position.value["x"] = pos["x"]
+        self.position.value["y"] = pos["y"]
 
 
 class model:
@@ -58,7 +62,7 @@ class align:
     def AutoFocus(det, emt, focuser, good_focus, rng_focus, method):
         z = random.uniform(rng_focus[0], rng_focus[1])
         lvl = 999  # arbitrary focus level number
-        focuser.set_position(z)
+        focuser.moveAbs(z)
         return autofocus_future(z, lvl)
 
     class autofocus:
