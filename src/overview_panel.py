@@ -57,7 +57,7 @@ class OverviewPanel(TomoCanvas):
 
     # The first point is user-specified, drawn in green.
     # The other points are calculated, drawn in red.
-    def set_points_of_interest(self, points_of_interest):  # point of interest in overview image coordinates
+    def set_points_of_interest(self, points_of_interest):  # point of interest in overview image coordinates; if a poi was set before it is replaced by the new one
         # Remove old POIs (if any)
         if self._poi_lines:
             self._remove_points_of_interest();

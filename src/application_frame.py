@@ -8,13 +8,10 @@ from wx.lib.floatcanvas import FloatCanvas, GUIMode
 import numpy as np
 import cv2
 import platform
-import os
-import math
 
 import polygon_simplification
 import tools
 import secom_tools
-import mapping
 import resources
 from model import TomoModel
 from mark_mode import MarkMode
@@ -26,12 +23,12 @@ from em_acquisition_dialog import EMAcquisitionDialog
 from overview_panel import OverviewPanel
 from ribbon_outline_dialog import RibbonOutlineDialog
 from ribbons_mask_dialog import RibbonsMaskDialog
-from point_of_interest_dialog import PointOfInterestDialog
 from segmentation_panel import SegmentationPanel
 from focus_panel import FocusPanel
 from contour_finder_panel import ContourFinderPanel
 from ribbon_splitter import segment_contours_into_slices, draw_contour_numbers
 from stage_alignment_panel import StageAlignmentPanel
+from point_of_interest_panel import PointOfInterestPanel
 from contour_finder import ContourFinder
 
 class ApplicationFrame(wx.Frame):
@@ -42,6 +39,7 @@ class ApplicationFrame(wx.Frame):
     _focus_panel = None
     _contour_finder_panel = None
     _stage_alignment_panel = None
+    _point_of_interest_panel = None
 
     # Menu
     _import_overview_image_item = None
@@ -106,6 +104,11 @@ class ApplicationFrame(wx.Frame):
         self._stage_alignment_panel.Show(False)
         self.Bind(wx.EVT_BUTTON, self._on_stage_alignment_done_button_click, self._stage_alignment_panel.done_button)
 
+        # Point of interest panel
+        self._point_of_interest_panel = PointOfInterestPanel(self, self._model, self._canvas_panel)
+        self._point_of_interest_panel.Show(False)
+        self.Bind(wx.EVT_BUTTON, self._on_point_of_interest_done_button_click, self._point_of_interest_panel.done_button)
+
         # IMPROVEME: rather than adding each side panel separately we probably should add just a single side panel
         #            with a "deck" of side panel cards? Does wxPython have this concept?
 
@@ -114,6 +117,7 @@ class ApplicationFrame(wx.Frame):
         hori.Add(self._focus_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
         hori.Add(self._contour_finder_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
         hori.Add(self._stage_alignment_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
+        hori.Add(self._point_of_interest_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
 
         contents = wx.BoxSizer(wx.VERTICAL)
         contents.Add(hori, 1, wx.EXPAND)  # note: proportion=1 here is crucial, 0 will not work
@@ -139,9 +143,9 @@ class ApplicationFrame(wx.Frame):
         self._align_stage_item = microscope_menu.Append(wx.NewId(), "Align stage and overview image...")
         self._align_stage_item.Enable(False)
         self._set_point_of_interest_item = microscope_menu.Append(wx.NewId(), "Set point of interest...")
-        self._set_point_of_interest_item.Enable(False)
+        self._set_point_of_interest_item.Enable(False) # the point of interest is specified in overview image coordinates (so we need an overview image) and will predict analogous points of interest in the other slices (so we need to have slice outlines)
         self._set_focus_item = microscope_menu.Append(wx.NewId(), "Set focus...")
-        self._set_focus_item.Enable(False)  # focus setup is only possible after we've aligned stage and overview image
+        self._set_focus_item.Enable(False)  # focus setup is only possible after we've aligned stage with overview image (because in the focus mode we can click on the overview image to move the stage to our target point where we want to manually set the focus)
         self._lm_image_acquisition_item = microscope_menu.Append(wx.NewId(), "Acquire LM Images...")
         self._lm_image_acquisition_item.Enable(False)
         self._em_image_acquisition_item = microscope_menu.Append(wx.NewId(), "Acquire EM Images...")
@@ -177,7 +181,9 @@ class ApplicationFrame(wx.Frame):
         return menu_bar
 
     def _on_mouse_move_over_image(self, event):
-        self._status_label.SetLabelText("Pos: %i, %i" % (event.Coords[0], -event.Coords[1]))  # flip y so we have the y-axis pointing down and (0,0)= top left corner of the image
+        x =  int(round(event.Coords[0]))
+        y = -int(round(event.Coords[1]))  # flip y so we have the y-axis pointing down and (0,0)= top left corner of the image
+        self._status_label.SetLabelText("x: {:d} y: {:d}".format(x, y))
         event.Skip()  # we're just observing the mouse moves, so pass on the event
 
     def _on_import_overview_image(self, event):
@@ -203,12 +209,6 @@ class ApplicationFrame(wx.Frame):
             dlg.CenterOnScreen()
             dlg.ShowModal()
 
-    def _on_set_point_of_interest(self, event):
-        with PointOfInterestDialog(self._model, None, wx.ID_ANY, "Point of Interest") as dlg:
-            dlg.CenterOnScreen()
-            if dlg.ShowModal() == wx.ID_OK:
-                self._do_set_point_of_interest()
-
     def _on_lm_image_acquisition(self, event):
         with LMAcquisitionDialog(self._model, None, wx.ID_ANY, "Acquire LM Images") as dlg:
             dlg.CenterOnScreen()
@@ -221,30 +221,49 @@ class ApplicationFrame(wx.Frame):
             if dlg.ShowModal() == wx.ID_OK:
                 self._do_em_acquire()
 
-    def _on_set_focus(self, event):
-        self._show_side_panel(self._focus_panel, True)
-        self._canvas_panel.EnableToolByName(MoveStageMode.NAME, True)
-
-    def _on_focus_done_button_click(self, event):
-        self._show_side_panel(self._focus_panel, False)
-        self._canvas_panel.EnableToolByName(MoveStageMode.NAME, False)
-        self._canvas_panel.SetMode(self._canvas_panel.FindToolByName("Pointer"))
-
     def _on_find_contours(self, event):
         self._show_side_panel(self._contour_finder_panel, True)
 
     def _on_find_contours_done_button_click(self, event):
         self._show_side_panel(self._contour_finder_panel, False)
 
+    def _on_set_focus(self, event):
+        self._canvas_panel.EnableToolByName(MoveStageMode.NAME, True)
+        self._show_side_panel(self._focus_panel, True)
+        self._focus_panel.activate()
+
+    def _on_focus_done_button_click(self, event):
+        self._focus_panel.deactivate()
+        self._show_side_panel(self._focus_panel, False)
+        self._canvas_panel.EnableToolByName(MoveStageMode.NAME, False)
+        self._canvas_panel.SetMode(self._canvas_panel.FindToolByName("Pointer"))
+
     def _on_align_stage(self, event):
-        self._show_side_panel(self._stage_alignment_panel, True)
         self._canvas_panel.EnableToolByName(MarkMode.NAME, True)
+        self._show_side_panel(self._stage_alignment_panel, True)
+        self._stage_alignment_panel.activate()
 
     def _on_stage_alignment_done_button_click(self, event):
+        self._stage_alignment_panel.deactivate()
         self._show_side_panel(self._stage_alignment_panel, False)
         self._canvas_panel.EnableToolByName(MarkMode.NAME, False)
         self._canvas_panel.SetMode(self._canvas_panel.FindToolByName("Pointer"))
         self._set_focus_item.Enable(not(self._model.overview_image_to_stage_coord_trf is None))  # note that == applied to a numpy array would perform elementwise comparison
+
+    def _on_set_point_of_interest(self, event):
+        self._canvas_panel.EnableToolByName(MarkMode.NAME, True)
+        self._show_side_panel(self._point_of_interest_panel, True)
+        self._point_of_interest_panel.activate()
+
+    def _on_point_of_interest_done_button_click(self, event):
+        self._point_of_interest_panel.deactivate()
+        self._show_side_panel(self._point_of_interest_panel, False)
+        self._canvas_panel.EnableToolByName(MoveStageMode.NAME, False)
+        self._canvas_panel.SetMode(self._canvas_panel.FindToolByName("Pointer"))  # CHECKME: does this work? is the pointer tool selected visually? otherwise try with e.g. the pan tool to confirm
+
+        # Enable/disable menu entries
+        self._lm_image_acquisition_item.Enable(True)   # We've got points of interest now, so we can acquire LM images.
+        self._em_image_acquisition_item.Enable(False)  # After changing the POI we need to acquire LM images first to obtain SIFT-corrected stage movements.
 
     def _show_side_panel(self, side_panel, show):
         side_panel.Show(show)
@@ -460,29 +479,7 @@ class ApplicationFrame(wx.Frame):
         # 5: simplify each split slice to exactly 4 points (some may have a few more)
         # 6: save slice outlines to JSON for later use
 
-    def _do_set_point_of_interest(self):
-        # Transform point-of-interest from one slice to the next
-        original_point_of_interest = self._model.original_point_of_interest
-        print('Original point-of-interest: x={} y={}'.format(*original_point_of_interest))
-        transformed_points_of_interest = mapping.repeatedly_transform_point(self._model.slice_polygons, original_point_of_interest)
-        self._model.all_points_of_interest = [original_point_of_interest] + transformed_points_of_interest
-
-        # Draw the points of interest
-        self._canvas_panel.set_points_of_interest(self._model.all_points_of_interest)
-        self._canvas_panel.redraw()
-
-        # TODO/CHECKME/FIXME: how will we get the transformation between overview image and absolute stage position?
-        #                     we need to do something in Odemis (move the stage to the poi) _and_ also in tomo (click on the corresponding poi on the overview image)?
-
-        # Enable/disable menu entries
-        self._lm_image_acquisition_item.Enable(True)   # We've got points of interest now, so we can acquire LM images.
-        self._em_image_acquisition_item.Enable(False)  # After changing the POI we need to acquire LM images first to obtain SIFT-corrected stage movements.
-        self._set_focus_item.Enable(True) # Once we have an overview image and a point of interest, the user can specify focus points in them.
-                                          # (The image is needed because we would like to show the focus points on it, and the point-of-interest is needed
-                                          # because it provides us the (approximate) transformation between stage coordinates and overview image coordinates.)
-
     def _do_lm_acquire(self):
-
         # Calculate the physical displacements on the sample required for moving between the points of interest.
         overview_image_pixelsize_in_microns = 1000.0 / self._model.overview_image_mm_per_pixel
         self._model.slice_offsets_microns = tools.physical_point_of_interest_offsets_in_microns(self._model.all_points_of_interest,

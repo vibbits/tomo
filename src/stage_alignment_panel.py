@@ -29,9 +29,6 @@ class StageAlignmentPanel(wx.Panel):
         self._canvas = canvas
         self._model = model
 
-        # Listen to mark tool mouse clicks so we can place the mark
-        self._canvas.Canvas.Bind(MarkMode.EVT_TOMO_MARK_LEFT_DOWN, self._on_left_mouse_button_down)
-
         # Build the user interface
         title = wx.StaticText(self, wx.ID_ANY, "Stage alignment")
         title.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD))
@@ -72,6 +69,13 @@ class StageAlignmentPanel(wx.Panel):
 
         self.SetSizer(contents)
         contents.Fit(self)
+
+    def activate(self):
+        # Listen to mark tool mouse clicks so we can place the mark
+        self._canvas.Canvas.Bind(MarkMode.EVT_TOMO_MARK_LEFT_DOWN, self._on_left_mouse_button_down)
+
+    def deactivate(self):
+        self._canvas.Canvas.Unbind(MarkMode.EVT_TOMO_MARK_LEFT_DOWN)
 
     def _on_left_mouse_button_down(self, event):
         print("Event = {}".format(event))

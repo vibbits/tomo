@@ -36,9 +36,6 @@ class FocusPanel(wx.Panel):
         self._focus_map = FocusMap()
         self._table = self._make_table()
 
-        # Listen to movestage tool mouse clicks so we can place the mark
-        self._canvas.Canvas.Bind(MoveStageMode.EVT_TOMO_MOVESTAGE_LEFT_DOWN, self._on_left_mouse_button_down)
-
         title = wx.StaticText(self, wx.ID_ANY, "Focus")
         title.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD))
         separator = wx.StaticLine(self, wx.ID_ANY)
@@ -69,6 +66,13 @@ class FocusPanel(wx.Panel):
 
         self.SetSizer(contents)
         contents.Fit(self)
+
+    def activate(self):
+        # Listen to movestage tool mouse clicks so we can place the mark
+        self._canvas.Canvas.Bind(MoveStageMode.EVT_TOMO_MOVESTAGE_LEFT_DOWN, self._on_left_mouse_button_down)
+
+    def deactivate(self):
+        self._canvas.Canvas.Unbind(MoveStageMode.EVT_TOMO_MOVESTAGE_LEFT_DOWN)
 
     def _make_table(self):
         # Make a spreadsheet like table.
