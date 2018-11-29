@@ -185,6 +185,7 @@ class ApplicationFrame(wx.Frame):
         y = -int(round(event.Coords[1]))  # flip y so we have the y-axis pointing down and (0,0)= top left corner of the image
         self._status_label.SetLabelText("x: {:d} y: {:d}".format(x, y))
         event.Skip()  # we're just observing the mouse moves, so pass on the event
+        # IMPROVEME: when the mouse moves outside the image area, then clear the status label text, otherwise it displays some confusing irrelevant coordinate
 
     def _on_import_overview_image(self, event):
         with OverviewImageDialog(self._model, None, wx.ID_ANY, "Overview Image") as dlg:
