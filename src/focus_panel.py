@@ -40,7 +40,7 @@ class FocusPanel(wx.Panel):
         title.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD))
         separator = wx.StaticLine(self, wx.ID_ANY)
 
-        label = wx.StaticText(self, wx.ID_ANY, "Click on the overview image with the 'Move Stage' tool to move the stage to a specific position. Then manually focus the microscope in Odemis and press 'Remember focus'. Repeat this for several points on the sample and finally press 'Done'.")
+        label = wx.StaticText(self, wx.ID_ANY, "Click on the overview image with the 'Move Stage' (V) tool to move the stage to a specific position. Then manually focus the microscope in Odemis and press 'Remember focus'. Repeat this for several points on the sample and finally press 'Done'.")
         label.Wrap(330)  # force line wrapping
 
         button_size = (125, -1)
@@ -126,8 +126,8 @@ class FocusPanel(wx.Panel):
             self._canvas.remove_objects(self._stage_position_object)
 
         # Draw current stage position on canvas
-        canvas_coords = (image_coords[0], -image_coords[1])
-        self._stage_position_object = self._canvas.add_cross(canvas_coords, "Red")  # Note: we need to pass canvas coordinates here (so y < 0 means over the image)
+        canvas_coords = (image_coords[0], -image_coords[1])  # Note: we need to pass canvas coordinates to add_cross (so y < 0 means over the image)
+        self._stage_position_object = self._canvas.add_cross(canvas_coords, "Blue")
         self._canvas.redraw()
 
         # Convert image coords to stage coords

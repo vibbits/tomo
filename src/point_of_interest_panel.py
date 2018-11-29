@@ -35,7 +35,7 @@ class PointOfInterestPanel(wx.Panel):
         poi_sizer.Add(self._poi_y_edit, flag = wx.ALIGN_CENTER_VERTICAL)
         poi_sizer.AddSpacer(5)
 
-        instructions_label = wx.StaticText(self, wx.ID_ANY, ("Use the Mark tool to specify the point of interest on the first slice. "
+        instructions_label = wx.StaticText(self, wx.ID_ANY, ("Use the Mark tool (+) to specify the point of interest on the first slice. "
                                                              "This point will be marked with a green cross, and predicted analogous "
                                                              "points in the other slices with a red cross."))
         w = 330

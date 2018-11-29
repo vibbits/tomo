@@ -47,7 +47,7 @@ class StageAlignmentPanel(wx.Panel):
         pixel_size_sizer.AddSpacer(5)
         pixel_size_sizer.Add(self._overview_pixel_size_edit, flag = wx.ALIGN_CENTER_VERTICAL)
 
-        label = wx.StaticText(self, wx.ID_ANY, "In Odemis, move the stage to an easy to recognize landmark. Then use the Mark tool to precisely indicate the same landmark on the overview image here in Tomo.")
+        label = wx.StaticText(self, wx.ID_ANY, "In Odemis, move the stage to an easy to recognize landmark. Then in Tomo use the Mark tool (+) to precisely indicate the same landmark on the overview image.")
         label.Wrap(w)  # force line wrapping
 
         self._alignment_state = wx.StaticText(self, wx.ID_ANY, "The stage is not aligned yet.")
