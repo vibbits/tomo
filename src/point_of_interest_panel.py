@@ -71,8 +71,7 @@ class PointOfInterestPanel(wx.Panel):
         self._poi_y_edit.SetValue("{:d}".format(image_coords[1]))
 
         # Store POI position in model
-        self._model.original_point_of_interest[0] = image_coords[0]
-        self._model.original_point_of_interest[1] = image_coords[1]
+        self._model.original_point_of_interest = image_coords
         self._model.write_parameters()  # CHECKME: still useful?
 
         # Transform point-of-interest from one slice to the next
