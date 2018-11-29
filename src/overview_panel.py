@@ -7,6 +7,8 @@ from wx.lib.floatcanvas import NavCanvas, FloatCanvas
 from polygon_editor import PolygonEditor
 from tomo_canvas import TomoCanvas
 
+# Note: See https://wxpython.org/Phoenix/docs/html/wx.ColourDatabase.html for a list of color names
+
 class OverviewPanel(TomoCanvas):
     _poi_lines = []
     _focus_lines = []
@@ -61,11 +63,16 @@ class OverviewPanel(TomoCanvas):
         # Remove old POIs (if any)
         if self._poi_lines:
             self._remove_points_of_interest();
+
+        # Color definitions
+        light_green = wx.Colour(0, 255, 0)
+        darker_green = wx.Colour(0, 225, 0)
+
         # Add new POIs
         pts = [(p[0], -p[1]) for p in points_of_interest]
-        self._add_point_of_interest(pts[0], line_color = "Green")
+        self._add_point_of_interest(pts[0], line_color = light_green)
         for pt in pts[1:]:
-            self._add_point_of_interest(pt, line_color = "Red")
+            self._add_point_of_interest(pt, line_color = darker_green)
 
     def add_focus_position(self, position, color = "Blue"):   # note: 'position' is in image space (with the origin in the top-left corner and y-axis pointing upward), so DIFFERENT from raw stage (x,y) position coordinates
         print('draw focus: {}'.format(position))
