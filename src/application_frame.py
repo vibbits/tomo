@@ -305,10 +305,11 @@ class ApplicationFrame(wx.Frame):
         e5 = self._load_slice_polygons_item.IsEnabled(); self._load_slice_polygons_item.Enable(False)
         e6 = self._set_focus_item.IsEnabled(); self._set_focus_item.Enable(False)
         e7 = self._set_point_of_interest_item.IsEnabled(); self._set_point_of_interest_item.Enable(False)
-        return (e1, e2, e3, e4, e5, e6, e7)
+        e8 = self._align_stage_item.IsEnabled(); self._align_stage_item.Enable(False)
+        return (e1, e2, e3, e4, e5, e6, e7, e8)
 
     def _enable_menu(self, state):
-        e1, e2, e3, e4, e5, e6, e7 = state
+        e1, e2, e3, e4, e5, e6, e7, e8 = state
         self._import_overview_image_item.Enable(e1)
         self._lm_image_acquisition_item.Enable(e2)
         self._em_image_acquisition_item.Enable(e3)
@@ -316,6 +317,7 @@ class ApplicationFrame(wx.Frame):
         self._load_slice_polygons_item.Enable(e5)
         self._set_focus_item.Enable(e6)
         self._set_point_of_interest_item.Enable(e7)
+        self._align_stage_item.Enable(e8)
 
     def _do_import_overview_image(self):
         # Display overview image pixel size information
