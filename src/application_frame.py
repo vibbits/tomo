@@ -321,9 +321,9 @@ class ApplicationFrame(wx.Frame):
 
     def _do_import_overview_image(self):
         # Display overview image pixel size information
-        overview_image_pixelsize_in_microns = 1000.0 / self._model.overview_image_mm_per_pixel
-        print('Overview image pixel size = {} micrometer = {} mm per pixel'.format(overview_image_pixelsize_in_microns,
-                                                                                   self._model.overview_image_mm_per_pixel))
+        overview_image_pixelsize_in_microns = 1000.0 / self._model.overview_image_pixels_per_mm
+        print('Overview image pixel size = {} micrometer = {} pixel per mm'.format(overview_image_pixelsize_in_microns,
+                                                                                   self._model.overview_image_pixels_per_mm))
 
         # Add and draw the overview image
         wait = wx.BusyInfo("Loading overview image...")
@@ -482,9 +482,25 @@ class ApplicationFrame(wx.Frame):
         # 5: simplify each split slice to exactly 4 points (some may have a few more)
         # 6: save slice outlines to JSON for later use
 
+    def _image_coords_to_stage_coords(self, image_coords):   # IMPROVEME: this is also coded somewhere else, use this function instead
+        # Convert image coords to stage coords
+        mat = self._model.overview_image_to_stage_coord_trf
+        homog_pos = np.array([image_coords[0], image_coords[1], 1])
+        homog_trf_pos = np.dot(mat, homog_pos)
+        stage_pos = homog_trf_pos[0:2]
+        return stage_pos
+
     def _do_lm_acquire(self):
+        # Move the stage to the first point of interest.
+        # The stage may not currently be positioned there because,
+        # for example, we may have moved the stage while building the focus map.
+        print('Moving stage to the point-of-interest on the first slice.')
+        poi_image_coords = self._model.all_points_of_interest[0]
+        poi_stage_coords = self._image_coords_to_stage_coords(poi_image_coords)
+        secom_tools.set_absolute_stage_position(poi_stage_coords)
+
         # Calculate the physical displacements on the sample required for moving between the points of interest.
-        overview_image_pixelsize_in_microns = 1000.0 / self._model.overview_image_mm_per_pixel
+        overview_image_pixelsize_in_microns = 1000.0 / self._model.overview_image_pixels_per_mm
         self._model.slice_offsets_microns = tools.physical_point_of_interest_offsets_in_microns(self._model.all_points_of_interest,
                                                                                                 overview_image_pixelsize_in_microns)
         print('Rough offset from slice polygons (in microns): ' + repr(self._model.slice_offsets_microns))
@@ -528,7 +544,7 @@ class ApplicationFrame(wx.Frame):
         # So our matrices should be pure translations. Extract the last column (=the offset) and convert from pixel
         # coordinates to physical distances on the sample.
         # (We also add a (0,0) offset for the first slice.)
-        sift_images_pixelsize_in_microns = 1000.0 / self._model.sift_images_mm_per_pixel
+        sift_images_pixelsize_in_microns = 1000.0 / self._model.sift_images_pixels_per_mm
         sift_offsets_microns = [np.array([0, 0])] + [mat[:, 2] * sift_images_pixelsize_in_microns for mat in
                                                      sift_matrices]
         print('Fine SIFT offset (in microns): ' + repr(sift_offsets_microns))

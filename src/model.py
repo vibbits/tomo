@@ -15,8 +15,8 @@ class TomoModel:
     _KEY_EM_ACQUISITION_DELAY = 'em_acquisition_delay'
     _KEY_LM_DO_AUTOFOCUS = 'lm_do_autofocus'
     _KEY_LM_MAX_AUTOFOCUS_CHANGE_NANOMETERS = 'lm_max_autofocus_change_nanometers'
-    _KEY_OVERVIEW_IMAGE_MM_PER_PIXEL = 'overview_image_mm_per_pixel'
-    _KEY_SIFT_IMAGES_MM_PER_PIXEL = 'sift_images_mm_per_pixel'
+    _KEY_OVERVIEW_IMAGE_PIXELS_PER_MM = 'overview_image_pixels_per_mm'
+    _KEY_SIFT_IMAGES_PIXELS_PER_MM = 'sift_images_pixels_per_mm'
     _KEY_FIJI_PATH = 'fiji_path'
     _KEY_ODEMIS_CLI = 'odemis_cli'
     _KEY_SIFT_REGISTRATION_SCRIPT = 'sift_registration_script'
@@ -40,8 +40,8 @@ class TomoModel:
     original_point_of_interest = None
     delay_between_LM_image_acquisition_secs = 0.0  # time in seconds to pause between successive microscope commands to acquire an LM image (maybe 1 or 2 secs in reality)
     delay_between_EM_image_acquisition_secs = 0.0  # time in seconds to pause between successive microscope commands to acquire an EM image (maybe 1 or 2 secs in reality)
-    overview_image_mm_per_pixel = 0.0  # of the e.g. x20 lens overview image
-    sift_images_mm_per_pixel = 0.0 # of the e.g. x100 lens LM images that will be acquired and used for SIFT registration
+    overview_image_pixels_per_mm = 0.0  # of the e.g. x20 lens overview image
+    sift_images_pixels_per_mm = 0.0 # of the e.g. x100 lens LM images that will be acquired and used for SIFT registration
     fiji_path = None
     odemis_cli = None
     sift_registration_script = None
@@ -70,7 +70,7 @@ class TomoModel:
         self.em_images_output_folder                 = self._config.Read(TomoModel._KEY_EM_IMAGES_OUTPUT_FOLDER, r'/home/secom/development/tomo/data/output/EM')
         self.delay_between_LM_image_acquisition_secs = self._config.ReadFloat(TomoModel._KEY_LM_ACQUISITION_DELAY, 2.0)
         self.delay_between_EM_image_acquisition_secs = self._config.ReadFloat(TomoModel._KEY_EM_ACQUISITION_DELAY, 2.0)
-        self.overview_image_mm_per_pixel             = self._config.ReadFloat(TomoModel._KEY_OVERVIEW_IMAGE_MM_PER_PIXEL, 3077.38542)
+        self.overview_image_pixels_per_mm            = self._config.ReadFloat(TomoModel._KEY_OVERVIEW_IMAGE_PIXELS_PER_MM, 3077.38542)
         self.fiji_path                               = self._config.Read(TomoModel._KEY_FIJI_PATH, r'/home/secom/Downloads/Fiji.app/ImageJ-linux64')
         self.odemis_cli                              = self._config.Read(TomoModel._KEY_ODEMIS_CLI, r'/usr/bin/odemis-cli')
         self.sift_registration_script                = self._config.Read(TomoModel._KEY_SIFT_REGISTRATION_SCRIPT, r'/home/secom/development/tomo/sift_registration.py')
@@ -78,7 +78,7 @@ class TomoModel:
         self.em_images_prefix                        = self._config.Read(TomoModel._KEY_EM_IMAGES_PREFIX, 'emsection')
         self.sift_input_folder                       = self._config.Read(TomoModel._KEY_SIFT_INPUT_FOLDER, r'/home/secom/development/tomo/data/output/LM')
         self.sift_output_folder                      = self._config.Read(TomoModel._KEY_SIFT_OUTPUT_FOLDER, r'/home/secom/development/tomo/data/output/LM')
-        self.sift_images_mm_per_pixel                = self._config.ReadFloat(TomoModel._KEY_SIFT_IMAGES_MM_PER_PIXEL, 1000.0)  # just a random value, probably not typical
+        self.sift_images_pixels_per_mm               = self._config.ReadFloat(TomoModel._KEY_SIFT_IMAGES_PIXELS_PER_MM, 15398.49624)
         self.template_slice_path                     = self._config.Read(TomoModel._KEY_TEMPLATE_SLICE_PATH, r'/home/secom/some/folder/template_slice_contour.json')
         #self.lm_do_autofocus                         = False # self._config.ReadBool(TomoModel._KEY_LM_DO_AUTOFOCUS, True) # FIXME: autofocus does not work, may have to be removed
         #self.lm_max_autofocus_change_nanometers      = self._config.ReadFloat(TomoModel._KEY_LM_MAX_AUTOFOCUS_CHANGE_NANOMETERS, 50.0)
@@ -91,7 +91,7 @@ class TomoModel:
         self._config.Write(TomoModel._KEY_EM_IMAGES_OUTPUT_FOLDER, self.em_images_output_folder)
         self._config.WriteFloat(TomoModel._KEY_LM_ACQUISITION_DELAY, self.delay_between_LM_image_acquisition_secs)
         self._config.WriteFloat(TomoModel._KEY_EM_ACQUISITION_DELAY, self.delay_between_EM_image_acquisition_secs)
-        self._config.WriteFloat(TomoModel._KEY_OVERVIEW_IMAGE_MM_PER_PIXEL, self.overview_image_mm_per_pixel)
+        self._config.WriteFloat(TomoModel._KEY_OVERVIEW_IMAGE_PIXELS_PER_MM, self.overview_image_pixels_per_mm)
         self._config.Write(TomoModel._KEY_FIJI_PATH, self.fiji_path)
         self._config.Write(TomoModel._KEY_ODEMIS_CLI, self.odemis_cli)
         self._config.Write(TomoModel._KEY_SIFT_REGISTRATION_SCRIPT, self.sift_registration_script)
@@ -99,11 +99,21 @@ class TomoModel:
         self._config.Write(TomoModel._KEY_EM_IMAGES_PREFIX, self.em_images_prefix)
         self._config.Write(TomoModel._KEY_SIFT_INPUT_FOLDER, self.sift_input_folder)
         self._config.Write(TomoModel._KEY_SIFT_OUTPUT_FOLDER, self.sift_output_folder)
-        self._config.WriteFloat(TomoModel._KEY_SIFT_IMAGES_MM_PER_PIXEL, self.sift_images_mm_per_pixel)
+        self._config.WriteFloat(TomoModel._KEY_SIFT_IMAGES_PIXELS_PER_MM, self.sift_images_pixels_per_mm)
         self._config.Write(TomoModel._KEY_TEMPLATE_SLICE_PATH, self.template_slice_path)
         #self._config.WriteBool(TomoModel._KEY_LM_DO_AUTOFOCUS, self.lm_do_autofocus)
         #self._config.WriteFloat(TomoModel._KEY_LM_MAX_AUTOFOCUS_CHANGE_NANOMETERS, self.lm_max_autofocus_change_nanometers)
         self._config.Flush()
+
+
+    # Image scales:
+    # +------+-------------+
+    # | lens | pixels/mm   |
+    # +------+-------------+
+    # |  10x |  1538.46154 |
+    # |  20x |  3077.38542 |
+    # | 100x | 15398.49624 |
+    # +------+-------------+
 
     # Input parameters # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
     # Frank Windows
@@ -112,7 +122,7 @@ class TomoModel:
     # lm_images_output_folder = r'E:\git\bits\bioimaging\Secom\tomo\data\output\LM'
     # original_point_of_interest = np.array([2417, 1066]) #[1205, 996])
     # delay_between_LM_image_acquisition_secs = 0.1  # time in seconds to pause between successive microscope commands to acquire an LM image (maybe 1 or 2 secs in reality)
-    # mm_per_pixel = 3077.38542  # of the x20 lens overview image
+    # pixels_per_mm = 3077.38542  # of the x20 lens overview image
     # fiji = r'e:\Fiji.app\ImageJ-win64.exe'
     # odemis_cli = r'E:\git\bits\bioimaging\Secom\tomo\odemis-cli.bat'
     # sift_registration_script = r'E:\git\bits\bioimaging\Secom\tomo\sift_registration.py'

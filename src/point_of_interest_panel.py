@@ -30,9 +30,9 @@ class PointOfInterestPanel(wx.Panel):
         poi_sizer = wx.BoxSizer(wx.HORIZONTAL)
         poi_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Point of interest (image coordinates):"), flag = wx.ALIGN_CENTER_VERTICAL)
         poi_sizer.AddSpacer(5)
-        poi_sizer.Add(self._poi_x_edit, flag = wx.ALIGN_CENTER_VERTICAL)
+        poi_sizer.Add(self._poi_x_edit, flag=wx.ALIGN_CENTER_VERTICAL)
         poi_sizer.AddSpacer(5)
-        poi_sizer.Add(self._poi_y_edit, flag = wx.ALIGN_CENTER_VERTICAL)
+        poi_sizer.Add(self._poi_y_edit, flag=wx.ALIGN_CENTER_VERTICAL)
         poi_sizer.AddSpacer(5)
 
         instructions_label = wx.StaticText(self, wx.ID_ANY, ("Use the Mark tool (+) to specify the point of interest on the first slice. "

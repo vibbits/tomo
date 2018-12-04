@@ -30,7 +30,7 @@ class FocusPanel(wx.Panel):
     _stage_position_object = None
 
     def __init__(self, parent, canvas, model):
-        wx.Panel.__init__(self, parent, size = (350, -1))
+        wx.Panel.__init__(self, parent, size=(350, -1))
         self._canvas = canvas
         self._model = model
         self._focus_map = FocusMap()
@@ -45,7 +45,7 @@ class FocusPanel(wx.Panel):
 
         button_size = (125, -1)
         remember_focus_button = wx.Button(self, wx.ID_ANY, "Remember focus", size=button_size)
-        self.done_button = wx.Button(self, wx.ID_ANY, "Done", size = button_size)  # Not this panel but the ApplicationFame will listen to clicks on this button.
+        self.done_button = wx.Button(self, wx.ID_ANY, "Done", size=button_size)  # Not this panel but the ApplicationFame will listen to clicks on this button.
         discard_all_button = wx.Button(self, wx.ID_ANY, "Discard all", size=button_size)
 
         self.Bind(wx.EVT_BUTTON, self._on_remember_focus_button_click, remember_focus_button)
@@ -164,6 +164,6 @@ class FocusPanel(wx.Panel):
         # IMPROVEME draw the _number_ of focus position on canvas too
 
     def _on_discard_all_button_click(self, event):
-        dlg = wx.MessageDialog(self, "Discard all user defined focus positions?", "Discard all", style = wx.YES | wx.NO)
+        dlg = wx.MessageDialog(self, "Discard all user defined focus positions?", "Discard all", style=wx.YES | wx.NO)
         if dlg.ShowModal() == wx.ID_YES:
             self.reset()

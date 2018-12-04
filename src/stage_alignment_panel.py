@@ -38,14 +38,14 @@ class StageAlignmentPanel(wx.Panel):
         label0 = wx.StaticText(self, wx.ID_ANY, "Please specify the resolution of the overview image.")
         label0.Wrap(w)  # force line wrapping
 
-        overview_pixel_size_label = wx.StaticText(self, wx.ID_ANY, "Pixel size (mm/pixel):")
-        self._overview_pixel_size_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.overview_image_mm_per_pixel), size=(100, -1))
+        overview_pixel_size_label = wx.StaticText(self, wx.ID_ANY, "Pixel size (pixels/mm):")
+        self._overview_pixel_size_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.overview_image_pixels_per_mm), size=(100, -1))
 
         pixel_size_sizer = wx.BoxSizer(wx.HORIZONTAL)
         pixel_size_sizer.AddSpacer(30)
-        pixel_size_sizer.Add(overview_pixel_size_label, flag = wx.ALIGN_CENTER_VERTICAL)
+        pixel_size_sizer.Add(overview_pixel_size_label, flag=wx.ALIGN_CENTER_VERTICAL)
         pixel_size_sizer.AddSpacer(5)
-        pixel_size_sizer.Add(self._overview_pixel_size_edit, flag = wx.ALIGN_CENTER_VERTICAL)
+        pixel_size_sizer.Add(self._overview_pixel_size_edit, flag=wx.ALIGN_CENTER_VERTICAL)
 
         label = wx.StaticText(self, wx.ID_ANY, "In Odemis, move the stage to an easy to recognize landmark. Then in Tomo use the Mark tool (+) to precisely indicate the same landmark on the overview image.")
         label.Wrap(w)  # force line wrapping
@@ -85,8 +85,8 @@ class StageAlignmentPanel(wx.Panel):
         self._place_landmark(pos)
 
     def _on_overview_pixel_size_change(self, event):
-        self._model.overview_image_mm_per_pixel = float(self._overview_pixel_size_edit.GetValue())
-        print('overview_image_mm_per_pixel={}'.format(self._model.overview_image_mm_per_pixel))
+        self._model.overview_image_pixels_per_mm = float(self._overview_pixel_size_edit.GetValue())
+        print('overview_image_pixels_per_mm={}'.format(self._model.overview_image_pixels_per_mm))
 
     def _place_landmark(self, landmark_image_pos):
         """
@@ -95,7 +95,7 @@ class StageAlignmentPanel(wx.Panel):
         :return:
         """
         # Calculate the alignment of stage and overview image.
-        pixel_size_meters = self._model.overview_image_mm_per_pixel / 1000.0
+        pixel_size_meters = (1.0 / self._model.overview_image_pixels_per_mm) / 1000.0
         landmark_stage_pos = secom_tools.get_absolute_stage_position()  # in meters
         self._model.overview_image_to_stage_coord_trf = self._calculate_overview_image_to_stage_transformation_matrix(landmark_stage_pos, landmark_image_pos, pixel_size_meters)
         print('Overview image and stage are now aligned. Landmark position stage={} image={}. Pixel size={} m. Image to stage trf={}'.format(landmark_stage_pos, landmark_image_pos, pixel_size_meters, self._model.overview_image_to_stage_coord_trf))

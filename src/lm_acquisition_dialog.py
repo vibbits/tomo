@@ -66,7 +66,7 @@ class LMAcquisitionDialog(wx.Dialog):
         sift_in_sizer.Add(self._sift_input_folder_button, flag = wx.ALIGN_CENTER_VERTICAL)
 
         sift_output_folder_label = wx.StaticText(self, wx.ID_ANY, "Output Folder:")
-        self._sift_output_folder_edit = wx.TextCtrl(self, wx.ID_ANY, self._model.sift_output_folder, size = (w, -1))
+        self._sift_output_folder_edit = wx.TextCtrl(self, wx.ID_ANY, self._model.sift_output_folder, size=(w, -1))
         self._sift_output_folder_button = wx.Button(self, wx.ID_ANY, "Browse")
 
         sift_out_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -74,18 +74,18 @@ class LMAcquisitionDialog(wx.Dialog):
         sift_out_sizer.AddSpacer(8)
         sift_out_sizer.Add(self._sift_output_folder_button, flag = wx.ALIGN_CENTER_VERTICAL)
 
-        sift_pixel_size_label = wx.StaticText(self, wx.ID_ANY, "Pixel size (mm/pixel):")
-        self._sift_pixel_size_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.sift_images_mm_per_pixel), size = (100, -1))
+        sift_pixel_size_label = wx.StaticText(self, wx.ID_ANY, "Pixel size (pixels/mm):")
+        self._sift_pixel_size_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.sift_images_pixels_per_mm), size=(100, -1))
 
         # LM Image Acquisition
-        lm_fgs = wx.FlexGridSizer(cols = 2, vgap = 4, hgap = 8)
-        lm_fgs.Add(lm_images_output_folder_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        lm_fgs.Add(lm_sizer, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        lm_fgs.Add(prefix_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        lm_fgs.Add(self._prefix_edit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        lm_fgs.Add(lm_acquisition_delay_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        lm_fgs.Add(self._lm_acquisition_delay_edit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        lm_fgs.Add(empty_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        lm_fgs = wx.FlexGridSizer(cols=2, vgap=4, hgap=8)
+        lm_fgs.Add(lm_images_output_folder_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        lm_fgs.Add(lm_sizer, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        lm_fgs.Add(prefix_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        lm_fgs.Add(self._prefix_edit, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        lm_fgs.Add(lm_acquisition_delay_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        lm_fgs.Add(self._lm_acquisition_delay_edit, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        lm_fgs.Add(empty_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         # lm_fgs.Add(self._lm_do_autofocus_checkbox, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
         # lm_fgs.Add(self._lm_max_autofocus_change_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         # lm_fgs.Add(self._lm_max_autofocus_change_edit, flag =wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
@@ -204,5 +204,5 @@ class LMAcquisitionDialog(wx.Dialog):
         print('sift_output_folder={}'.format(self._model.sift_output_folder))
 
     def _on_sift_pixel_size_change(self, event):
-        self._model.sift_images_mm_per_pixel = float(self._sift_pixel_size_edit.GetValue())
-        print('sift_images_mm_per_pixel={}'.format(self._model.sift_images_mm_per_pixel))
+        self._model.sift_images_pixels_per_mm = float(self._sift_pixel_size_edit.GetValue())
+        print('sift_images_pixels_per_mm={}'.format(self._model.sift_images_pixels_per_mm))
