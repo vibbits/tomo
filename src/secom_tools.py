@@ -1,4 +1,5 @@
 import os
+import wx  # for confirmation dialog
 import time
 from tools import commandline_exec
 
@@ -71,8 +72,17 @@ def move_stage_relative(odemis_cli, offset_microns):   # move the stage a certai
 def set_absolute_stage_position(pos):  # move the stage to the specified absolute position (in meters)
     stage = model.getComponent(role="stage")
     x, y = pos
-    print("(Not) Moving stage to absolute position x={} y={}".format(x, y))
-    #######stage.moveAbs({"x": x, "y": y})
+    msg = "Move stage to absolute position x={} y={}".format(x, y)
+
+    # For minimal safety, pop up a confirmation dialog for now.
+    dlg = wx.MessageDialog(None, msg + " ?", "Move stage?", style=wx.YES | wx.NO)
+    if dlg.ShowModal() == wx.ID_YES:
+        print(msg)
+        stage.moveAbs({"x": x, "y": y})
+    else:
+        print(msg + " -- CANCELLED")
+    dlg.Destroy()
+
     # CHECKME: moveAbs() actually returns a future, need to do something special?
     # <ClientFuture at 0x7f5d91218c50 for Proxy of Component 'Sample Stage'>
 
@@ -98,10 +108,20 @@ def get_absolute_focus_z_position():    # returns the focus z value (CHECKME: in
 def set_absolute_focus_z_position(z):      # z is the absolute focus value  (use the same units as get_absolute_focus_z_position...)
                                            # (CHECKME: in what units ???)
     focus = model.getComponent(role="focus")
-    print("Setting focus absolute position to z={}".format(z))
-    focus.moveAbs({"z": z})    # CHECKME: should we use moveAbsSync() instead of moveAbs() ?
-                               # CHECKME: moveAbs() actually returns a future, need to do something special?
-                               # <ClientFuture at 0x7f5d91c6c410 for Proxy of Component 'Optical Focus'>
+    msg = "Set absolute focus position to z={}".format(z)
+
+    # For minimal safety, pop up a confirmation dialog for now.
+    dlg = wx.MessageDialog(None, msg + " ?", "Set focus?", style=wx.YES | wx.NO)
+    if dlg.ShowModal() == wx.ID_YES:
+        print(msg)
+        focus.moveAbs({"z": z})
+    else:
+        print(msg + " -- CANCELLED")
+    dlg.Destroy()
+
+    # CHECKME: should we use moveAbsSync() instead of moveAbs() ?
+    # CHECKME: moveAbs() actually returns a future, need to do something special?
+    # <ClientFuture at 0x7f5d91c6c410 for Proxy of Component 'Optical Focus'>
 
 
 ######################################################################################################################
