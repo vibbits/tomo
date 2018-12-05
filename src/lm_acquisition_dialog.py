@@ -107,8 +107,8 @@ class LMAcquisitionDialog(wx.Dialog):
         sift_sizer = wx.StaticBoxSizer(sift_box, wx.VERTICAL)
         sift_sizer.Add(sift_fgs, 0, wx.ALL|wx.CENTER, 10)
 
-        instructions_label = wx.StaticText(self, wx.ID_ANY, ("Prepare the LM microscope and position it over the point-of-interest in the first slice. "
-                                                             "Afterwards, press the button below to start image acquisition. " 
+        instructions_label = wx.StaticText(self, wx.ID_ANY, ("If the LM microscope is ready and positioned over the point-of-interest in the first slice "
+                                                             "press the button below to start image acquisition. " 
                                                              "The microscope will successively acquire LM images at the point-of-interest on each slice "
                                                              "and align them with SIFT image registration. Furthermore, the image offsets calculated during "
                                                              "registration are used to improve the predicted point-of-interest positions in the different slices. "

@@ -32,8 +32,8 @@ class OverviewImageDialog(wx.Dialog):
         fgs.Add(path_sizer, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
         instructions_label = wx.StaticText(self, wx.ID_ANY, (
-            "Please select an overview image of the sample. It will be used for coarse microscope navigation. "
-            "It should show the ribbons with the sample slices. Typically it will be a 10x or 20x LM image."))
+            "Please select an overview LM image of the sample. It will be used for coarse microscope navigation. "
+            "It should show the ribbons with the sample slices."))
         instructions_label.Wrap(620)  # Force line wrapping of the instructions text
 
         self._import_button = wx.Button(self, wx.ID_ANY, "Import")
