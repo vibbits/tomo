@@ -3,9 +3,10 @@
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
 
 import wx
-from wx.lib.floatcanvas import NavCanvas, FloatCanvas
-from polygon_editor import PolygonEditor
+from wx.lib.floatcanvas import FloatCanvas
 from tomo_canvas import TomoCanvas
+# from wx.lib.floatcanvas import NavCanvas
+# from polygon_editor import PolygonEditor
 
 # Note: See https://wxpython.org/Phoenix/docs/html/wx.ColourDatabase.html for a list of color names
 
@@ -19,7 +20,9 @@ class OverviewPanel(TomoCanvas):
     _polygon_editor = None
     # END PROTOTYPE
 
-    def __init__(self, parent, custom_modes=[]):
+    def __init__(self, parent, custom_modes=None):
+        if custom_modes is None:
+            custom_modes = []
         TomoCanvas.__init__(self, parent, custom_modes, id=wx.ID_ANY, size=(800, -1))
         # PROTOTYPE - for polygon editing
         # _polygon_editor = PolygonEditor(self.Canvas)
@@ -103,7 +106,7 @@ class OverviewPanel(TomoCanvas):
 
     def add_bullseye(self, pt, line_color, size=25):  # returns the list of objects added to the canvas; size is the size of the circle, the cross will be 20% larger; pt in image coordinates (y>=0)
         pt = (pt[0], -pt[1])  # note: flip y to convert from image coordinates (with y >= 0) back to canvas coords
-        cross = self.add_cross(pt, line_color, size * 1.2)
+        cross = self.add_cross(pt, line_color, int(round(size * 1.2)))
         circle = self.Canvas.AddCircle(pt, size, LineColor=line_color)
         return cross + [circle]
 
