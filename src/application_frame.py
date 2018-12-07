@@ -238,7 +238,7 @@ class ApplicationFrame(wx.Frame):
         self._focus_panel.deactivate()
         self._show_side_panel(self._focus_panel, False)
         self._canvas_panel.EnableToolByName(MoveStageMode.NAME, False)
-        self._canvas_panel.SetMode(self._canvas_panel.FindToolByName("Pointer"))
+        # self._canvas_panel.SetMode(self._canvas_panel.FindToolByName("Pointer"))
 
     def _on_align_stage(self, event):
         self._canvas_panel.EnableToolByName(MarkMode.NAME, True)
@@ -250,7 +250,7 @@ class ApplicationFrame(wx.Frame):
         self._stage_alignment_panel.deactivate()
         self._show_side_panel(self._stage_alignment_panel, False)
         self._canvas_panel.EnableToolByName(MarkMode.NAME, False)
-        self._canvas_panel.SetMode(self._canvas_panel.FindToolByName("Pointer"))
+        # self._canvas_panel.SetMode(self._canvas_panel.FindToolByName("Pointer"))
 
         # Enable/disable menu entries
         stage_is_aligned = not(self._model.overview_image_to_stage_coord_trf is None)
@@ -267,7 +267,7 @@ class ApplicationFrame(wx.Frame):
         self._point_of_interest_panel.deactivate()
         self._show_side_panel(self._point_of_interest_panel, False)
         self._canvas_panel.EnableToolByName(MarkMode.NAME, False)
-        self._canvas_panel.Canvas.SetMode(self._canvas_panel.FindToolByName("Pointer"))  # CHECKME: does this work? is the pointer tool selected visually? otherwise try with e.g. the pan tool to confirm
+        # self._canvas_panel.Canvas.SetMode(self._canvas_panel.FindToolByName("Pointer"))  # CHECKME: does this work? is the pointer tool selected visually? otherwise try with e.g. the pan tool to confirm
 
         # Enable/disable menu entries
         self._lm_image_acquisition_item.Enable(self._can_acquire_lm_images())
