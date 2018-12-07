@@ -78,7 +78,7 @@ class OverviewPanel(TomoCanvas):
             self._add_point_of_interest(pt, line_color=darker_green)
 
     def add_focus_position(self, position, color="Blue"):   # note: 'position' is in image space (with the origin in the top-left corner and y-axis pointing upward), so DIFFERENT from raw stage (x,y) position coordinates
-        print('draw focus: {}'.format(position))
+        # print('draw focus: {}'.format(position))
         position = (position[0], -position[1])  # note: flip y to convert from image coordinates (with y >= 0) back to canvas coords
         objs = self.add_cross(position, color)
         self._focus_lines.extend(objs)
@@ -92,14 +92,14 @@ class OverviewPanel(TomoCanvas):
         self._poi_lines = []
 
     def _add_point_of_interest(self, pt, line_color, size=25):
-        print('draw poi: {}'.format(pt))
+        # print('draw poi: {}'.format(pt))
         objs = self.add_cross(pt, line_color, size)
         self._poi_lines.extend(objs)
 
     # FIXME: IMPORTANT: fix inconsistency: sometimes canvas and sometimes image coordinates on the API!
 
     def add_cross(self, pt, line_color, size=25):  # pt is in *canvas* coordinates (y <= 0 means over the image); returns the list of objects added to the canvas
-        print('draw cross: {}'.format(pt))
+        # print('draw cross: {}'.format(pt))
         line1 = self.Canvas.AddLine([(pt[0] - size, pt[1]), (pt[0] + size, pt[1])], LineColor=line_color)
         line2 = self.Canvas.AddLine([(pt[0], pt[1] - size), (pt[0], pt[1] + size)], LineColor=line_color)
         return [line1, line2]
