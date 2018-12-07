@@ -69,7 +69,7 @@ class RibbonOutlineDialog(wx.Dialog):
             if dlg.ShowModal() == wx.ID_OK:
                 path = dlg.GetPath()
                 self._model.slice_polygons_path = path
-                self._slice_polygons_path_edit.SetLabelText(path)
+                self._slice_polygons_path_edit.SetValue(path)
 
     def _on_load_button_click(self, event):
         self._model.write_parameters()

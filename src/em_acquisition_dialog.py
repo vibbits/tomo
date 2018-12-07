@@ -78,7 +78,7 @@ class EMAcquisitionDialog(wx.Dialog):
             if dlg.ShowModal() == wx.ID_OK:
                 path = dlg.GetPath()
                 self._model.em_images_output_folder = path
-                self._em_images_output_folder_edit.SetLabelText(path)
+                self._em_images_output_folder_edit.SetValue(path)
 
     def _on_acquire_button_click(self, event):
         self._model.write_parameters()

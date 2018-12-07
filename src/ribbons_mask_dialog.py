@@ -74,7 +74,7 @@ class RibbonsMaskDialog(wx.Dialog):
         if dlg.ShowModal() == wx.ID_OK:
             path = dlg.GetPath()
             self._model.ribbons_mask_path = path
-            self._ribbons_mask_path_edit.SetLabelText(path)
+            self._ribbons_mask_path_edit.SetValue(path)
         dlg.Destroy()
 
     def _on_browse2_button_click(self, event):
@@ -87,7 +87,7 @@ class RibbonsMaskDialog(wx.Dialog):
             if dlg.ShowModal() == wx.ID_OK:
                 path = dlg.GetPath()
                 self._model.template_slice_path = path
-                self._template_slice_path_edit.SetLabelText(path)
+                self._template_slice_path_edit.SetValue(path)
 
     def _on_load_button_click(self, event):
         self._model.write_parameters()

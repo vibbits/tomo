@@ -22,7 +22,7 @@ class LMAcquisitionDialog(wx.Dialog):
     # _lm_max_autofocus_change_edit = None
     # _lm_do_autofocus_checkbox = None
 
-    def __init__(self, model, parent, ID, title, size = wx.DefaultSize, pos = wx.DefaultPosition, style = wx.DEFAULT_DIALOG_STYLE):
+    def __init__(self, model, parent, ID, title, size=wx.DefaultSize, pos=wx.DefaultPosition, style=wx.DEFAULT_DIALOG_STYLE):
         wx.Dialog.__init__(self, parent, ID, title, pos, size, style)
 
         self._model = model
@@ -31,19 +31,19 @@ class LMAcquisitionDialog(wx.Dialog):
 
         #
         lm_images_output_folder_label = wx.StaticText(self, wx.ID_ANY, "Output Folder:")
-        self._lm_images_output_folder_edit = wx.TextCtrl(self, wx.ID_ANY, self._model.lm_images_output_folder, size = (w, -1))
+        self._lm_images_output_folder_edit = wx.TextCtrl(self, wx.ID_ANY, self._model.lm_images_output_folder, size=(w, -1))
         self._lm_images_output_folder_button = wx.Button(self, wx.ID_ANY, "Browse")
 
         prefix_label = wx.StaticText(self, wx.ID_ANY, "Filename Prefix:")
-        self._prefix_edit = wx.TextCtrl(self, wx.ID_ANY, self._model.lm_images_prefix, size = (w, -1))
+        self._prefix_edit = wx.TextCtrl(self, wx.ID_ANY, self._model.lm_images_prefix, size=(w, -1))
 
         lm_acquisition_delay_label = wx.StaticText(self, wx.ID_ANY, "Acquisition Delay (sec):")
-        self._lm_acquisition_delay_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.delay_between_LM_image_acquisition_secs), size = (50, -1))
+        self._lm_acquisition_delay_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.delay_between_LM_image_acquisition_secs), size=(50, -1))
 
         lm_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        lm_sizer.Add(self._lm_images_output_folder_edit, flag = wx.ALIGN_CENTER_VERTICAL)
+        lm_sizer.Add(self._lm_images_output_folder_edit, flag=wx.ALIGN_CENTER_VERTICAL)
         lm_sizer.AddSpacer(8)
-        lm_sizer.Add(self._lm_images_output_folder_button, flag = wx.ALIGN_CENTER_VERTICAL)
+        lm_sizer.Add(self._lm_images_output_folder_button, flag=wx.ALIGN_CENTER_VERTICAL)
 
         empty_label = wx.StaticText(self, wx.ID_ANY, "")
 
@@ -57,22 +57,22 @@ class LMAcquisitionDialog(wx.Dialog):
 
         #
         sift_input_folder_label = wx.StaticText(self, wx.ID_ANY, "Input Folder:")
-        self._sift_input_folder_edit = wx.TextCtrl(self, wx.ID_ANY, self._model.sift_input_folder, size = (w, -1))
+        self._sift_input_folder_edit = wx.TextCtrl(self, wx.ID_ANY, self._model.sift_input_folder, size=(w, -1))
         self._sift_input_folder_button = wx.Button(self, wx.ID_ANY, "Browse")
 
         sift_in_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sift_in_sizer.Add(self._sift_input_folder_edit, flag = wx.ALIGN_CENTER_VERTICAL)
+        sift_in_sizer.Add(self._sift_input_folder_edit, flag=wx.ALIGN_CENTER_VERTICAL)
         sift_in_sizer.AddSpacer(8)
-        sift_in_sizer.Add(self._sift_input_folder_button, flag = wx.ALIGN_CENTER_VERTICAL)
+        sift_in_sizer.Add(self._sift_input_folder_button, flag=wx.ALIGN_CENTER_VERTICAL)
 
         sift_output_folder_label = wx.StaticText(self, wx.ID_ANY, "Output Folder:")
         self._sift_output_folder_edit = wx.TextCtrl(self, wx.ID_ANY, self._model.sift_output_folder, size=(w, -1))
         self._sift_output_folder_button = wx.Button(self, wx.ID_ANY, "Browse")
 
         sift_out_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sift_out_sizer.Add(self._sift_output_folder_edit, flag = wx.ALIGN_CENTER_VERTICAL)
+        sift_out_sizer.Add(self._sift_output_folder_edit, flag=wx.ALIGN_CENTER_VERTICAL)
         sift_out_sizer.AddSpacer(8)
-        sift_out_sizer.Add(self._sift_output_folder_button, flag = wx.ALIGN_CENTER_VERTICAL)
+        sift_out_sizer.Add(self._sift_output_folder_button, flag=wx.ALIGN_CENTER_VERTICAL)
 
         sift_pixel_size_label = wx.StaticText(self, wx.ID_ANY, "Pixel size (pixels/mm):")
         self._sift_pixel_size_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.sift_images_pixels_per_mm), size=(100, -1))
@@ -148,27 +148,33 @@ class LMAcquisitionDialog(wx.Dialog):
 
     def _on_lm_output_folder_browse_button_click(self, event):
         defaultPath = self._model.lm_images_output_folder
+        print('defaultPath='+defaultPath)
         with wx.DirDialog(self, "Select the output directory for LM images", defaultPath) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
                 path = dlg.GetPath()
+                print('Set lm_images_output_folder = ' + path)
                 self._model.lm_images_output_folder = path
-                self._lm_images_output_folder_edit.SetLabelText(path)
+                self._lm_images_output_folder_edit.SetValue(path)
 
     def _on_sift_input_folder_browse_button_click(self, event):
         defaultPath = self._model.sift_input_folder
+        print('defaultPath='+defaultPath)
         with wx.DirDialog(self, "Select the SIFT input directory", defaultPath) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
                 path = dlg.GetPath()
+                print('Set sift_input_folder = ' + path)
                 self._model.sift_input_folder = path
-                self._sift_input_folder_edit.SetLabelText(path)
+                self._sift_input_folder_edit.SetValue(path)
 
     def _on_sift_output_folder_browse_button_click(self, event):
         defaultPath = self._model.sift_output_folder
+        print('defaultPath='+defaultPath)
         with wx.DirDialog(self, "Select the SIFT output directory", defaultPath) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
                 path = dlg.GetPath()
+                print('Set sift_output_folder = ' + path)
                 self._model.sift_output_folder = path
-                self._sift_output_folder_edit.SetLabelText(path)
+                self._sift_output_folder_edit.SetValue(path)
 
     def _on_acquire_button_click(self, event):
         self._model.write_parameters()

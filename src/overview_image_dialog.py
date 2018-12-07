@@ -66,7 +66,7 @@ class OverviewImageDialog(wx.Dialog):
             if dlg.ShowModal() == wx.ID_OK:
                 path = dlg.GetPath()
                 self._model.overview_image_path = path
-                self._overview_image_path_edit.SetLabelText(path)
+                self._overview_image_path_edit.SetValue(path)
 
     def _on_import_button_click(self, event):
         self._model.write_parameters()

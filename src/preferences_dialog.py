@@ -16,7 +16,7 @@ class PreferencesDialog(wx.Dialog):
     _fiji_path = None
     _sift_registration_script = None
 
-    def __init__(self, model, parent, ID, title, size = wx.DefaultSize, pos = wx.DefaultPosition, style = wx.DEFAULT_DIALOG_STYLE):
+    def __init__(self, model, parent, ID, title, size=wx.DefaultSize, pos=wx.DefaultPosition, style=wx.DEFAULT_DIALOG_STYLE):
         wx.Dialog.__init__(self, parent, ID, title, pos, size, style)
 
         self._model = model
@@ -27,10 +27,10 @@ class PreferencesDialog(wx.Dialog):
         w = 450
 
         fiji_path_label = wx.StaticText(self, wx.ID_ANY, "Fiji Folder:")
-        self._fiji_path_edit = wx.TextCtrl(self, wx.ID_ANY, model.fiji_path, size = (w, -1))
+        self._fiji_path_edit = wx.TextCtrl(self, wx.ID_ANY, model.fiji_path, size=(w, -1))
 
         odemis_cli_path_label = wx.StaticText(self, wx.ID_ANY, "Odemis CLI Tool:")
-        self._odemis_cli_path_edit = wx.TextCtrl(self, wx.ID_ANY, model.odemis_cli, size = (w, -1))
+        self._odemis_cli_path_edit = wx.TextCtrl(self, wx.ID_ANY, model.odemis_cli, size=(w, -1))
 
         registration_script_file_label = wx.StaticText(self, wx.ID_ANY, "Registration Script for Fiji:")
         self._registration_script_file_edit = wx.TextCtrl(self, wx.ID_ANY, model.sift_registration_script, size = (w, -1))
@@ -49,10 +49,10 @@ class PreferencesDialog(wx.Dialog):
         env_sizer.Add(env_fgs, 0, wx.ALL | wx.CENTER, 10)
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)
-        ok_button = wx.Button(self, label = 'OK')
-        cancel_button = wx.Button(self, label = 'Cancel')
+        ok_button = wx.Button(self, label='OK')
+        cancel_button = wx.Button(self, label='Cancel')
         hbox.Add(cancel_button)
-        hbox.Add(ok_button, flag = wx.LEFT, border = 5)
+        hbox.Add(ok_button, flag=wx.LEFT, border=5)
 
         self.Bind(wx.EVT_TEXT, self._on_odemis_cli_path_change, self._odemis_cli_path_edit)
         self.Bind(wx.EVT_TEXT, self._on_fiji_path_change, self._fiji_path_edit)
@@ -62,8 +62,8 @@ class PreferencesDialog(wx.Dialog):
         # TODO: pressing x should also cancel
 
         contents = wx.BoxSizer(wx.VERTICAL)
-        contents.Add(env_sizer, 0, wx.ALL | wx.EXPAND, border = 5)
-        contents.Add(hbox, flag = wx.ALIGN_CENTER | wx.TOP | wx.BOTTOM, border = 10)
+        contents.Add(env_sizer, 0, wx.ALL | wx.EXPAND, border=5)
+        contents.Add(hbox, flag=wx.ALIGN_CENTER | wx.TOP | wx.BOTTOM, border=10)
 
         self.SetSizer(contents)
         contents.Fit(self)
