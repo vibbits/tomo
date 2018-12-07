@@ -532,9 +532,12 @@ class ApplicationFrame(wx.Frame):
 
         print('Aligning LM images')
         print('Starting a headless Fiji and calling the SIFT image registration plugin. Please be patient...')
-        if platform.system() == "Windows":
+        if True:   # platform.system() == "Windows":
+            # IMPROVEME: It seems that the True case is needed on Ubuntu.
+            # We will need to double check that it also works on Windows. If so, remove the confusing else part.
             script_args = "srcdir='{}',dstdir='{}',prefix='{}'".format(self._model.sift_input_folder, self._model.sift_output_folder, self._model.lm_images_prefix)
-        else: # On Ubuntu
+        else:
+            # Note: this does NOT seem to work on Ubuntu (on the SECOM computer) with Python 2.7 and Fiji.
             script_args = '"srcdir=\'{}\',dstdir=\'{}\',prefix=\'{}\'"'.format(self._model.sift_input_folder, self._model.sift_output_folder, self._model.lm_images_prefix)
 
         # Info about headless ImageJ: https://imagej.net/Headless#Running_macros_in_headless_mode
