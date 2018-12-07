@@ -11,7 +11,7 @@ class OverviewImageDialog(wx.Dialog):
     _overview_image_path_edit = None
     _browse_button = None
 
-    def __init__(self, model, parent, ID, title, size = wx.DefaultSize, pos = wx.DefaultPosition, style = wx.DEFAULT_DIALOG_STYLE):
+    def __init__(self, model, parent, ID, title, size=wx.DefaultSize, pos=wx.DefaultPosition, style=wx.DEFAULT_DIALOG_STYLE):
         wx.Dialog.__init__(self, parent, ID, title, pos, size, style)
 
         self._model = model
@@ -41,7 +41,7 @@ class OverviewImageDialog(wx.Dialog):
 
         box = wx.StaticBox(self, wx.ID_ANY)
         sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
-        sizer.Add(fgs, 0, wx.ALL|wx.CENTER, 10)
+        sizer.Add(fgs, 0, wx.ALL | wx.CENTER, 10)
 
         self.Bind(wx.EVT_TEXT, self._on_overview_image_path_change, self._overview_image_path_edit)
         self.Bind(wx.EVT_BUTTON, self._on_import_button_click, self._import_button)
