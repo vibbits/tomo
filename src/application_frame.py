@@ -230,6 +230,7 @@ class ApplicationFrame(wx.Frame):
 
     def _on_set_focus(self, event):
         self._canvas_panel.EnableToolByName(MoveStageMode.NAME, True)
+        self._canvas_panel.EnableToolByName(MarkMode.NAME, False)
         self._show_side_panel(self._focus_panel, True)
         self._focus_panel.activate()
 
@@ -241,6 +242,7 @@ class ApplicationFrame(wx.Frame):
 
     def _on_align_stage(self, event):
         self._canvas_panel.EnableToolByName(MarkMode.NAME, True)
+        self._canvas_panel.EnableToolByName(MoveStageMode.NAME, False)
         self._show_side_panel(self._stage_alignment_panel, True)
         self._stage_alignment_panel.activate()
 
@@ -249,22 +251,32 @@ class ApplicationFrame(wx.Frame):
         self._show_side_panel(self._stage_alignment_panel, False)
         self._canvas_panel.EnableToolByName(MarkMode.NAME, False)
         self._canvas_panel.SetMode(self._canvas_panel.FindToolByName("Pointer"))
-        self._set_focus_item.Enable(not(self._model.overview_image_to_stage_coord_trf is None))  # note that == applied to a numpy array would perform elementwise comparison
+
+        # Enable/disable menu entries
+        stage_is_aligned = not(self._model.overview_image_to_stage_coord_trf is None)
+        self._set_focus_item.Enable(stage_is_aligned)  # during focus acquisition we will move the stage, so it needs to be aligned
+        self._lm_image_acquisition_item.Enable(self._can_acquire_lm_images())
 
     def _on_set_point_of_interest(self, event):
         self._canvas_panel.EnableToolByName(MarkMode.NAME, True)
+        self._canvas_panel.EnableToolByName(MoveStageMode.NAME, False)
         self._show_side_panel(self._point_of_interest_panel, True)
         self._point_of_interest_panel.activate()
 
     def _on_point_of_interest_done_button_click(self, event):
         self._point_of_interest_panel.deactivate()
         self._show_side_panel(self._point_of_interest_panel, False)
-        self._canvas_panel.EnableToolByName(MoveStageMode.NAME, False)
-        self._canvas_panel.SetMode(self._canvas_panel.FindToolByName("Pointer"))  # CHECKME: does this work? is the pointer tool selected visually? otherwise try with e.g. the pan tool to confirm
+        self._canvas_panel.EnableToolByName(MarkMode.NAME, False)
+        self._canvas_panel.Canvas.SetMode(self._canvas_panel.FindToolByName("Pointer"))  # CHECKME: does this work? is the pointer tool selected visually? otherwise try with e.g. the pan tool to confirm
 
         # Enable/disable menu entries
-        self._lm_image_acquisition_item.Enable(True)   # We've got points of interest now, so we can acquire LM images.
+        self._lm_image_acquisition_item.Enable(self._can_acquire_lm_images())
         self._em_image_acquisition_item.Enable(False)  # After changing the POI we need to acquire LM images first to obtain SIFT-corrected stage movements.
+
+    def _can_acquire_lm_images(self):
+        stage_is_aligned = not (self._model.overview_image_to_stage_coord_trf is None)
+        have_point_of_interest = not (self._model.all_points_of_interest is None)
+        return stage_is_aligned and have_point_of_interest
 
     def _show_side_panel(self, side_panel, show):
         side_panel.Show(show)
