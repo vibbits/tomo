@@ -77,8 +77,8 @@ def set_absolute_stage_position(pos):  # move the stage to the specified absolut
     # # For minimal safety, pop up a confirmation dialog for now.
     # dlg = wx.MessageDialog(None, msg + " ?", "Move stage?", style=wx.YES | wx.NO)
     # if dlg.ShowModal() == wx.ID_YES:
-    #     print(msg)
-    #     stage.moveAbs({"x": x, "y": y})
+    print(msg)
+    stage.moveAbs({"x": x, "y": y})
     # else:
     #     print(msg + " -- CANCELLED")
     # dlg.Destroy()
@@ -113,8 +113,8 @@ def set_absolute_focus_z_position(z):      # z is the absolute focus value  (use
     # # For minimal safety, pop up a confirmation dialog for now.
     # dlg = wx.MessageDialog(None, msg + " ?", "Set focus?", style=wx.YES | wx.NO)
     # if dlg.ShowModal() == wx.ID_YES:
-    #     print(msg)
-    #     focus.moveAbs({"z": z})
+    print(msg)
+    focus.moveAbs({"z": z})
     # else:
     #     print(msg + " -- CANCELLED")
     # dlg.Destroy()
