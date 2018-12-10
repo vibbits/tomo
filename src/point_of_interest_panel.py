@@ -78,6 +78,8 @@ class PointOfInterestPanel(wx.Panel):
         original_point_of_interest = self._model.original_point_of_interest
         print('Original point-of-interest: x={} y={}'.format(*original_point_of_interest))
         transformed_points_of_interest = mapping.repeatedly_transform_point(self._model.slice_polygons, original_point_of_interest)
+        if not transformed_points_of_interest:
+            print("An error occurred while calculating the predicted point-of-interests.")  # IMPROVEME: display a warning message (e.g. in red) in the panel instead.
         self._model.all_points_of_interest = [original_point_of_interest] + transformed_points_of_interest
 
         # Draw the points of interest

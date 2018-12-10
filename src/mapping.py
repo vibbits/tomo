@@ -8,6 +8,7 @@ import numpy as np
 # Takes the (x, y) coordinates of a point p and of a quadrilateral
 # and returns normalized coordinates (xi, eta) of this point
 # relative to a square centered on the origin and with corners (-/+1, -/+1).
+# Note: throws an exception if mapping failed.
 def normalize_point_position(quad, p):
     # note: y-axis gets flipped
     p_x = float(p[0]); p_y = float(-p[1])
@@ -34,10 +35,26 @@ def normalize_point_position(quad, p):
     bb = b / min(a, b, c)
     cc = c / min(a, b, c)
 
-    # TODO: check what division by zero in the expressions below means geometrically, and test for it.
+    # Note: negative discriminants sometimes occur
+    # (e.g. when mapping points that are outside the slice contours)
+    # This will results in a Python exception being thrown.
 
     discriminant = bb ** 2 - 4 * aa * cc
-    eta = (-bb - math.sqrt(discriminant)) / (2 * aa)
+    # print("aa={} bb={} cc={} D={}".format(aa, bb, cc, discriminant))
+
+    # eta can be calculated as the solution of a quadratic equations.
+    # This equation yields two solutions. The correct solution is the one with eta in [-1, +1].
+    # CHECKME: is it possible that both eta's are in [-1, +1]?
+    eta_minus = (-bb - math.sqrt(discriminant)) / (2 * aa)
+    eta_plus = (-bb + math.sqrt(discriminant)) / (2 * aa)
+
+    # Pick the eta solution that is in [-1, 1].
+    # For robustness, we pick the eta that is closest to 0.
+    if abs(eta_minus) < abs(eta_plus):
+        eta = eta_minus
+    else:
+        eta = eta_plus
+
     xi = (G - B * eta) / (A + C * eta)
 
     print("A={} B={} C={} D={} E={} F={} G={} H={} a={} b={} c={} a'={} b'={} c'={} raiz={} eta={} xi={}".format(A, B, C, D, E, F, G, H, a, b, c, aa, bb, cc, discriminant, eta, xi))
@@ -82,11 +99,14 @@ def transform_point(quad1, quad2, poi):
 # is returned: the positions of the points in quads 2 to N.
 # (starting_point is of course the position in quad 1).
 def repeatedly_transform_point(quads, starting_point):
-    num_quads = len(quads)
-    transformed_points = []
-    p = starting_point
-    for i in range(0, num_quads-1):
-        p = transform_point(quads[i], quads[i + 1], p)
-        transformed_points.append(p)
+    try:
+        num_quads = len(quads)
+        transformed_points = []
+        p = starting_point
+        for i in range(0, num_quads-1):
+            p = transform_point(quads[i], quads[i + 1], p)
+            transformed_points.append(p)
 
-    return transformed_points
+        return transformed_points
+    except:
+        return []
