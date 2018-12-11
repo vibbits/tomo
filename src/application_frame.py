@@ -338,10 +338,8 @@ class ApplicationFrame(wx.Frame):
                                                                                    self._model.overview_image_pixels_per_mm))
 
         # Add and draw the overview image
-        wait = wx.BusyInfo("Loading overview image...")
         self._canvas_panel.set_image(self._model.overview_image_path)
         self._canvas_panel.zoom_to_fit()
-        del wait
 
         # Enable the menu item for loading the slice outlines
         # (We can now use it because we've got the pixel size of the overview image (really needed????))

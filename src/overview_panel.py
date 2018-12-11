@@ -31,7 +31,16 @@ class OverviewPanel(TomoCanvas):
 
     def set_image(self, filename):
         print('Loading ' + filename)
-        image = wx.Image(filename)
+
+        wait = wx.BusyInfo("Loading overview image...")
+        try:
+            image = wx.Image(filename)
+        finally:
+            del wait
+
+        if not image.IsOk():
+            return
+
         img = FloatCanvas.ScaledBitmap2(image,
                                         (0, 0),
                                         Height=image.GetHeight(),
