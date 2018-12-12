@@ -27,7 +27,7 @@ class TomoCanvas(NavCanvas.NavCanvas):
         num_tools = tb.GetToolsCount()
         for pos in range(num_tools):
             tool = tb.GetToolByPos(pos)
-            print("tool {}: label='{}' shortHelp='{}' id={}".format(pos, tool.GetLabel(), tool.GetShortHelp(), tool.GetId()))
+            # print("tool {}: label='{}' shortHelp='{}' id={}".format(pos, tool.GetLabel(), tool.GetShortHelp(), tool.GetId()))
             if tool.GetShortHelp() == name:
                 return tool
         return None

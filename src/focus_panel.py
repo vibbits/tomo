@@ -115,7 +115,6 @@ class FocusPanel(wx.Panel):
         return self._focus_map
 
     def _on_left_mouse_button_down(self, event):
-        print("Event = {}".format(event))
         coords = event.GetCoords()
 
         image_coords = (coords[0], -coords[1])
