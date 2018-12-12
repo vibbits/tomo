@@ -1,6 +1,7 @@
 import wx
 import mapping
 from mark_mode import MarkMode
+import tools
 
 class PointOfInterestPanel(wx.Panel):
     _canvas = None
@@ -35,9 +36,8 @@ class PointOfInterestPanel(wx.Panel):
         poi_sizer.Add(self._poi_y_edit, flag=wx.ALIGN_CENTER_VERTICAL)
         poi_sizer.AddSpacer(5)
 
-        instructions_label = wx.StaticText(self, wx.ID_ANY, ("Use the Mark tool (+) to specify the point of interest on the first slice. "
-                                                             "This point will be marked with a green cross, and predicted analogous "
-                                                             "points in the other slices with a red cross."))
+        instructions_label = wx.StaticText(self, wx.ID_ANY, ("Use the Mark tool (+) to specify the point of interest inside any slice. "
+                                                             "This point and predicted analogous points in the other slices will be marked with a red cross."))
         w = 330
         instructions_label.Wrap(w)  # force line wrapping
 
@@ -62,26 +62,45 @@ class PointOfInterestPanel(wx.Panel):
     def deactivate(self):
         self._canvas.Canvas.Unbind(MarkMode.EVT_TOMO_MARK_LEFT_DOWN)
 
+    def _update_poi(self, image_coords):
+        # IMPROVEME: if image_coords is None, then show a label "No point of interest selected yet." instead of showing empty POI x/y coordinate boxes.
+        x_val = "{:d}".format(image_coords[0]) if image_coords else ""
+        y_val = "{:d}".format(image_coords[1]) if image_coords else ""
+        self._poi_x_edit.SetValue(x_val)
+        self._poi_y_edit.SetValue(y_val)
+
     def _on_left_mouse_button_down(self, event):
         canvas_coords = event.GetCoords()
-        image_coords = (int(round(canvas_coords[0])), -int(round(canvas_coords[1])))
+        poi_coords = (int(round(canvas_coords[0])), -int(round(canvas_coords[1])))
+
+        slices_hit = tools.polygons_hit(self._model.slice_polygons, poi_coords)
+        if not slices_hit:
+            print("No point of interest was selected. Please click inside a slice.") # IMPROVEME: show message in GUI - a message box? or a warning in the side panel?
+            self._model.original_point_of_interest = None
+            self._model.all_points_of_interest = []
+        else:
+            reference_slice_index = slices_hit[0]
+            self._model.original_point_of_interest = poi_coords
+            self._model.all_points_of_interest = self._predict_points_of_interest(poi_coords, reference_slice_index)
 
         # Show poi position numerically in ui
-        self._poi_x_edit.SetValue("{:d}".format(image_coords[0]))
-        self._poi_y_edit.SetValue("{:d}".format(image_coords[1]))
-
-        # Store POI position in model
-        self._model.original_point_of_interest = image_coords
-        self._model.write_parameters()  # CHECKME: still useful?
-
-        # Transform point-of-interest from one slice to the next
-        original_point_of_interest = self._model.original_point_of_interest
-        print('Original point-of-interest: x={} y={}'.format(*original_point_of_interest))
-        transformed_points_of_interest = mapping.repeatedly_transform_point(self._model.slice_polygons, original_point_of_interest)
-        if not transformed_points_of_interest:
-            print("An error occurred while calculating the predicted point-of-interests.")  # IMPROVEME: display a warning message (e.g. in red) in the panel instead.
-        self._model.all_points_of_interest = [original_point_of_interest] + transformed_points_of_interest
+        self._update_poi(self._model.original_point_of_interest)
 
         # Draw the points of interest
         self._canvas.set_points_of_interest(self._model.all_points_of_interest)
         self._canvas.redraw()
+
+    def _predict_points_of_interest(self, poi_coords, reference_slice_index):
+        # Transform point-of-interest from one slice to the next
+        # The reference_slice_index is the index of the slice in which the user specified the point-of-interest.
+        # We will only predict points-of-interest in subsequent slices.
+
+        original_point_of_interest = poi_coords
+        slice_polygons = self._model.slice_polygons[reference_slice_index:]
+
+        transformed_points_of_interest = mapping.repeatedly_transform_point(slice_polygons, original_point_of_interest)
+        if not transformed_points_of_interest:
+            print("An error occurred while calculating predicted points-of-interest.")  # IMPROVEME: display a warning message (e.g. in red) in the panel instead.
+
+        return [original_point_of_interest] + transformed_points_of_interest
+

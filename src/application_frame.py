@@ -253,7 +253,7 @@ class ApplicationFrame(wx.Frame):
         # self._canvas_panel.SetMode(self._canvas_panel.FindToolByName("Pointer"))
 
         # Enable/disable menu entries
-        stage_is_aligned = not(self._model.overview_image_to_stage_coord_trf is None)
+        stage_is_aligned = (self._model.overview_image_to_stage_coord_trf is not None)
         self._set_focus_item.Enable(stage_is_aligned)  # during focus acquisition we will move the stage, so it needs to be aligned
         self._lm_image_acquisition_item.Enable(self._can_acquire_lm_images())
 
@@ -274,15 +274,15 @@ class ApplicationFrame(wx.Frame):
         self._em_image_acquisition_item.Enable(False)  # After changing the POI we need to acquire LM images first to obtain SIFT-corrected stage movements.
 
     def _can_acquire_lm_images(self):
-        stage_is_aligned = not (self._model.overview_image_to_stage_coord_trf is None)
-        have_point_of_interest = not (self._model.all_points_of_interest is None)
+        stage_is_aligned = (self._model.overview_image_to_stage_coord_trf is not None)
+        have_point_of_interest = bool(self._model.all_points_of_interest)
         return stage_is_aligned and have_point_of_interest
 
     def _show_side_panel(self, side_panel, show):
         side_panel.Show(show)
         self.GetTopLevelParent().Layout()
 
-        self._canvas_panel.zoom_to_fit()
+        self._canvas_panel.zoom_to_fit()  # CHECKME: is this really needed? often it makes sense not to disturb the overview image zoom/position when opening the side panel (because the user typically needs to perform several actions in the same area of the overview image)
         self._canvas_panel.redraw()
 
         # Disable/Re-enable the menu depending on whether the side panel is active or not.

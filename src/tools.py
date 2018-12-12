@@ -117,9 +117,46 @@ def polygon_center(polygon):
     return (cx / six_area, cy / six_area)
 
 
-# def is_inside(polygon, point):
-#     inside = cv2.pointPolygonTest(polygon, point, measureDist = False)
-#     return inside >= 0
+# Example usage of pointPolygonTest():
+# >>> cnt = np.array([[1,1],[10,50],[50,50]], dtype=np.int32)
+# >>> cv2.pointPolygonTest(cnt, (40,40),True)
+# -0.0
+# >>> cv2.pointPolygonTest(cnt, (40,45),True)
+# 3.5355339059327378
+# >>> cv2.pointPolygonTest(cnt, (200,45),True)
+# -150.08331019803634
+# >>> cv2.pointPolygonTest(cnt, (40,45),False)
+# 1.0
+# >>> cv2.pointPolygonTest(cnt, (40,33345),False)
+# -1.0
+#
+# Assuming a coordinate system where the y-axis points down (and x to the right),
+# and the contour's vertices are specified in counter-clockwise order, then:
+#
+#                                         < 0 means the point is outside the contour
+#    cv2.pointPolygonTest(contour, point) = 0 means the point is on contour
+#                                         >  0 means the point is inside the contour
+#
+
+def is_strictly_inside(polygon, point):
+    inside = cv2.pointPolygonTest(polygon, point, measureDist = False)
+    return inside > 0
+
+
+def polygons_hit(polygons, point):
+    """
+    :param point: x,y coordinates of the point to check
+    :return: a list with the (0-based) index of all the polygons containing the given point.
+             The list can contain 0 polygon indices (point not in any of the polygons),
+             1 index (the point is inside exactly one polygon and it overlaps with no other polygons),
+             or more polygon indices (some polygons overlap and the point is inside them).
+    """
+    hit = []
+    for i, polygon in enumerate(polygons):
+        cnt = np.array(polygon, dtype=np.int32)
+        if is_strictly_inside(cnt, point):
+            hit.append(i)
+    return hit
 
 
 # def interpolate_along_line_segment(pos1, val1, pos2, val2, pos):

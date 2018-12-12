@@ -69,22 +69,18 @@ class OverviewPanel(TomoCanvas):
         self.remove_objects(self._slice_outlines)
         self._slice_outlines = []
 
-    # The first point is user-specified, drawn in green.
-    # The other points are calculated, drawn in red.
-    def set_points_of_interest(self, points_of_interest):  # point of interest in overview image coordinates; if a poi was set before it is replaced by the new one
+    def set_points_of_interest(self, points_of_interest):  # points of interest in overview image coordinates; if pois were set before, they are replaced by the new ones; points_of_interest can be the empty list
         # Remove old POIs (if any)
         if self._poi_lines:
             self._remove_points_of_interest()
 
-        # Color definitions
-        light_green = wx.Colour(0, 255, 0)
-        darker_green = wx.Colour(0, 225, 0)
+        if not points_of_interest:
+            return
 
         # Add new POIs
         pts = [(p[0], -p[1]) for p in points_of_interest]
-        self._add_point_of_interest(pts[0], line_color=light_green)
-        for pt in pts[1:]:
-            self._add_point_of_interest(pt, line_color=darker_green)
+        for pt in pts:
+            self._add_point_of_interest(pt, line_color="red")
 
     def add_focus_position(self, position, color="Blue"):   # note: 'position' is in image space (with the origin in the top-left corner and y-axis pointing upward), so DIFFERENT from raw stage (x,y) position coordinates
         # print('draw focus: {}'.format(position))
