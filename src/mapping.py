@@ -57,7 +57,7 @@ def normalize_point_position(quad, p):
 
     xi = (G - B * eta) / (A + C * eta)
 
-    print("A={} B={} C={} D={} E={} F={} G={} H={} a={} b={} c={} a'={} b'={} c'={} raiz={} eta={} xi={}".format(A, B, C, D, E, F, G, H, a, b, c, aa, bb, cc, discriminant, eta, xi))
+    # print("A={} B={} C={} D={} E={} F={} G={} H={} a={} b={} c={} a'={} b'={} c'={} raiz={} eta={} xi={}".format(A, B, C, D, E, F, G, H, a, b, c, aa, bb, cc, discriminant, eta, xi))
 
     return np.array([xi, eta])
 
@@ -82,7 +82,7 @@ def unnormalize_point_position(quad, p_normalized):
     x = Ni_1 * x1 + Ni_2 * x2 + Ni_3 * x3 + Ni_4 * x4
     y = Ni_1 * y1 + Ni_2 * y2 + Ni_3 * y3 + Ni_4 * y4
 
-    print("eta={} xi={} Ni_1={} Ni_2={} Ni_3={} Ni_4={} x={} y={}".format(eta, xi, Ni_1, Ni_2, Ni_3, Ni_4, x, y))
+    # print("eta={} xi={} Ni_1={} Ni_2={} Ni_3={} Ni_4={} x={} y={}".format(eta, xi, Ni_1, Ni_2, Ni_3, Ni_4, x, y))
 
     return np.array([x, -y])
 
