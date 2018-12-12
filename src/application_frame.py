@@ -502,7 +502,7 @@ class ApplicationFrame(wx.Frame):
         # Move the stage to the first point of interest.
         # The stage may not currently be positioned there because,
         # for example, we may have moved the stage while building the focus map.
-        print('Moving stage to the point-of-interest on the first slice.')
+        print('Moving stage to the first point-of-interest.')
         poi_image_coords = self._model.all_points_of_interest[0]
         poi_stage_coords = self._image_coords_to_stage_coords(poi_image_coords)
         secom_tools.set_absolute_stage_position(poi_stage_coords)
@@ -568,7 +568,7 @@ class ApplicationFrame(wx.Frame):
         tools.show_offsets_table(self._model.slice_offsets_microns, sift_offsets_microns, self._model.combined_offsets_microns)
 
         # Move stage back to the first slice (using the inverse coarse movements)
-        print('Moving stage back to the point-of-interest on the first slice.')
+        print('Moving stage back to the first point-of-interest.')
         total_stage_movement_microns = sum(self._model.slice_offsets_microns)
         secom_tools.move_stage_relative(self._model.odemis_cli, -total_stage_movement_microns)
 
