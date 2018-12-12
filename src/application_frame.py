@@ -281,8 +281,6 @@ class ApplicationFrame(wx.Frame):
     def _show_side_panel(self, side_panel, show):
         side_panel.Show(show)
         self.GetTopLevelParent().Layout()
-
-        self._canvas_panel.zoom_to_fit()  # CHECKME: is this really needed? often it makes sense not to disturb the overview image zoom/position when opening the side panel (because the user typically needs to perform several actions in the same area of the overview image)
         self._canvas_panel.redraw()
 
         # Disable/Re-enable the menu depending on whether the side panel is active or not.
