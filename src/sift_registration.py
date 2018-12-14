@@ -1,6 +1,7 @@
 #@String srcdir
 #@String dstdir
 #@String prefix
+#@Integer numimages
 
 # Prototype script for registering a set of images with ImageJ's SIFT registration plugin.
 # This script is to be executed by a headless Fiji.
@@ -36,6 +37,15 @@ def registration():
     # Sort the image filenames in natural order
     # (so with "prefix2.tif" before "prefix11.tif")
     images.sort(key = natural_keys)
+
+    # Restrict ourselves to the number of images requested by the user.
+    # (The numimages parameter is a bit of a workaround to be able to handle the
+    # situation where images are written into a folder which is not empty. Just iterating
+    # over all files with the correct prefix might then yield an incorrect mix of old and new images.
+    # We could erase this folder before acquiring images, but that is annoying for our
+    # mock setup on our development machine where we do not actually acquire images but use pre-acquired images
+    # because we don't have connection to an actual SECOM. And we prefer not to erase+copy again.)
+    images = images[:numimages]
 
     # Actually load the images and add them to a stack
     print('Loading images and merging them into an image stack')

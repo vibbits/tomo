@@ -528,7 +528,7 @@ class ApplicationFrame(wx.Frame):
 
         print('Aligning LM images')
         print('Starting a headless Fiji and calling the SIFT image registration plugin. Please be patient...')
-        script_args = "srcdir='{}',dstdir='{}',prefix='{}'".format(self._model.sift_input_folder, self._model.sift_output_folder, self._model.lm_images_prefix)
+        script_args = "srcdir='{}',dstdir='{}',prefix='{}',numimages='{}'".format(self._model.sift_input_folder, self._model.sift_output_folder, self._model.lm_images_prefix, len(self._model.all_points_of_interest))
 
         # Info about headless ImageJ: https://imagej.net/Headless#Running_macros_in_headless_mode
         wait = wx.BusyInfo("Aligning LM images...")
