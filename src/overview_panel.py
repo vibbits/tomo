@@ -14,7 +14,8 @@ class OverviewPanel(TomoCanvas):
     _poi_lines = []
     _focus_lines = []
     _slice_outlines = []
-    _image = None
+    _wximage = None  # the original wx.Image
+    _image = None  # the canvas image object handle
 
     # PROTOTYPE - for polygon editing
     _polygon_editor = None
@@ -34,16 +35,16 @@ class OverviewPanel(TomoCanvas):
 
         wait = wx.BusyInfo("Loading overview image...")
         try:
-            image = wx.Image(filename)
+            self._wximage = wx.Image(filename)
         finally:
             del wait
 
-        if not image.IsOk():
+        if not self._wximage.IsOk():
             return
 
-        img = FloatCanvas.ScaledBitmap2(image,
+        img = FloatCanvas.ScaledBitmap2(self._wximage,
                                         (0, 0),
-                                        Height=image.GetHeight(),
+                                        Height=self._wximage.GetHeight(),
                                         Position='tl')
         # CHECKME: why use ScaledBitmap2 instead of ScaledBitmap?
         # CHECKME: can we use a different Position (e.g. 'bl') to avoid flipping the y-axis in different places?
@@ -51,9 +52,13 @@ class OverviewPanel(TomoCanvas):
             self._remove_image()
         self._image = self.Canvas.AddObject(img)
 
+    def get_wximage(self):
+        return self._wximage
+
     def _remove_image(self):
         self.Canvas.RemoveObject(self._image)
         self._image = None
+        self._wximage = None
 
     def set_slice_outlines(self, slice_outlines, line_color="Green"):  # slice outlines in overview image coordinates (y >= 0)
         # Add previous slice outlines (if any)

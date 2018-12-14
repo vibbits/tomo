@@ -19,6 +19,7 @@ import numpy as np
 import secom_tools
 from focus_map import FocusMap
 from move_stage_mode import MoveStageMode
+import platform
 
 class FocusPanel(wx.Panel):
     _canvas = None
@@ -47,9 +48,11 @@ class FocusPanel(wx.Panel):
         remember_focus_button = wx.Button(self, wx.ID_ANY, "Remember focus", size=button_size)
         self.done_button = wx.Button(self, wx.ID_ANY, "Done", size=button_size)  # Not this panel but the ApplicationFame will listen to clicks on this button.
         discard_all_button = wx.Button(self, wx.ID_ANY, "Discard all", size=button_size)
+        export_button = wx.Button(self, wx.ID_ANY, "Export", size=button_size)
 
         self.Bind(wx.EVT_BUTTON, self._on_remember_focus_button_click, remember_focus_button)
         self.Bind(wx.EVT_BUTTON, self._on_discard_all_button_click, discard_all_button)
+        self.Bind(wx.EVT_BUTTON, self._on_export_button_click, export_button)
 
         table_title = wx.StaticText(self, wx.ID_ANY, "User defined focus positions:")
 
@@ -60,6 +63,7 @@ class FocusPanel(wx.Panel):
         contents.Add(label, 0, wx.ALL | wx.EXPAND, border=b)
         contents.Add(remember_focus_button, 0, wx.ALL | wx.CENTER, border=b)
         contents.Add(discard_all_button, 0, wx.ALL | wx.CENTER, border=b)
+        contents.Add(export_button, 0, wx.ALL | wx.CENTER, border=b)
         contents.Add(self.done_button, 0, wx.ALL | wx.CENTER, border=b)
         contents.Add(table_title, 0, wx.ALL, border=b)
         contents.Add(self._table, 0, wx.ALL, border=b)
@@ -78,7 +82,7 @@ class FocusPanel(wx.Panel):
         # Make a spreadsheet like table.
         # See https://groups.google.com/forum/#!msg/wxpython-users/CsII2JsSEOI/DkectFCHAewJ
         # and https://wxpython.org/Phoenix/docs/html/wx.grid.Grid.html
-        num_rows = 1  # empty initial roww, for cosmetic reason
+        num_rows = 1  # empty initial row, for cosmetic reason
         num_cols = 3
         table = wx.grid.Grid(self, wx.ID_ANY)
         table.SetDefaultCellAlignment(wx. ALIGN_CENTRE, wx. ALIGN_CENTRE)
@@ -89,7 +93,6 @@ class FocusPanel(wx.Panel):
         table.EnableEditing(False)
         table.DisableDragRowSize()
         table.SetRowLabelSize(40)  # width of the column that displays the row number
-        # IMPROVEME? Support deleting rows?
         return table
 
     def reset(self):
@@ -141,7 +144,15 @@ class FocusPanel(wx.Panel):
     def _on_remember_focus_button_click(self, event):
         # Query stage position and focus height
         stage_pos = secom_tools.get_absolute_stage_position()
-        z = secom_tools.get_absolute_focus_z_position()
+
+        # The actual SECOM computer runs Ubuntu, but we develop on Windows, not connected to the electron microscope.
+        # In that case generate some fake z-focus values for testing purposes.
+        fake = (platform.system() == "Windows")
+        if fake:
+            z = stage_pos[0]
+            print('FAKE focus absolute position: z={}'.format(z))
+        else:
+            z = secom_tools.get_absolute_focus_z_position()
 
         # Remember focus
         self._focus_map.add_user_defined_focus_position(stage_pos, z)
@@ -166,3 +177,46 @@ class FocusPanel(wx.Panel):
         dlg = wx.MessageDialog(self, "Discard all user defined focus positions?", "Discard all", style=wx.YES | wx.NO)
         if dlg.ShowModal() == wx.ID_YES:
             self.reset()
+
+    def _on_export_button_click(self, event):
+        defaultDir = ''
+        defaultFile = 'focus_map.txt'
+        with wx.FileDialog(self, "Specify name of focus map file",
+                           defaultDir, defaultFile,
+                           wildcard="Text files (*.txt)|*.txt",
+                           style=wx.FD_SAVE) as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
+                path = dlg.GetPath()
+                focus_samples = self._sample_focus_map(step = 100)
+                np.savetxt(path, focus_samples, delimiter = '\t')
+                print('Sampled focus map saved to {}'.format(path))
+
+    def _sample_focus_map(self, step):
+        """
+        :param step: the focus map will be sampled at every 'step' pixels in the overview image
+        :return: a numpy array with the sampled focus map; each entry in the array is an interpolated focus z value
+        """
+        assert self._canvas._image is not None
+
+        print('Sampling focus map every {} pixels in the overview image...'.format(step))
+        image = self._canvas.get_wximage()
+        image_y_range = range(0, image.GetHeight(), step)
+        image_x_range = range(0, image.GetWidth(), step)
+
+        # 'focus' will hold the focus samples
+        focus = np.empty((len(image_y_range), len(image_x_range)), np.float)
+
+        mat = self._model.overview_image_to_stage_coord_trf
+
+        for y_index, image_y in enumerate(image_y_range):
+            for x_index, image_x in enumerate(image_x_range):
+                # Convert overview image coordinates to stage coordinates.
+                homog_image_coords = np.array([image_x, image_y, 1])
+                homog_stage_coords = np.dot(mat, homog_image_coords)
+                stage_pos = homog_stage_coords[0:2]
+
+                # Sample the focus map at stage position 'stage_pos'
+                focus_z = self._focus_map.get_focus(stage_pos)
+                focus[y_index, x_index] = focus_z
+
+        return focus
