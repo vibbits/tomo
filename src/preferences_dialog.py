@@ -37,12 +37,12 @@ class PreferencesDialog(wx.Dialog):
 
         # Environment
         env_fgs = wx.FlexGridSizer(cols = 2, vgap = 4, hgap = 8)
-        env_fgs.Add(fiji_path_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        env_fgs.Add(self._fiji_path_edit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        env_fgs.Add(odemis_cli_path_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        env_fgs.Add(self._odemis_cli_path_edit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        env_fgs.Add(registration_script_file_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        env_fgs.Add(self._registration_script_file_edit, flag =wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        env_fgs.Add(fiji_path_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        env_fgs.Add(self._fiji_path_edit, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        env_fgs.Add(odemis_cli_path_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        env_fgs.Add(self._odemis_cli_path_edit, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        env_fgs.Add(registration_script_file_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        env_fgs.Add(self._registration_script_file_edit, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
         env_box = wx.StaticBox(self, -1, 'Environment')
         env_sizer = wx.StaticBoxSizer(env_box, wx.VERTICAL)
@@ -59,7 +59,6 @@ class PreferencesDialog(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self._on_registration_script_change, self._registration_script_file_edit)
         self.Bind(wx.EVT_BUTTON, self._on_ok, ok_button)
         self.Bind(wx.EVT_BUTTON, self._on_cancel, cancel_button)
-        # TODO: pressing x should also cancel
 
         contents = wx.BoxSizer(wx.VERTICAL)
         contents.Add(env_sizer, 0, wx.ALL | wx.EXPAND, border=5)
@@ -81,12 +80,9 @@ class PreferencesDialog(wx.Dialog):
 
     def _on_odemis_cli_path_change(self, event):
         self._odemis_cli = self._odemis_cli_path_edit.GetValue()
-        print('temp odemis_cli={}'.format(self._odemis_cli))
 
     def _on_fiji_path_change(self, event):
         self._fiji_path = self._fiji_path_edit.GetValue()
-        print('temp fiji={}'.format(self._fiji_path))
 
     def _on_registration_script_change(self, event):
         self._sift_registration_script = self._registration_script_file_edit.GetValue()
-        print('temp sift_registration_script={}'.format(self._sift_registration_script))
