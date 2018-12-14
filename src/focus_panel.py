@@ -48,11 +48,11 @@ class FocusPanel(wx.Panel):
         remember_focus_button = wx.Button(self, wx.ID_ANY, "Remember focus", size=button_size)
         self.done_button = wx.Button(self, wx.ID_ANY, "Done", size=button_size)  # Not this panel but the ApplicationFame will listen to clicks on this button.
         discard_all_button = wx.Button(self, wx.ID_ANY, "Discard all", size=button_size)
-        export_button = wx.Button(self, wx.ID_ANY, "Export", size=button_size)
+        save_button = wx.Button(self, wx.ID_ANY, "Save Focus Map", size=button_size)
 
         self.Bind(wx.EVT_BUTTON, self._on_remember_focus_button_click, remember_focus_button)
         self.Bind(wx.EVT_BUTTON, self._on_discard_all_button_click, discard_all_button)
-        self.Bind(wx.EVT_BUTTON, self._on_export_button_click, export_button)
+        self.Bind(wx.EVT_BUTTON, self._on_save_button_click, save_button)
 
         table_title = wx.StaticText(self, wx.ID_ANY, "User defined focus positions:")
 
@@ -63,7 +63,7 @@ class FocusPanel(wx.Panel):
         contents.Add(label, 0, wx.ALL | wx.EXPAND, border=b)
         contents.Add(remember_focus_button, 0, wx.ALL | wx.CENTER, border=b)
         contents.Add(discard_all_button, 0, wx.ALL | wx.CENTER, border=b)
-        contents.Add(export_button, 0, wx.ALL | wx.CENTER, border=b)
+        contents.Add(save_button, 0, wx.ALL | wx.CENTER, border=b)
         contents.Add(self.done_button, 0, wx.ALL | wx.CENTER, border=b)
         contents.Add(table_title, 0, wx.ALL, border=b)
         contents.Add(self._table, 0, wx.ALL, border=b)
@@ -110,9 +110,9 @@ class FocusPanel(wx.Panel):
     def _add_to_table(self, x, y, z):
         row = len(self._focus_map.get_user_defined_focus_positions()) - 1
         self._table.InsertRows(row)
-        self._table.SetCellValue(row, 0, str(x))
-        self._table.SetCellValue(row, 1, str(y))
-        self._table.SetCellValue(row, 2, str(z))
+        self._table.SetCellValue(row, 0, '{:.9f}'.format(x))  # x and y are expressed in meters, display position with nanometer precision
+        self._table.SetCellValue(row, 1, '{:.9f}'.format(y))
+        self._table.SetCellValue(row, 2, '{:.9f}'.format(z))
 
     def get_focus_map(self):
         return self._focus_map
@@ -178,7 +178,10 @@ class FocusPanel(wx.Panel):
         if dlg.ShowModal() == wx.ID_YES:
             self.reset()
 
-    def _on_export_button_click(self, event):
+    def _on_save_button_click(self, event):
+        """
+        Sample the focus map and save it to a text file.
+        """
         defaultDir = ''
         defaultFile = 'focus_map.txt'
         with wx.FileDialog(self, "Specify name of focus map file",
