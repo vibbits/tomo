@@ -28,7 +28,7 @@ class PointOfInterestPanel(wx.Panel):
         self._poi_label = wx.StaticText(self, wx.ID_ANY, "")
         self._update_poi(self._model.original_point_of_interest)
 
-        num_pois_label = wx.StaticText(self, wx.ID_ANY, "Number of POIs:")
+        num_pois_label = wx.StaticText(self, wx.ID_ANY, "Number of slices:")  # CHECKME: should we use 'section' or 'slice' as terminology?
         self._num_pois_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._num_pois), size=(50, -1), style=wx.TE_PROCESS_ENTER)
         self._num_pois_edit.Bind(wx.EVT_KEY_DOWN, self._on_num_pois_key_down)
         self._num_pois_edit.Bind(wx.EVT_KILL_FOCUS, self._on_num_pois_focus_lost)
