@@ -23,7 +23,7 @@ from em_acquisition_dialog import EMAcquisitionDialog
 from overview_panel import OverviewPanel
 from ribbon_outline_dialog import RibbonOutlineDialog
 from ribbons_mask_dialog import RibbonsMaskDialog
-from segmentation_panel import SegmentationPanel
+from segmentation_canvas import SegmentationCanvas
 from focus_panel import FocusPanel
 from contour_finder_panel import ContourFinderPanel
 from ribbon_splitter import segment_contours_into_slices, draw_contour_numbers
@@ -401,21 +401,21 @@ class ApplicationFrame(wx.Frame):
         print('_do_load_ribbons_mask')
 
         frame = wx.Frame(self, wx.ID_ANY, "Ribbon Segmentation", size = (1024, 1024))
-        segm_panel = SegmentationPanel(frame)
+        segm_canvas = SegmentationCanvas(frame)
         contents = wx.BoxSizer(wx.VERTICAL)
-        contents.Add(segm_panel, 1, wx.EXPAND)
+        contents.Add(segm_canvas, 1, wx.EXPAND)
         frame.SetSizer(contents)
         frame.CenterOnScreen()
         frame.Show(True)
 
         # TODO: maybe draw the ribbons mask transparently over the overview image?
-        segm_panel.add_image(self._model.ribbons_mask_path)
-        segm_panel.redraw()
+        segm_canvas.add_image(self._model.ribbons_mask_path)
+        segm_canvas.redraw()
 
         template_slice_contour = ApplicationFrame._load_template_slice(self._model.template_slice_path)
-        segm_panel.add_polygon(template_slice_contour, "Green", line_width = 4)
-        segm_panel.add_text("template", tools.polygon_center(template_slice_contour), "Green", font_size = 100)
-        segm_panel.redraw()
+        segm_canvas.add_polygon(template_slice_contour, "Green", line_width = 4)
+        segm_canvas.add_text("template", tools.polygon_center(template_slice_contour), "Green", font_size = 100)
+        segm_canvas.redraw()
 
         wx.Yield()  # give wxPython opportunity to redraw the frame
 
@@ -476,9 +476,9 @@ class ApplicationFrame(wx.Frame):
 
         # Show each slice, with slice numbers
         for i, slice in enumerate(slices):
-            segm_panel.add_polygon(slice, "Red", line_width = 2)
-            segm_panel.add_text(str(i), tools.polygon_center(slice), "Red", font_size = 100)
-        segm_panel.redraw()
+            segm_canvas.add_polygon(slice, "Red", line_width = 2)
+            segm_canvas.add_text(str(i), tools.polygon_center(slice), "Red", font_size = 100)
+        segm_canvas.redraw()
 
         print('...Done...')
 

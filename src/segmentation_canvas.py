@@ -5,7 +5,7 @@
 import wx
 from wx.lib.floatcanvas import NavCanvas, FloatCanvas
 
-class SegmentationPanel(NavCanvas.NavCanvas):
+class SegmentationCanvas(NavCanvas.NavCanvas):
     _poi_lines = []
     def __init__(self, parent):
         NavCanvas.NavCanvas.__init__(self, parent)
