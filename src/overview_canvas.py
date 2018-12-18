@@ -10,7 +10,7 @@ from tomo_canvas import TomoCanvas
 
 # Note: See https://wxpython.org/Phoenix/docs/html/wx.ColourDatabase.html for a list of color names
 
-class OverviewPanel(TomoCanvas):
+class OverviewCanvas(TomoCanvas):
     _poi_lines = []
     _focus_lines = []
     _slice_outlines = []

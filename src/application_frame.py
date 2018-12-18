@@ -20,7 +20,7 @@ from preferences_dialog import PreferencesDialog
 from overview_image_dialog import OverviewImageDialog
 from lm_acquisition_dialog import LMAcquisitionDialog
 from em_acquisition_dialog import EMAcquisitionDialog
-from overview_panel import OverviewPanel
+from overview_canvas import OverviewCanvas
 from ribbon_outline_dialog import RibbonOutlineDialog
 from ribbons_mask_dialog import RibbonsMaskDialog
 from segmentation_canvas import SegmentationCanvas
@@ -34,7 +34,7 @@ from contour_finder import ContourFinder
 class ApplicationFrame(wx.Frame):
     _model = None
 
-    _canvas_panel = None
+    _overview_canvas = None
     _status_label = None
     _focus_panel = None
     _contour_finder_panel = None
@@ -73,39 +73,39 @@ class ApplicationFrame(wx.Frame):
                         (MoveStageMode.NAME, MoveStageMode(self), resources.movestage.GetBitmap())]
 
         # Image Panel
-        self._canvas_panel = OverviewPanel(self, custom_modes)
+        self._overview_canvas = OverviewCanvas(self, custom_modes)
 
         # By default disable the custom modes, they are only active when their corresponding side panel is visible
         for mode in custom_modes:
-            tool = self._canvas_panel.FindToolByName(mode[0])
-            self._canvas_panel.ToolBar.EnableTool(tool.GetId(), False)
+            tool = self._overview_canvas.FindToolByName(mode[0])
+            self._overview_canvas.ToolBar.EnableTool(tool.GetId(), False)
 
         # Listen to mouse movements so we can show the mouse position in the status bar.
         # We also need to listen to mouse movements when some custom modes are active (since regular FloatCanvas events do not happen then).
-        self._canvas_panel.Bind(FloatCanvas.EVT_MOTION, self._on_mouse_move_over_image)
-        self._canvas_panel.Bind(MarkMode.EVT_TOMO_MARK_MOTION, self._on_mouse_move_over_image)
-        self._canvas_panel.Bind(MoveStageMode.EVT_TOMO_MOVESTAGE_MOTION, self._on_mouse_move_over_image)
+        self._overview_canvas.Bind(FloatCanvas.EVT_MOTION, self._on_mouse_move_over_image)
+        self._overview_canvas.Bind(MarkMode.EVT_TOMO_MARK_MOTION, self._on_mouse_move_over_image)
+        self._overview_canvas.Bind(MoveStageMode.EVT_TOMO_MOVESTAGE_MOTION, self._on_mouse_move_over_image)
 
         # Status bar at the bottom of the window
         self._status_label = wx.StaticText(self, wx.ID_ANY, "")
 
         # Focus side panel
-        self._focus_panel = FocusPanel(self, self._canvas_panel, self._model)
+        self._focus_panel = FocusPanel(self, self._overview_canvas, self._model)
         self._focus_panel.Show(False)
         self.Bind(wx.EVT_BUTTON, self._on_focus_done_button_click, self._focus_panel.done_button)
 
         # Contour finder side panel
-        self._contour_finder_panel = ContourFinderPanel(self, self._model, self._canvas_panel)
+        self._contour_finder_panel = ContourFinderPanel(self, self._model, self._overview_canvas)
         self._contour_finder_panel.Show(False)
         self.Bind(wx.EVT_BUTTON, self._on_find_contours_done_button_click, self._contour_finder_panel.done_button)
 
         # Stage alignment side panel
-        self._stage_alignment_panel = StageAlignmentPanel(self, self._model, self._canvas_panel)
+        self._stage_alignment_panel = StageAlignmentPanel(self, self._model, self._overview_canvas)
         self._stage_alignment_panel.Show(False)
         self.Bind(wx.EVT_BUTTON, self._on_stage_alignment_done_button_click, self._stage_alignment_panel.done_button)
 
         # Point of interest panel
-        self._point_of_interest_panel = PointOfInterestPanel(self, self._model, self._canvas_panel)
+        self._point_of_interest_panel = PointOfInterestPanel(self, self._model, self._overview_canvas)
         self._point_of_interest_panel.Show(False)
         self.Bind(wx.EVT_BUTTON, self._on_point_of_interest_done_button_click, self._point_of_interest_panel.done_button)
 
@@ -113,7 +113,7 @@ class ApplicationFrame(wx.Frame):
         #            with a "deck" of side panel cards? Does wxPython have this concept?
 
         hori = wx.BoxSizer(wx.HORIZONTAL)
-        hori.Add(self._canvas_panel, 1, wx.ALL | wx.EXPAND, border=5)
+        hori.Add(self._overview_canvas, 1, wx.ALL | wx.EXPAND, border=5)
         hori.Add(self._focus_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
         hori.Add(self._contour_finder_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
         hori.Add(self._stage_alignment_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
@@ -229,27 +229,27 @@ class ApplicationFrame(wx.Frame):
         self._show_side_panel(self._contour_finder_panel, False)
 
     def _on_set_focus(self, event):
-        self._canvas_panel.EnableToolByName(MoveStageMode.NAME, True)
-        self._canvas_panel.EnableToolByName(MarkMode.NAME, False)
+        self._overview_canvas.EnableToolByName(MoveStageMode.NAME, True)
+        self._overview_canvas.EnableToolByName(MarkMode.NAME, False)
         self._show_side_panel(self._focus_panel, True)
         self._focus_panel.activate()
 
     def _on_focus_done_button_click(self, event):
         self._focus_panel.deactivate()
         self._show_side_panel(self._focus_panel, False)
-        self._canvas_panel.EnableToolByName(MoveStageMode.NAME, False)
+        self._overview_canvas.EnableToolByName(MoveStageMode.NAME, False)
         # self._canvas_panel.SetMode(self._canvas_panel.FindToolByName("Pointer"))
 
     def _on_align_stage(self, event):
-        self._canvas_panel.EnableToolByName(MarkMode.NAME, True)
-        self._canvas_panel.EnableToolByName(MoveStageMode.NAME, False)
+        self._overview_canvas.EnableToolByName(MarkMode.NAME, True)
+        self._overview_canvas.EnableToolByName(MoveStageMode.NAME, False)
         self._show_side_panel(self._stage_alignment_panel, True)
         self._stage_alignment_panel.activate()
 
     def _on_stage_alignment_done_button_click(self, event):
         self._stage_alignment_panel.deactivate()
         self._show_side_panel(self._stage_alignment_panel, False)
-        self._canvas_panel.EnableToolByName(MarkMode.NAME, False)
+        self._overview_canvas.EnableToolByName(MarkMode.NAME, False)
         # self._canvas_panel.SetMode(self._canvas_panel.FindToolByName("Pointer"))
 
         # Enable/disable menu entries
@@ -258,15 +258,15 @@ class ApplicationFrame(wx.Frame):
         self._lm_image_acquisition_item.Enable(self._can_acquire_lm_images())
 
     def _on_set_point_of_interest(self, event):
-        self._canvas_panel.EnableToolByName(MarkMode.NAME, True)
-        self._canvas_panel.EnableToolByName(MoveStageMode.NAME, False)
+        self._overview_canvas.EnableToolByName(MarkMode.NAME, True)
+        self._overview_canvas.EnableToolByName(MoveStageMode.NAME, False)
         self._show_side_panel(self._point_of_interest_panel, True)
         self._point_of_interest_panel.activate()
 
     def _on_point_of_interest_done_button_click(self, event):
         self._point_of_interest_panel.deactivate()
         self._show_side_panel(self._point_of_interest_panel, False)
-        self._canvas_panel.EnableToolByName(MarkMode.NAME, False)
+        self._overview_canvas.EnableToolByName(MarkMode.NAME, False)
         # self._canvas_panel.Canvas.SetMode(self._canvas_panel.FindToolByName("Pointer"))  # CHECKME: does this work? is the pointer tool selected visually? otherwise try with e.g. the pan tool to confirm
 
         # Enable/disable menu entries
@@ -281,7 +281,7 @@ class ApplicationFrame(wx.Frame):
     def _show_side_panel(self, side_panel, show):
         side_panel.Show(show)
         self.GetTopLevelParent().Layout()
-        self._canvas_panel.redraw()
+        self._overview_canvas.redraw()
 
         # Disable/Re-enable the menu depending on whether the side panel is active or not.
         # While the side panel is shown, the application behaves more or less like modal.
@@ -336,8 +336,8 @@ class ApplicationFrame(wx.Frame):
                                                                                    self._model.overview_image_pixels_per_mm))
 
         # Add and draw the overview image
-        self._canvas_panel.set_image(self._model.overview_image_path)
-        self._canvas_panel.zoom_to_fit()
+        self._overview_canvas.set_image(self._model.overview_image_path)
+        self._overview_canvas.zoom_to_fit()
 
         # Enable the menu item for loading the slice outlines
         # (We can now use it because we've got the pixel size of the overview image (really needed????))
@@ -356,8 +356,8 @@ class ApplicationFrame(wx.Frame):
         print('Loaded {} slice polygons from {}'.format(len(self._model.slice_polygons), self._model.slice_polygons_path))
 
         # Add and draw the slice outlines
-        self._canvas_panel.set_slice_outlines(self._model.slice_polygons)
-        self._canvas_panel.redraw()
+        self._overview_canvas.set_slice_outlines(self._model.slice_polygons)
+        self._overview_canvas.redraw()
 
         # Enable the menu item for acquiring LM images
         # (We can now use it because we've got POIs)
