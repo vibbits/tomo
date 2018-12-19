@@ -5,6 +5,8 @@
 import wx
 from wx.lib.floatcanvas import NavCanvas, FloatCanvas
 
+# OBSOLETE OBSOLETE OBSOLETE OBSOLETE OBSOLETE OBSOLETE OBSOLETE OBSOLETE
+
 class SegmentationCanvas(NavCanvas.NavCanvas):
     _poi_lines = []
     def __init__(self, parent):
@@ -33,3 +35,5 @@ class SegmentationCanvas(NavCanvas.NavCanvas):
 
     def redraw(self):
         self.Canvas.Draw()
+
+# OBSOLETE OBSOLETE OBSOLETE OBSOLETE OBSOLETE OBSOLETE OBSOLETE OBSOLETE
