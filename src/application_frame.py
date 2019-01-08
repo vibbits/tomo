@@ -3,13 +3,11 @@
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
 
 import wx
-from wx.lib.floatcanvas import FloatCanvas, GUIMode, Resources
+from wx.lib.floatcanvas import FloatCanvas, Resources
 
 import numpy as np
-import cv2
-import platform
+import os
 
-import polygon_simplification
 import tools
 import secom_tools
 import resources
@@ -23,16 +21,12 @@ from lm_acquisition_dialog import LMAcquisitionDialog
 from em_acquisition_dialog import EMAcquisitionDialog
 from overview_canvas import OverviewCanvas
 from ribbon_outline_dialog import RibbonOutlineDialog
-from ribbons_mask_dialog import RibbonsMaskDialog
-from segmentation_canvas import SegmentationCanvas
 from focus_panel import FocusPanel
 from contour_finder_panel import ContourFinderPanel
-from ribbon_splitter import segment_contours_into_slices, draw_contour_numbers
 from stage_alignment_panel import StageAlignmentPanel
 from point_of_interest_panel import PointOfInterestPanel
 from segmentation_panel import SegmentationPanel
 from polygon_editor_panel import PolygonEditorPanel
-from contour_finder import ContourFinder
 
 class ApplicationFrame(wx.Frame):
     _model = None
@@ -155,10 +149,13 @@ class ApplicationFrame(wx.Frame):
         file_menu = wx.Menu()
         self._import_overview_image_item = file_menu.Append(wx.NewId(), "Import Overview Image...")
         self._load_slice_polygons_item = file_menu.Append(wx.NewId(), "Load Slice Polygons...")
+        self._save_slice_polygons_item = file_menu.Append(wx.NewId(), "Save Slice Polygons...")
+        self._save_slice_polygons_item.Enable(False)
         exit_menu_item = file_menu.Append(wx.NewId(), "Exit")
 
         edit_menu = wx.Menu()
         self._edit_polygons_item = edit_menu.Append(wx.NewId(), "Polygons...")
+        self._edit_polygons_item.Enable(False)
         edit_menu.AppendSeparator()
         prefs_menu_item = edit_menu.Append(wx.NewId(), "Preferences...")
 
@@ -193,6 +190,7 @@ class ApplicationFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_edit_preferences, prefs_menu_item)
         self.Bind(wx.EVT_MENU, self._on_import_overview_image, self._import_overview_image_item)
         self.Bind(wx.EVT_MENU, self._on_load_slice_polygons, self._load_slice_polygons_item)
+        self.Bind(wx.EVT_MENU, self._on_save_slice_polygons, self._save_slice_polygons_item)
         self.Bind(wx.EVT_MENU, self._on_set_point_of_interest, self._set_point_of_interest_item)
         self.Bind(wx.EVT_MENU, self._on_align_stage, self._align_stage_item)
         self.Bind(wx.EVT_MENU, self._on_lm_image_acquisition, self._lm_image_acquisition_item)
@@ -222,6 +220,19 @@ class ApplicationFrame(wx.Frame):
             dlg.CenterOnScreen()
             if dlg.ShowModal() == wx.ID_OK:
                 self._do_load_slice_polygons()
+        self._save_slice_polygons_item.Enable(True)  # We now have polygons, so we can edit them and save them
+
+    def _on_save_slice_polygons(self, event):
+        path = self._model.slice_polygons_path  # by default suggest saving to the same location where the slices were last loaded from
+        defaultDir = os.path.dirname(path)
+        defaultFile = os.path.basename(path)
+        with wx.FileDialog(self, "Select the slice outlines file",
+                            defaultDir, defaultFile,
+                            wildcard="JSON files (*.json)|*.json") as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
+                path = dlg.GetPath()
+                tools.json_save_polygons(path, self._model.slice_polygons)
+                print('Saved {} slice polygons to {}'.format(len(self._model.slice_polygons), path))
 
     def _on_edit_preferences(self, event):
         with PreferencesDialog(self._model, None, wx.ID_ANY, "Preferences") as dlg:
@@ -374,10 +385,6 @@ class ApplicationFrame(wx.Frame):
         self._overview_canvas.set_image(self._model.overview_image_path)
         self._overview_canvas.zoom_to_fit()
 
-        # Enable the menu item for loading the slice outlines
-        # (We can now use it because we've got the pixel size of the overview image (really needed????))
-        # self._load_slice_polygons_item.Enable(True)
-
         # Once we have an overview image the user can use it to identify a landmark on that image
         # and the same one in Odemis. This constitutes stage - overview image alignment.
         self._align_stage_item.Enable(True)
@@ -398,6 +405,10 @@ class ApplicationFrame(wx.Frame):
         # Enable the menu item for setting the point of interest
         # (We can now because we have reference slice contours - though typically we will also want to load the overview image)
         self._set_point_of_interest_item.Enable(True)
+
+        # Since the polygon editor cannot be used yet to manually add polygon slices, it must only be enabled
+        # after the user loaded an existing polygons (created for example via ImageJ).
+        self._edit_polygons_item.Enable(True)
 
     def _image_coords_to_stage_coords(self, image_coords):   # IMPROVEME: this is also coded somewhere else, use this function instead
         # Convert image coords to stage coords

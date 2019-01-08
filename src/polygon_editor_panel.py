@@ -247,6 +247,7 @@ class PolygonEditorPanel(wx.Panel):
 
     def _add_slice_numbers(self):
         self._slice_numbers = []
+        assert self._model.slice_polygons is not None  # IMPROVEME: can't we use the empty list instead of None? That would make some None checking unnecessary.
         for i, polygon in enumerate(self._model.slice_polygons):
             pos = tools.polygon_center(polygon)
             pos = (pos[0], -pos[1])
