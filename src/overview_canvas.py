@@ -5,10 +5,15 @@
 import wx
 from wx.lib.floatcanvas import FloatCanvas
 from tomo_canvas import TomoCanvas
-# from wx.lib.floatcanvas import NavCanvas
-# from polygon_editor import PolygonEditor
 
 # Note: See https://wxpython.org/Phoenix/docs/html/wx.ColourDatabase.html for a list of color names
+
+# IMPROVEME: I think the API should return the handles to the objects that it created, and have the caller keep track of it.
+# (Otherwise this class will need many different functions to keep semantically different "lines" or "squares" or ... apart
+# since they may have to be removed separately.)
+# THOUGHT: I think this class *can* keep track of objects, but maybe only those that need to be rendered independent of which side panel is active, and
+# even if no side panel is activate. Some objects are tied tightly to a specific panel (e.g. polygon editing handles) and those should probably
+# be left out of the OverviewCanvas.
 
 class OverviewCanvas(TomoCanvas):
     _poi_lines = []
@@ -17,17 +22,10 @@ class OverviewCanvas(TomoCanvas):
     _wximage = None  # the original wx.Image
     _image = None  # the canvas image object handle
 
-    # PROTOTYPE - for polygon editing
-    _polygon_editor = None
-    # END PROTOTYPE
-
     def __init__(self, parent, custom_modes=None):
         if custom_modes is None:
             custom_modes = []
         TomoCanvas.__init__(self, parent, custom_modes, id=wx.ID_ANY, size=(800, -1))
-        # PROTOTYPE - for polygon editing
-        # _polygon_editor = PolygonEditor(self.Canvas)
-        # END PROTOTYPE
         wx.CallAfter(self.Canvas.ZoomToBB)  # so it will get called after everything is created and sized
 
     def set_image(self, filename):
@@ -70,6 +68,18 @@ class OverviewCanvas(TomoCanvas):
             polygon = self.Canvas.AddPolygon(pts, LineColor=line_color)
             self._slice_outlines.append(polygon)
 
+    def set_slice_outline_linewidth(self, outline, line_width):
+        obj = self._slice_outlines[outline]
+        obj.SetLineWidth(line_width)
+
+    def set_slice_outline_vertex_position(self, outline, vertex, pos):
+        obj = self._slice_outlines[outline]
+        obj.Points[vertex] = pos
+
+    def remove_slice_outline(self, index):
+        obj = self._slice_outlines.pop(index)
+        self.remove_objects([obj])
+
     def _remove_slice_outlines(self):
         self.remove_objects(self._slice_outlines)
         self._slice_outlines = []
@@ -108,6 +118,8 @@ class OverviewCanvas(TomoCanvas):
 
     # FIXME: IMPORTANT: fix inconsistency: sometimes canvas and sometimes image coordinates on the API!
 
+    # FIXME: if we first add slice outlines and then the overview image, the image will completely obscure the slice outlines. To avoid this, either somehow move the slice outlines back to the top, or remove and add them again in the correct order.
+
     def add_cross(self, pt, line_color, size=25):  # pt is in *canvas* coordinates (y <= 0 means over the image); returns the list of objects added to the canvas
         # print('draw cross: {}'.format(pt))
         line1 = self.Canvas.AddLine([(pt[0] - size, pt[1]), (pt[0] + size, pt[1])], LineColor=line_color)
@@ -127,8 +139,8 @@ class OverviewCanvas(TomoCanvas):
     def zoom_to_fit(self):
         self.Canvas.ZoomToBB()
 
-    def redraw(self):
-        self.Canvas.Draw()
+    def redraw(self, force=False):
+        self.Canvas.Draw(force)
 
     ##### FIXME PROTOTYPE FOR RIBBON SEGMENTATION - NEEDS TO BE CLEANED UP
 

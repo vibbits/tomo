@@ -3,7 +3,7 @@
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
 
 import wx
-from wx.lib.floatcanvas import FloatCanvas, GUIMode
+from wx.lib.floatcanvas import FloatCanvas, GUIMode, Resources
 
 import numpy as np
 import cv2
@@ -16,6 +16,7 @@ import resources
 from model import TomoModel
 from mark_mode import MarkMode
 from move_stage_mode import MoveStageMode
+from polygon_selection_mode import PolygonSelectionMode
 from preferences_dialog import PreferencesDialog
 from overview_image_dialog import OverviewImageDialog
 from lm_acquisition_dialog import LMAcquisitionDialog
@@ -30,6 +31,7 @@ from ribbon_splitter import segment_contours_into_slices, draw_contour_numbers
 from stage_alignment_panel import StageAlignmentPanel
 from point_of_interest_panel import PointOfInterestPanel
 from segmentation_panel import SegmentationPanel
+from polygon_editor_panel import PolygonEditorPanel
 from contour_finder import ContourFinder
 
 class ApplicationFrame(wx.Frame):
@@ -42,6 +44,7 @@ class ApplicationFrame(wx.Frame):
     _stage_alignment_panel = None
     _point_of_interest_panel = None
     _segmentation_panel = None
+    _polygon_editor_panel = None
 
     # Menu
     _import_overview_image_item = None
@@ -49,6 +52,7 @@ class ApplicationFrame(wx.Frame):
     _lm_image_acquisition_item = None
     _em_image_acquisition_item = None
     _segment_ribbons_item = None
+    _edit_polygons_item = None
     _set_point_of_interest_item = None
     _set_focus_item = None
     _about_item = None
@@ -71,8 +75,11 @@ class ApplicationFrame(wx.Frame):
 
         # Custom tool modes definition. They will be associated with tools in the toolbar.
         # We can listen to mouse events when such a mode is active.
+        # (The third element in each tuple is a bitmap for showing in the toolbar. The mode itself typically also
+        # set a custom cursor; often the same bitmap.)
         custom_modes = [(MarkMode.NAME, MarkMode(self), resources.crosshair.GetBitmap()),
-                        (MoveStageMode.NAME, MoveStageMode(self), resources.movestage.GetBitmap())]
+                        (MoveStageMode.NAME, MoveStageMode(self), resources.movestage.GetBitmap()),
+                        (PolygonSelectionMode.NAME, PolygonSelectionMode(self), Resources.getPointerBitmap())]
 
         # Image Panel
         self._overview_canvas = OverviewCanvas(self, custom_modes)
@@ -87,6 +94,7 @@ class ApplicationFrame(wx.Frame):
         self._overview_canvas.Bind(FloatCanvas.EVT_MOTION, self._on_mouse_move_over_image)
         self._overview_canvas.Bind(MarkMode.EVT_TOMO_MARK_MOTION, self._on_mouse_move_over_image)
         self._overview_canvas.Bind(MoveStageMode.EVT_TOMO_MOVESTAGE_MOTION, self._on_mouse_move_over_image)
+        self._overview_canvas.Bind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_MOTION, self._on_mouse_move_over_image)
 
         # Status bar at the bottom of the window
         self._status_label = wx.StaticText(self, wx.ID_ANY, "")
@@ -114,8 +122,12 @@ class ApplicationFrame(wx.Frame):
         # Segmentation panel
         self._segmentation_panel = SegmentationPanel(self, self._model, self._overview_canvas)
         self._segmentation_panel.Show(False)
-        self.Bind(wx.EVT_BUTTON, self._on_segmentation_done_button_click,
-                  self._segmentation_panel.done_button)
+        self.Bind(wx.EVT_BUTTON, self._on_segmentation_done_button_click, self._segmentation_panel.done_button)
+
+        # Polygon editor panel
+        self._polygon_editor_panel = PolygonEditorPanel(self, self._model, self._overview_canvas)
+        self._polygon_editor_panel.Show(False)
+        self.Bind(wx.EVT_BUTTON, self._on_polygon_editor_done_button_click, self._polygon_editor_panel.done_button)
 
         # IMPROVEME: rather than adding each side panel separately we probably should add just a single side panel
         #            with a "deck" of side panel cards? Does wxPython have this concept?
@@ -123,6 +135,7 @@ class ApplicationFrame(wx.Frame):
         hori = wx.BoxSizer(wx.HORIZONTAL)
         hori.Add(self._overview_canvas, 1, wx.ALL | wx.EXPAND, border=5)
         hori.Add(self._focus_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
+        hori.Add(self._polygon_editor_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
         hori.Add(self._contour_finder_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
         hori.Add(self._stage_alignment_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
         hori.Add(self._point_of_interest_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
@@ -142,10 +155,11 @@ class ApplicationFrame(wx.Frame):
         file_menu = wx.Menu()
         self._import_overview_image_item = file_menu.Append(wx.NewId(), "Import Overview Image...")
         self._load_slice_polygons_item = file_menu.Append(wx.NewId(), "Load Slice Polygons...")
-        self._load_slice_polygons_item.Enable(False)
         exit_menu_item = file_menu.Append(wx.NewId(), "Exit")
 
         edit_menu = wx.Menu()
+        self._edit_polygons_item = edit_menu.Append(wx.NewId(), "Polygons...")
+        edit_menu.AppendSeparator()
         prefs_menu_item = edit_menu.Append(wx.NewId(), "Preferences...")
 
         microscope_menu = wx.Menu()
@@ -175,6 +189,7 @@ class ApplicationFrame(wx.Frame):
         menu_bar.Append(help_menu, "&Help")
 
         self.Bind(wx.EVT_MENU, self._on_exit, exit_menu_item)
+        self.Bind(wx.EVT_MENU, self._on_edit_polygons, self._edit_polygons_item)
         self.Bind(wx.EVT_MENU, self._on_edit_preferences, prefs_menu_item)
         self.Bind(wx.EVT_MENU, self._on_import_overview_image, self._import_overview_image_item)
         self.Bind(wx.EVT_MENU, self._on_load_slice_polygons, self._load_slice_polygons_item)
@@ -208,12 +223,6 @@ class ApplicationFrame(wx.Frame):
             if dlg.ShowModal() == wx.ID_OK:
                 self._do_load_slice_polygons()
 
-    def _on_segment_ribbons(self, event):
-        self._show_side_panel(self._segmentation_panel, True)
-
-    def _on_segmentation_done_button_click(self, event):
-        self._show_side_panel(self._segmentation_panel, False)
-
     def _on_edit_preferences(self, event):
         with PreferencesDialog(self._model, None, wx.ID_ANY, "Preferences") as dlg:
             dlg.CenterOnScreen()
@@ -236,6 +245,23 @@ class ApplicationFrame(wx.Frame):
 
     def _on_find_contours_done_button_click(self, event):
         self._show_side_panel(self._contour_finder_panel, False)
+
+    def _on_segment_ribbons(self, event):
+        self._show_side_panel(self._segmentation_panel, True)
+
+    def _on_segmentation_done_button_click(self, event):
+        self._show_side_panel(self._segmentation_panel, False)
+
+    def _on_edit_polygons(self, event):
+        self._overview_canvas.EnableToolByName(PolygonSelectionMode.NAME, True)
+        self._show_side_panel(self._polygon_editor_panel, True)
+        self._polygon_editor_panel.activate()
+
+    def _on_polygon_editor_done_button_click(self, event):
+        self._overview_canvas.EnableToolByName(PolygonSelectionMode.NAME, False)
+        self._show_side_panel(self._polygon_editor_panel, False)
+        #TODO: make the default pointer tool the currently active tool again
+        self._polygon_editor_panel.deactivate()
 
     def _on_set_focus(self, event):
         self._overview_canvas.EnableToolByName(MoveStageMode.NAME, True)
@@ -350,7 +376,7 @@ class ApplicationFrame(wx.Frame):
 
         # Enable the menu item for loading the slice outlines
         # (We can now use it because we've got the pixel size of the overview image (really needed????))
-        self._load_slice_polygons_item.Enable(True)
+        # self._load_slice_polygons_item.Enable(True)
 
         # Once we have an overview image the user can use it to identify a landmark on that image
         # and the same one in Odemis. This constitutes stage - overview image alignment.
@@ -366,10 +392,11 @@ class ApplicationFrame(wx.Frame):
 
         # Add and draw the slice outlines
         self._overview_canvas.set_slice_outlines(self._model.slice_polygons)
+        self._overview_canvas.zoom_to_fit()
         self._overview_canvas.redraw()
 
-        # Enable the menu item for acquiring LM images
-        # (We can now use it because we've got POIs)
+        # Enable the menu item for setting the point of interest
+        # (We can now because we have reference slice contours - though typically we will also want to load the overview image)
         self._set_point_of_interest_item.Enable(True)
 
     def _image_coords_to_stage_coords(self, image_coords):   # IMPROVEME: this is also coded somewhere else, use this function instead
