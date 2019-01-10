@@ -78,10 +78,8 @@ class StageAlignmentPanel(wx.Panel):
         self._canvas.Canvas.Unbind(MarkMode.EVT_TOMO_MARK_LEFT_DOWN)
 
     def _on_left_mouse_button_down(self, event):
-        print("Event = {}".format(event))
         coords = event.GetCoords()
         pos = (coords[0], -coords[1])
-        print("Left mouse button clicked: %i, %i" % pos)
         self._place_landmark(pos)
 
     def _on_overview_pixel_size_change(self, event):
