@@ -51,8 +51,16 @@ class OverviewCanvas(TomoCanvas):
                                         (0, 0),
                                         Height=self._wximage.GetHeight(),
                                         Position='tl')
-        # CHECKME: why use ScaledBitmap2 instead of ScaledBitmap?
-        # CHECKME: can we use a different Position (e.g. 'bl') to avoid flipping the y-axis in different places?
+        # CHECKME: why use ScaledBitmap2 instead of ScaledBitmap? Performance? - our overview images are really large.
+
+        # Note: we place the image such that the FloatCanvas origin (0,0) is in the top left corner ('tl') of the image,
+        # because that is what ImageJ also does. Because we used ImageJ sometimes to experiment with image processing,
+        # and since we sometimes export lineart data from ImageJ for use in Tomo, it makes sense to use the same convention.
+        # The y-axis in ImageJ however points down, whereas by default in FloatCanvas it points up, so sometimes we will
+        # need to flip the sign of the y-coordinates of our lineart objects when drawing them onto the FloatCanvas
+        # on top of the image. (CHECKME: It would be nice if we could just use a coordinate transform to flip these
+        # objects when drawing, we'll have to look into that...)
+
         if self._image != None:
             self._remove_image()
 
