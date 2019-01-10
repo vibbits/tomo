@@ -171,18 +171,23 @@ class ApplicationFrame(wx.Frame):
         self._em_image_acquisition_item = microscope_menu.Append(wx.NewId(), "Acquire EM Images...")
         self._em_image_acquisition_item.Enable(False)
 
-        help_menu = wx.Menu()
-        self._about_item = help_menu.Append(wx.NewId(), "About")
-
         experimental_menu = wx.Menu()
         self._segment_ribbons_item = experimental_menu.Append(wx.NewId(), "Segment Ribbons...")
         self._contour_finder_item = experimental_menu.Append(wx.NewId(), "Find slice contours...")  # gradient descent based slice contour fitting - does not work (yet?)
         self._contour_finder_item.Enable(False)
 
+        view_menu = wx.Menu()
+        self._show_slice_numbers_item = view_menu.Append(wx.NewId(), "Show slice numbers", kind=wx.ITEM_CHECK)
+        self._show_slice_numbers_item.Check(True)
+
+        help_menu = wx.Menu()
+        self._about_item = help_menu.Append(wx.NewId(), "About")
+
         menu_bar.Append(file_menu, "&File")
         menu_bar.Append(edit_menu, "&Edit")
         menu_bar.Append(microscope_menu, "&Microscope")
         menu_bar.Append(experimental_menu, "&Experimental")
+        menu_bar.Append(view_menu, "&View")
         menu_bar.Append(help_menu, "&Help")
 
         self.Bind(wx.EVT_MENU, self._on_exit, exit_menu_item)
@@ -198,9 +203,15 @@ class ApplicationFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_segment_ribbons, self._segment_ribbons_item)
         self.Bind(wx.EVT_MENU, self._on_find_contours, self._contour_finder_item)
         self.Bind(wx.EVT_MENU, self._on_set_focus, self._set_focus_item)
+        self.Bind(wx.EVT_MENU, self._on_show_slice_numbers, self._show_slice_numbers_item)
         self.Bind(wx.EVT_MENU, self._on_about, self._about_item)
 
         return menu_bar
+
+    def _on_show_slice_numbers(self, event):
+        show_numbers = self._show_slice_numbers_item.IsChecked()
+        self._overview_canvas.set_show_slice_numbers(show_numbers)
+        self._overview_canvas.redraw(True)
 
     def _on_mouse_move_over_image(self, event):
         x =  int(round(event.Coords[0]))
@@ -398,7 +409,7 @@ class ApplicationFrame(wx.Frame):
         print('Loaded {} slice polygons from {}'.format(len(self._model.slice_polygons), self._model.slice_polygons_path))
 
         # Add and draw the slice outlines
-        self._overview_canvas.set_slice_outlines(self._model.slice_polygons)
+        self._overview_canvas.set_slice_polygons(self._model.slice_polygons)
         self._overview_canvas.zoom_to_fit()
         self._overview_canvas.redraw()
 

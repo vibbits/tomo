@@ -5,6 +5,7 @@
 import wx
 from wx.lib.floatcanvas import FloatCanvas
 from tomo_canvas import TomoCanvas
+import tools
 
 # Note: See https://wxpython.org/Phoenix/docs/html/wx.ColourDatabase.html for a list of color names
 
@@ -15,12 +16,19 @@ from tomo_canvas import TomoCanvas
 # even if no side panel is activate. Some objects are tied tightly to a specific panel (e.g. polygon editing handles) and those should probably
 # be left out of the OverviewCanvas.
 
+NORMAL_COLOR = "Green"  # IMPROVEME: factor out into separate file
+
 class OverviewCanvas(TomoCanvas):
+    _wximage = None  # the original wx.Image
+    _show_slice_numbers = True  # flag indicating if slice numbers need to be drawn on the slice outlines
+    _slice_polygons = []  # list with the slice polygons, in the same format as TomoModel.slice_polygons
+
+    # FloatCanvas objects
+    _image = None  # the canvas image object handle
     _poi_lines = []
     _focus_lines = []
-    _slice_outlines = []
-    _wximage = None  # the original wx.Image
-    _image = None  # the canvas image object handle
+    _slice_outlines = []  # FloatCanvas polygon objects representing the quadrilateral slice polygons specified in _slice_polygons
+    _slice_numbers = []  # FloatCanvas objects of the text objects for the slice numbers
 
     def __init__(self, parent, custom_modes=None):
         if custom_modes is None:
@@ -58,16 +66,6 @@ class OverviewCanvas(TomoCanvas):
         self._image = None
         self._wximage = None
 
-    def set_slice_outlines(self, slice_outlines, line_color="Green"):  # slice outlines in overview image coordinates (y >= 0)
-        # Add previous slice outlines (if any)
-        if self._slice_outlines:
-            self._remove_slice_outlines()
-        # Add new slice outlines
-        for outline in slice_outlines:
-            pts = [(p[0], -p[1]) for p in outline]  # note: flip y to convert from image coordinates (with y >= 0) back to canvas coords
-            polygon = self.Canvas.AddPolygon(pts, LineColor=line_color)
-            self._slice_outlines.append(polygon)
-
     def set_slice_outline_linewidth(self, outline, line_width):
         obj = self._slice_outlines[outline]
         obj.SetLineWidth(line_width)
@@ -76,18 +74,61 @@ class OverviewCanvas(TomoCanvas):
         obj = self._slice_outlines[outline]
         obj.Points[vertex] = pos
 
-    def remove_slice_outline(self, index):
-        obj = self._slice_outlines.pop(index)
+    def remove_slice_outline(self, slice_index):
+        obj = self._slice_outlines.pop(slice_index)
         self.remove_objects([obj])
 
-    def _remove_slice_outlines(self):
+    def set_slice_number_position(self, slice_index, pos):
+        if self._show_slice_numbers:
+            obj = self._slice_numbers[slice_index]
+            obj.SetPoint(pos)
+
+    def set_slice_polygons(self, polygons, line_color=NORMAL_COLOR):  # slice outlines in overview image coordinates (y >= 0)
+        assert polygons is not None  # IMPROVEME: can't we use the empty list instead of None? That would make some None checking unnecessary.
+        self._slice_polygons = polygons
+
+        # Handle slice outlines
         self.remove_objects(self._slice_outlines)
         self._slice_outlines = []
+        self._add_slice_outlines(line_color)
+
+        # Handle slice numbers
+        self.remove_objects(self._slice_numbers)
+        self._slice_numbers = []
+        if self._show_slice_numbers:
+            self._add_slice_numbers()
+
+    def _add_slice_outlines(self, line_color):
+        for polygon in self._slice_polygons:
+            pts = [(p[0], -p[1]) for p in polygon]  # note: flip y to convert from image coordinates (with y >= 0) back to canvas coords
+            outline = self.Canvas.AddPolygon(pts, LineColor=line_color)
+            self._slice_outlines.append(outline)
+
+    def set_show_slice_numbers(self, show_numbers):
+        if self._show_slice_numbers == show_numbers:
+            return
+
+        if show_numbers:
+            self._add_slice_numbers()
+        else:
+            self.remove_objects(self._slice_numbers)
+            self._slice_numbers = []
+
+        self._show_slice_numbers = show_numbers
+
+    def _add_slice_numbers(self):
+        self._slice_numbers = []
+        for i, polygon in enumerate(self._slice_polygons):
+            pos = tools.polygon_center(polygon)
+            pos = (pos[0], -pos[1])
+            obj = self.Canvas.AddText(str(i+1), pos, Size=10, BackgroundColor=None, Color=NORMAL_COLOR, Position="cc")
+            self._slice_numbers.append(obj)
 
     def set_points_of_interest(self, points_of_interest):  # points of interest in overview image coordinates; if pois were set before, they are replaced by the new ones; points_of_interest can be the empty list
         # Remove old POIs (if any)
         if self._poi_lines:
-            self._remove_points_of_interest()
+            self.remove_objects(self._poi_lines)
+            self._poi_lines = []
 
         if not points_of_interest:
             return
@@ -106,10 +147,6 @@ class OverviewCanvas(TomoCanvas):
     def remove_focus_positions(self):
         self.remove_objects(self._focus_lines)
         self._focus_lines = []
-
-    def _remove_points_of_interest(self):
-        self.remove_objects(self._poi_lines)
-        self._poi_lines = []
 
     def _add_point_of_interest(self, pt, line_color, size=25):
         # print('draw poi: {}'.format(pt))

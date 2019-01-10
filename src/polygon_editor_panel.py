@@ -11,6 +11,21 @@ REGULAR_LINE_WIDTH = 1  # IMPROVEME: should be the same width as when the polygo
 HIGHLIGHTED_LINE_WIDTH = 3
 
 
+# TODO: add support for creating a new slice outline
+# TODO: add support for re-ordering slices (e.g. by dragging the mouse cursor in one long sweep over each slice in the correct order)
+# FIXME: If we delete a slice, then some other parts of the model may have to be invalidated.
+#        For example, the list with predicted points of interest will have to be recalculated.
+#        (Not always, in case of POIs only if we remove a slice that is part of the range of slices for which we did predict POIs.
+#         Maybe we should forbid editing the slices once we've set POIs?)
+# FIXME: Key events are only received if the canvas has focus, for example by clicking it first.
+#        This is undersirable, we _always_ want the key event.
+# IMPROVEME: it would be better if the "view" layer 'listens' to model changes.
+#            For example, that if we change a slice outline or delete one,
+#            that the view layer gets a callback and can update the canvas.
+#            We can use the PyPubSub package for this. (But first check which version of this package that we need on the SECOM...)
+# IMPROVEME: factor out all general "side panel" code (so for the title, separator line, optional instruction text, an optional panel with more widget and a done button)
+
+
 class PolygonEditorPanel(wx.Panel):
     _canvas = None
     _model = None
@@ -66,7 +81,6 @@ class PolygonEditorPanel(wx.Panel):
         self._active_handle = NOTHING
         self._handles = []
         self._slice_numbers = []
-        self._add_slice_numbers()
         self._canvas.Bind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_MOTION, self._on_mouse_move)
         self._canvas.Bind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_LEFT_DOWN, self._on_left_mouse_button_down)
         self._canvas.Bind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_LEFT_UP, self._on_left_mouse_button_up)
@@ -75,7 +89,6 @@ class PolygonEditorPanel(wx.Panel):
     def deactivate(self):
         # print('Polygon editor panel: deactivate')
         self._remove_slice_handles()
-        self._remove_slice_numbers()
         self._canvas.Unbind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_MOTION)
         self._canvas.Unbind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_LEFT_DOWN)
         self._canvas.Unbind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_LEFT_UP)
@@ -88,25 +101,18 @@ class PolygonEditorPanel(wx.Panel):
         :param event:
         """
 
-        # FIXME: Key events are only received if the canvas has focus, for example by clicking it first.
-        #        This is undersirable, we _always_ want the key event.
-
         key = event.GetKeyCode()
         print('polygon editor: keydown key={}'.format(key))
         if key == wx.WXK_DELETE or key == wx.WXK_NUMPAD_DELETE:
             if self._selected != NOTHING:
+                # Remove slice from model
+                self._model.slice_polygons.pop(self._selected)
+
                 # Remove slice handles from canvas
                 self._remove_slice_handles()
 
                 # Remove slice from canvas
-                self._canvas.remove_slice_outline(self._selected)
-
-                # Remove slice from model
-                self._model.slice_polygons.pop(self._selected)
-
-                # Update slice numbers
-                self._remove_slice_numbers()
-                self._add_slice_numbers()
+                self._canvas.set_slice_polygons(self._model.slice_polygons)
 
                 # Update state
                 if self._over == self._selected:
@@ -118,33 +124,51 @@ class PolygonEditorPanel(wx.Panel):
                 # Redraw
                 self._canvas.redraw(True)
 
-        # FIXME: If we delete a slice, then some other parts of the model may have to be invalidated.
-        #        For example, the list with predicted points of interest will have to be recalculated.
-        #        (Not always, in case of POIs only if we remove a slice that is part of the range of slices for which we did predict POIs.
-        #         Maybe we should forbid editing the slices once we've set POIs?)
-
     def _on_left_mouse_button_down(self, event):
+
+        # Check if user clicked on a handle to start dragging it.
+        # -------------------------------------------------------
         if self._active_handle != NOTHING:
             # The mouse is over a handle, and the user presses the mouse button down,
             # so we remember which handle is being dragged so we can update the slice contour
-            # when we receive mouse move events lateron.
+            # when we receive mouse move events later on.
             self._dragging = self._active_handle
 
     def _on_mouse_move(self, event):
+        """
+        We need to deal with two possible user actions here:
+        1. The user was dragging a slice handle and we need to update the slice polygon accordingly.
+        2. The user hover over a slice and we need to change it visual appearance to indicate that it can be selected.
+        """
+
         coords = event.GetCoords()
         pos = (coords[0], -coords[1])
         # print("Mouse move, position: %i, %i" % pos)
 
-        # Special situation: we're dragging a slice handle
+        # Check if user was dragging a handle.
+        # ------------------------------------
+
         if self._dragging != NOTHING:
             # Update model
             self._model.slice_polygons[self._selected][self._dragging] = pos
+
+            # Update the polygon vertex position on the canvas
+            self._canvas.set_slice_outline_vertex_position(self._selected, self._dragging, coords)
+
+            # Update position of slice number on the canvas
+            new_center = tools.polygon_center(self._model.slice_polygons[self._selected])
+            new_center = (new_center[0], -new_center[1])
+            self._canvas.set_slice_number_position(self._selected, new_center)
+
             # Update slice handles
             self._handles[self._dragging].SetPoint(coords)
-            # Update slice outline
-            self._canvas.set_slice_outline_vertex_position(self._selected, self._dragging, coords)
+
+            # Redraw
             self._canvas.redraw(True)
             return
+
+        # Check if user hovers over a slice.
+        # ----------------------------------
 
         slices_hit = tools.polygons_hit(self._model.slice_polygons, pos)
 
@@ -165,10 +189,23 @@ class PolygonEditorPanel(wx.Panel):
         self._over = new_over
 
     def _on_left_mouse_button_up(self, event):
+        """
+        We need to deal with two possible user actions here:
+        1. The user was dragging a slice handle and released that handle.
+        2. The user clicked inside a slice in order to select it.
+        """
+
+        # Check if user released a handle.
+        # --------------------------------
+
         if self._dragging != NOTHING:
+
             # The user released a slice handle that was being dragged.
             self._dragging = NOTHING
             return
+
+        # Check if user selected a slice.
+        # -------------------------------
 
         if self._over == self._selected:
             return
@@ -241,23 +278,3 @@ class PolygonEditorPanel(wx.Panel):
         object.SetColor(NORMAL_COLOR)
         self._active_handle = NOTHING
         self._canvas.redraw(True)
-
-    # IMPROVEME: the slice numbers should probably be handled in the OverviewCanvas, as they are interesting outside the polygon editor too.
-    # And it should then be possible to show/hide them from the Tomo menu.
-
-    def _add_slice_numbers(self):
-        self._slice_numbers = []
-        assert self._model.slice_polygons is not None  # IMPROVEME: can't we use the empty list instead of None? That would make some None checking unnecessary.
-        for i, polygon in enumerate(self._model.slice_polygons):
-            pos = tools.polygon_center(polygon)
-            pos = (pos[0], -pos[1])
-            obj = self._canvas.Canvas.AddText(str(i+1), pos, Size=10, BackgroundColor=None, Color=NORMAL_COLOR, Position="cc")
-            self._slice_numbers.append(obj)
-
-    def _remove_slice_numbers(self):
-        self._canvas.remove_objects(self._slice_numbers)
-
-    # IMPROVEME: it would be better if the "view" layer 'listens' to model changes.
-    # For example, that if we change a slice outline or delete one,
-    # that the view layer gets a callback and can update the canvas.
-    # We can use the PyPubSub package for this. (But first check which version of this package that we need on the SECOM...)
