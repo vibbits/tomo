@@ -2,13 +2,9 @@ import wx
 import tools
 from wx.lib.floatcanvas import FloatCanvas
 from polygon_selection_mode import PolygonSelectionMode
+from constants import NOTHING, NORMAL_COLOR, ACTIVE_COLOR, REGULAR_LINE_WIDTH, HIGHLIGHTED_LINE_WIDTH
 
-NOTHING = -1  # an invalid index indicating no slice or no handle.
-NORMAL_COLOR = 'Green'
-ACTIVE_COLOR = 'Red'
 HANDLE_NAME_PREFIX = 'PolygonHandle'
-REGULAR_LINE_WIDTH = 1  # IMPROVEME: should be the same width as when the polygon was drawn outside this mode, we should probably move these constants to a separate file.
-HIGHLIGHTED_LINE_WIDTH = 3
 
 
 # TODO: add support for creating a new slice outline

@@ -6,6 +6,7 @@ import wx
 from wx.lib.floatcanvas import FloatCanvas
 from tomo_canvas import TomoCanvas
 import tools
+from constants import NORMAL_COLOR, REGULAR_LINE_WIDTH, POINT_OF_INTEREST_COLOR, FOCUS_POSITION_COLOR, MARKER_SIZE
 
 # Note: See https://wxpython.org/Phoenix/docs/html/wx.ColourDatabase.html for a list of color names
 
@@ -16,12 +17,10 @@ import tools
 # even if no side panel is activate. Some objects are tied tightly to a specific panel (e.g. polygon editing handles) and those should probably
 # be left out of the OverviewCanvas.
 
-NORMAL_COLOR = "Green"  # IMPROVEME: factor out into separate file
-
 class OverviewCanvas(TomoCanvas):
     _wximage = None  # the original wx.Image
     _show_slice_numbers = True  # flag indicating if slice numbers need to be drawn on the slice outlines
-    _slice_polygons = []  # list with the slice polygons, in the same format as TomoModel.slice_polygons
+    _slice_polygons = []  # list with the slice polygo the same format as TomoModel.slice_polygons
 
     # FloatCanvas objects
     _image = None  # the canvas image object handle
@@ -56,6 +55,13 @@ class OverviewCanvas(TomoCanvas):
         # CHECKME: can we use a different Position (e.g. 'bl') to avoid flipping the y-axis in different places?
         if self._image != None:
             self._remove_image()
+
+        # If we have lineart already, it needs to be on top of the image.
+        # Since there apparently is no way to re-order the FloatCanvas objects (?!),
+        # it seems we need to remove all lineart first,
+        # then add the image, and finally recreate all lineart again.
+        # TODO!
+
         self._image = self.Canvas.AddObject(img)
 
     def get_wximage(self):
@@ -83,14 +89,14 @@ class OverviewCanvas(TomoCanvas):
             obj = self._slice_numbers[slice_index]
             obj.SetPoint(pos)
 
-    def set_slice_polygons(self, polygons, line_color=NORMAL_COLOR):  # slice outlines in overview image coordinates (y >= 0)
+    def set_slice_polygons(self, polygons):  # slice outlines in overview image coordinates (y >= 0)
         assert polygons is not None  # IMPROVEME: can't we use the empty list instead of None? That would make some None checking unnecessary.
         self._slice_polygons = polygons
 
         # Handle slice outlines
         self.remove_objects(self._slice_outlines)
         self._slice_outlines = []
-        self._add_slice_outlines(line_color)
+        self._add_slice_outlines()
 
         # Handle slice numbers
         self.remove_objects(self._slice_numbers)
@@ -98,10 +104,10 @@ class OverviewCanvas(TomoCanvas):
         if self._show_slice_numbers:
             self._add_slice_numbers()
 
-    def _add_slice_outlines(self, line_color):
+    def _add_slice_outlines(self):
         for polygon in self._slice_polygons:
             pts = [(p[0], -p[1]) for p in polygon]  # note: flip y to convert from image coordinates (with y >= 0) back to canvas coords
-            outline = self.Canvas.AddPolygon(pts, LineColor=line_color)
+            outline = self.Canvas.AddPolygon(pts, LineColor=NORMAL_COLOR, LineWidth=REGULAR_LINE_WIDTH)
             self._slice_outlines.append(outline)
 
     def set_show_slice_numbers(self, show_numbers):
@@ -136,9 +142,9 @@ class OverviewCanvas(TomoCanvas):
         # Add new POIs
         pts = [(p[0], -p[1]) for p in points_of_interest]
         for pt in pts:
-            self._add_point_of_interest(pt, line_color="red")
+            self._add_point_of_interest(pt, line_color=POINT_OF_INTEREST_COLOR)
 
-    def add_focus_position(self, position, color="Blue"):   # note: 'position' is in image space (with the origin in the top-left corner and y-axis pointing upward), so DIFFERENT from raw stage (x,y) position coordinates
+    def add_focus_position(self, position, color=FOCUS_POSITION_COLOR):   # note: 'position' is in image space (with the origin in the top-left corner and y-axis pointing upward), so DIFFERENT from raw stage (x,y) position coordinates
         # print('draw focus: {}'.format(position))
         position = (position[0], -position[1])  # note: flip y to convert from image coordinates (with y >= 0) back to canvas coords
         objs = self.add_cross(position, color)
@@ -148,22 +154,22 @@ class OverviewCanvas(TomoCanvas):
         self.remove_objects(self._focus_lines)
         self._focus_lines = []
 
-    def _add_point_of_interest(self, pt, line_color, size=25):
+    def _add_point_of_interest(self, pt, line_color, size=MARKER_SIZE):
         # print('draw poi: {}'.format(pt))
         objs = self.add_cross(pt, line_color, size)
         self._poi_lines.extend(objs)
 
-    # FIXME: IMPORTANT: fix inconsistency: sometimes canvas and sometimes image coordinates on the API!
+    # IMPROVEME: fix inconsistency: sometimes canvas and sometimes image coordinates on the API!
 
-    # FIXME: if we first add slice outlines and then the overview image, the image will completely obscure the slice outlines. To avoid this, either somehow move the slice outlines back to the top, or remove and add them again in the correct order.
+    # FIXME: If we first add slice outlines and then the overview image, the image will be drawn on top and completely obscure the slice outlines.
 
-    def add_cross(self, pt, line_color, size=25):  # pt is in *canvas* coordinates (y <= 0 means over the image); returns the list of objects added to the canvas
+    def add_cross(self, pt, line_color, size=MARKER_SIZE):  # pt is in *canvas* coordinates (y <= 0 means over the image); returns the list of objects added to the canvas
         # print('draw cross: {}'.format(pt))
         line1 = self.Canvas.AddLine([(pt[0] - size, pt[1]), (pt[0] + size, pt[1])], LineColor=line_color)
         line2 = self.Canvas.AddLine([(pt[0], pt[1] - size), (pt[0], pt[1] + size)], LineColor=line_color)
         return [line1, line2]
 
-    def add_bullseye(self, pt, line_color, size=25):  # returns the list of objects added to the canvas; size is the size of the circle, the cross will be 20% larger; pt in image coordinates (y>=0)
+    def add_bullseye(self, pt, line_color, size=MARKER_SIZE):  # returns the list of objects added to the canvas; size is the size of the circle, the cross will be 20% larger; pt in image coordinates (y>=0)
         pt = (pt[0], -pt[1])  # note: flip y to convert from image coordinates (with y >= 0) back to canvas coords
         cross = self.add_cross(pt, line_color, int(round(size * 1.2)))
         circle = self.Canvas.AddCircle(pt, size, LineColor=line_color)
@@ -192,10 +198,10 @@ class OverviewCanvas(TomoCanvas):
 
     def seg_add_polygon(self, outline, line_color, line_width):
         pts = [(p[0], -p[1]) for p in outline]
-        self.Canvas.AddPolygon(pts, LineColor = line_color, LineWidth = line_width)
+        self.Canvas.AddPolygon(pts, LineColor=line_color, LineWidth=line_width)
 
     def seg_add_text(self, text, position, text_color, font_size):
         # http://docs.huihoo.com/wxpython/2.8.3.0/api/wx.lib.floatcanvas.FloatCanvas.FloatCanvas-class.html#addshape
-        self.Canvas.AddScaledText(text, (position[0], -position[1]), Position = "cc", Color = text_color, Size = font_size)
+        self.Canvas.AddScaledText(text, (position[0], -position[1]), Position="cc", Color=text_color, Size=font_size)
 
     #####
