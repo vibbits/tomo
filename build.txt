@@ -1,6 +1,14 @@
-To embed imqges into the resources.py file:
+To embed images into the resources.py file:
+
 cd src\
 del resources.py
-img2py    ..\images\crosshair.png resources.py
-img2py -a ..\images\movestage.png resources.py
-img2py -a ..\images\tomo.ico resources.py
+img2py -m #ffffff    ..\images\crosshair.png resources.py
+img2py -m #ffffff -a ..\images\movestage.png resources.py
+img2py            -a ..\images\tomo.ico resources.py
+
+Note that the PNGs that are to be used as bitmaps for the tool bar should NOT have an alpha channel and have to use the -m #ffffff option.
+This is to ensure that they end up being wx.bitmap objects that are 24 bit/pixel with wx.mask, instead of 32 bit/pixel without wx.mask.
+The former kind of image will yield toolbar buttons that are automatically grayed out when disabled, whereas the latter
+kind of images are not grayed out at all.
+(In Gimp: background pixels must be opaque white, all pixels have 100% opacity. Then export to PNG,
+with "Save background color" and "Save color values from transparent pixels" both unchecked.)
