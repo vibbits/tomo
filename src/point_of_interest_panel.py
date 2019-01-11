@@ -1,6 +1,7 @@
 import wx
 import mapping
 from mark_mode import MarkMode
+from constants import POINTER_MODE_NAME
 import tools
 
 class PointOfInterestPanel(wx.Panel):
@@ -64,10 +65,15 @@ class PointOfInterestPanel(wx.Panel):
         contents.Fit(self)
 
     def activate(self):
+        self._canvas.Activate(MarkMode.NAME)
+
         # Listen to mark tool mouse clicks so we can place the mark
         self._canvas.Canvas.Bind(MarkMode.EVT_TOMO_MARK_LEFT_DOWN, self._on_left_mouse_button_down)
 
     def deactivate(self):
+        self._canvas.Deactivate(MarkMode.NAME)
+        self._canvas.Activate(POINTER_MODE_NAME)
+
         self._canvas.Canvas.Unbind(MarkMode.EVT_TOMO_MARK_LEFT_DOWN)
 
     def _on_num_pois_key_down(self, event):

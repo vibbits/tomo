@@ -15,6 +15,7 @@ from model import TomoModel
 from mark_mode import MarkMode
 from move_stage_mode import MoveStageMode
 from polygon_selection_mode import PolygonSelectionMode
+from polygon_creation_mode import PolygonCreationMode
 from preferences_dialog import PreferencesDialog
 from overview_image_dialog import OverviewImageDialog
 from lm_acquisition_dialog import LMAcquisitionDialog
@@ -71,11 +72,16 @@ class ApplicationFrame(wx.Frame):
         # We can listen to mouse events when such a mode is active.
         # (The third element in each tuple is a bitmap for showing in the toolbar. The mode itself typically also
         # set a custom cursor; often the same bitmap.)
-        custom_modes = [(MarkMode.NAME, MarkMode(self), resources.crosshair.GetBitmap()),
-                        (MoveStageMode.NAME, MoveStageMode(self), resources.movestage.GetBitmap()),
-                        (PolygonSelectionMode.NAME, PolygonSelectionMode(self), Resources.getPointerBitmap())]
+        self._mark_mode = MarkMode()
+        self._polygon_selection_mode = PolygonSelectionMode()
+        self._polygon_creation_mode = PolygonCreationMode()
+        self._move_stage_mode = MoveStageMode()
+        custom_modes = [(MarkMode.NAME, self._mark_mode, resources.crosshair.GetBitmap()),
+                        (MoveStageMode.NAME, self._move_stage_mode, resources.movestage.GetBitmap()),
+                        (PolygonSelectionMode.NAME, self._polygon_selection_mode, Resources.getPointerBitmap()),  # TODO: create icon (a quad with moved vertex ?)
+                        (PolygonCreationMode.NAME, self._polygon_creation_mode, Resources.getPointerBitmap())]  # TODO: create icon (a quad with a + ?)
 
-        # Image Panel
+        # Canvas
         self._overview_canvas = OverviewCanvas(self, custom_modes)
 
         # By default disable the custom modes, they are only active when their corresponding side panel is visible
@@ -89,6 +95,7 @@ class ApplicationFrame(wx.Frame):
         self._overview_canvas.Bind(MarkMode.EVT_TOMO_MARK_MOTION, self._on_mouse_move_over_image)
         self._overview_canvas.Bind(MoveStageMode.EVT_TOMO_MOVESTAGE_MOTION, self._on_mouse_move_over_image)
         self._overview_canvas.Bind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_MOTION, self._on_mouse_move_over_image)
+        self._overview_canvas.Bind(PolygonCreationMode.EVT_TOMO_POLY_CREATE_MOTION, self._on_mouse_move_over_image)
 
         # Status bar at the bottom of the window
         self._status_label = wx.StaticText(self, wx.ID_ANY, "")
@@ -275,39 +282,28 @@ class ApplicationFrame(wx.Frame):
         self._show_side_panel(self._segmentation_panel, False)
 
     def _on_edit_polygons(self, event):
-        self._overview_canvas.EnableToolByName(PolygonSelectionMode.NAME, True)
         self._show_side_panel(self._polygon_editor_panel, True)
         self._polygon_editor_panel.activate()
 
     def _on_polygon_editor_done_button_click(self, event):
-        self._overview_canvas.EnableToolByName(PolygonSelectionMode.NAME, False)
         self._show_side_panel(self._polygon_editor_panel, False)
-        #TODO: make the default pointer tool the currently active tool again
         self._polygon_editor_panel.deactivate()
 
     def _on_set_focus(self, event):
-        self._overview_canvas.EnableToolByName(MoveStageMode.NAME, True)
-        self._overview_canvas.EnableToolByName(MarkMode.NAME, False)
         self._show_side_panel(self._focus_panel, True)
         self._focus_panel.activate()
 
     def _on_focus_done_button_click(self, event):
         self._focus_panel.deactivate()
         self._show_side_panel(self._focus_panel, False)
-        self._overview_canvas.EnableToolByName(MoveStageMode.NAME, False)
-        # self._canvas_panel.SetMode(self._canvas_panel.FindToolByName("Pointer"))
 
     def _on_align_stage(self, event):
-        self._overview_canvas.EnableToolByName(MarkMode.NAME, True)
-        self._overview_canvas.EnableToolByName(MoveStageMode.NAME, False)
         self._show_side_panel(self._stage_alignment_panel, True)
         self._stage_alignment_panel.activate()
 
     def _on_stage_alignment_done_button_click(self, event):
         self._stage_alignment_panel.deactivate()
         self._show_side_panel(self._stage_alignment_panel, False)
-        self._overview_canvas.EnableToolByName(MarkMode.NAME, False)
-        # self._canvas_panel.SetMode(self._canvas_panel.FindToolByName("Pointer"))
 
         # Enable/disable menu entries
         stage_is_aligned = (self._model.overview_image_to_stage_coord_trf is not None)
@@ -315,16 +311,12 @@ class ApplicationFrame(wx.Frame):
         self._lm_image_acquisition_item.Enable(self._can_acquire_lm_images())
 
     def _on_set_point_of_interest(self, event):
-        self._overview_canvas.EnableToolByName(MarkMode.NAME, True)
-        self._overview_canvas.EnableToolByName(MoveStageMode.NAME, False)
         self._show_side_panel(self._point_of_interest_panel, True)
         self._point_of_interest_panel.activate()
 
     def _on_point_of_interest_done_button_click(self, event):
         self._point_of_interest_panel.deactivate()
         self._show_side_panel(self._point_of_interest_panel, False)
-        self._overview_canvas.EnableToolByName(MarkMode.NAME, False)
-        # self._canvas_panel.Canvas.SetMode(self._canvas_panel.FindToolByName("Pointer"))  # CHECKME: does this work? is the pointer tool selected visually? otherwise try with e.g. the pan tool to confirm
 
         # Enable/disable menu entries
         self._lm_image_acquisition_item.Enable(self._can_acquire_lm_images())

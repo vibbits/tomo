@@ -17,7 +17,7 @@ class PolygonSelectionMode(GUIMode.GUIBase):
     EVT_TOMO_POLY_SELECT_LEFT_DOWN = wx.PyEventBinder(EVT_TYPE_TOMO_POLY_SELECT_LEFT_DOWN)
     EVT_TOMO_POLY_SELECT_MOTION = wx.PyEventBinder(EVT_TYPE_TOMO_POLY_SELECT_MOTION)
 
-    def __init__(self, canvas):
+    def __init__(self, canvas=None):
         GUIMode.GUIBase.__init__(self, canvas)
         self.Cursor = self.MakePolygonSelectionCursor()
 
@@ -37,7 +37,7 @@ class PolygonSelectionMode(GUIMode.GUIBase):
             return None
 
     def OnLeftUp(self, event):
-        # print('Polygon selection tool: left mouse button up {} {}'.format(event, event.GetPosition()))
+        print('Polygon selection tool: left mouse button up {} {}; canvas={}'.format(event, event.GetPosition(), self.Canvas))
         EventType = self.EVT_TYPE_TOMO_POLY_SELECT_LEFT_UP
         self.Canvas._RaiseMouseEvent(event, EventType)
 

@@ -15,7 +15,7 @@ class MoveStageMode(GUIMode.GUIBase):
     EVT_TOMO_MOVESTAGE_LEFT_DOWN = wx.PyEventBinder(EVT_TYPE_TOMO_MOVESTAGE_LEFT_DOWN)
     EVT_TOMO_MOVESTAGE_MOTION = wx.PyEventBinder(EVT_TYPE_TOMO_MOVESTAGE_MOTION)
 
-    def __init__(self, canvas):
+    def __init__(self, canvas=None):
         GUIMode.GUIBase.__init__(self, canvas)
         self.Cursor = self.MakeMoveStageCursor()
 

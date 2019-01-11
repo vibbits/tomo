@@ -15,7 +15,7 @@ class MarkMode(GUIMode.GUIBase):
     EVT_TOMO_MARK_LEFT_DOWN = wx.PyEventBinder(EVT_TYPE_TOMO_MARK_LEFT_DOWN)
     EVT_TOMO_MARK_MOTION = wx.PyEventBinder(EVT_TYPE_TOMO_MARK_MOTION)
 
-    def __init__(self, canvas):
+    def __init__(self, canvas=None):
         GUIMode.GUIBase.__init__(self, canvas)
         self.Cursor = self.MakeMarkCursor()
 

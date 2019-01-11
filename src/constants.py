@@ -13,3 +13,8 @@ ACTIVE_COLOR = 'Red'             # Color for drawing an 'active' slice polygon h
 POINT_OF_INTEREST_COLOR = 'Red'  # Color for drawing the point-of-interest markers
 FOCUS_POSITION_COLOR = 'Blue'    # Color for drawing the markers showing where z-focus values were measured
 
+# Names of the default modes, as defined in NavCanvas.
+POINTER_MODE_NAME = 'Pointer'
+ZOOM_IN_MODE_NAME = 'Zoom In'
+ZOOM_OUT_MODE_NAME = 'Zoom Out'
+PAN_MODE_NAME = 'Pan'

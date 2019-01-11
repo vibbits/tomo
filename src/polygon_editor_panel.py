@@ -2,7 +2,7 @@ import wx
 import tools
 from wx.lib.floatcanvas import FloatCanvas
 from polygon_selection_mode import PolygonSelectionMode
-from constants import NOTHING, NORMAL_COLOR, ACTIVE_COLOR, REGULAR_LINE_WIDTH, HIGHLIGHTED_LINE_WIDTH
+from constants import NOTHING, NORMAL_COLOR, ACTIVE_COLOR, REGULAR_LINE_WIDTH, HIGHLIGHTED_LINE_WIDTH, POINTER_MODE_NAME
 
 HANDLE_NAME_PREFIX = 'PolygonHandle'
 
@@ -15,6 +15,7 @@ HANDLE_NAME_PREFIX = 'PolygonHandle'
 #         Maybe we should forbid editing the slices once we've set POIs?)
 # FIXME: Key events are only received if the canvas has focus, for example by clicking it first.
 #        This is undersirable, we _always_ want the key event.
+# FIXME: If a slice is selected (=has handles) and we switch to the regular Pointer tool, the the handle changes color if we hover over it (=wrong and confusing) even though it cannot be dragged around.
 # IMPROVEME: it would be better if the "view" layer 'listens' to model changes.
 #            For example, that if we change a slice outline or delete one,
 #            that the view layer gets a callback and can update the canvas.
@@ -71,6 +72,8 @@ class PolygonEditorPanel(wx.Panel):
 
     def activate(self):
         # print('Polygon editor panel: activate')
+        self._canvas.Activate(PolygonSelectionMode.NAME)
+
         self._over = NOTHING
         self._selected = NOTHING
         self._dragging = NOTHING
@@ -84,6 +87,9 @@ class PolygonEditorPanel(wx.Panel):
 
     def deactivate(self):
         # print('Polygon editor panel: deactivate')
+        self._canvas.Deactivate(PolygonSelectionMode.NAME)
+        self._canvas.Activate(POINTER_MODE_NAME)
+
         self._remove_slice_handles()
         self._canvas.Unbind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_MOTION)
         self._canvas.Unbind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_LEFT_DOWN)

@@ -2,7 +2,7 @@ import wx
 import numpy as np
 import secom_tools
 from mark_mode import MarkMode
-
+from constants import POINTER_MODE_NAME
 
 # Align stage and overview image
 #    + first, in odemis:
@@ -71,10 +71,15 @@ class StageAlignmentPanel(wx.Panel):
         contents.Fit(self)
 
     def activate(self):
+        self._canvas.Activate(MarkMode.NAME)
+
         # Listen to mark tool mouse clicks so we can place the mark
         self._canvas.Canvas.Bind(MarkMode.EVT_TOMO_MARK_LEFT_DOWN, self._on_left_mouse_button_down)
 
     def deactivate(self):
+        self._canvas.Deactivate(MarkMode.NAME)
+        self._canvas.Activate(POINTER_MODE_NAME)
+
         self._canvas.Canvas.Unbind(MarkMode.EVT_TOMO_MARK_LEFT_DOWN)
 
     def _on_left_mouse_button_down(self, event):

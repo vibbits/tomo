@@ -19,6 +19,7 @@ import numpy as np
 import secom_tools
 from focus_map import FocusMap
 from move_stage_mode import MoveStageMode
+from constants import POINTER_MODE_NAME
 import platform
 
 class FocusPanel(wx.Panel):
@@ -72,10 +73,15 @@ class FocusPanel(wx.Panel):
         contents.Fit(self)
 
     def activate(self):
-        # Listen to movestage tool mouse clicks so we can place the mark
+        self._canvas.Activate(MoveStageMode.NAME)
+
+        # Listen to the move stage tool mouse clicks so we can place the mark
         self._canvas.Canvas.Bind(MoveStageMode.EVT_TOMO_MOVESTAGE_LEFT_DOWN, self._on_left_mouse_button_down)
 
     def deactivate(self):
+        self._canvas.Deactivate(MoveStageMode.NAME)
+        self._canvas.Activate(POINTER_MODE_NAME)
+
         self._canvas.Canvas.Unbind(MoveStageMode.EVT_TOMO_MOVESTAGE_LEFT_DOWN)
 
     def _make_table(self):
