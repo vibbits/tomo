@@ -23,11 +23,15 @@ class TomoCanvas(NavCanvas.NavCanvas):
     def Deactivate(self, tool):
         self._MakeActive(tool, False)
 
-    def _MakeActive(self, tool, active):
-        tool = self.FindToolByName(tool)
+    def _MakeActive(self, tool_name, active):
+        tool = self.FindToolByName(tool_name)
         self.ToolBar.EnableTool(tool.GetId(), active)  # enable/disable the tool (=make the tool button clickable/not clickable and make sure it is grayed out/not grayed out)
         self.ToolBar.ToggleTool(tool.GetId(), active)  # make the tool button the currently active button in the tool bar
         self.SetMode(tool)  # make the mode corresponding to the tool button the current mode
+
+    def IsActive(self, tool_name):
+        tool = self.FindToolByName(tool_name)
+        return self.ToolBar.GetToolState(tool.GetId())
 
     def FindToolByName(self, name):
         tb = self.ToolBar

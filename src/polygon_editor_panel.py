@@ -15,7 +15,6 @@ HANDLE_NAME_PREFIX = 'PolygonHandle'
 #         Maybe we should forbid editing the slices once we've set POIs?)
 # FIXME: Key events are only received if the canvas has focus, for example by clicking it first.
 #        This is undersirable, we _always_ want the key event.
-# FIXME: If a slice is selected (=has handles) and we switch to the regular Pointer tool, the the handle changes color if we hover over it (=wrong and confusing) even though it cannot be dragged around.
 # IMPROVEME: it would be better if the "view" layer 'listens' to model changes.
 #            For example, that if we change a slice outline or delete one,
 #            that the view layer gets a callback and can update the canvas.
@@ -263,6 +262,8 @@ class PolygonEditorPanel(wx.Panel):
         :param object: the floatcanvas object that the mouse moved onto (little square in our case)
         """
         # print("handle enter, object = {}".format(object.Name))
+        if not self._canvas.IsActive(PolygonSelectionMode.NAME):  # ignore this event if the polygon selection tool is not active (but e.g. the Pointer tool is)
+            return
         if self._dragging != NOTHING:
             return
         object.SetColor(ACTIVE_COLOR)
@@ -275,6 +276,8 @@ class PolygonEditorPanel(wx.Panel):
         :param object: the floatcanvas object that the mouse moved away from (little square in our case)
         """
         # print("handle leave, object = {}".format(object.Name))
+        if not self._canvas.IsActive(PolygonSelectionMode.NAME):
+            return
         if self._dragging != NOTHING:
             return
         object.SetColor(NORMAL_COLOR)
