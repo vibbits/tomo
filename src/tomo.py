@@ -37,6 +37,13 @@ from application_frame import ApplicationFrame
 #
 # - On Ubuntu, the wxPython sources are installed here: 
 #   /usr/lib/python2.7/dist-packages/wx-3.0-gtk2/wx
+#
+#
+# Windows environment for Tomo:
+#   Python: 2.7.13
+#   OpenCV: 3.4.3
+#   wxPython: 4.0.3 msw (phoenix) wxWidgets 3.0.5
+
 
 def main():
     print('Environment:\n  Python: {}.{}.{}\n  OpenCV: {}\n  wxPython: {}'.format(sys.version_info[0], sys.version_info[1], sys.version_info[2], cv2.__version__, wx.version()))
