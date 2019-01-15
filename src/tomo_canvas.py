@@ -17,6 +17,10 @@ class TomoCanvas(NavCanvas.NavCanvas):
             print("mode: {}".format(mode))
         super(TomoCanvas, self).BuildToolbar()
 
+    def EnableTool(self, tool_name, enable):
+        tool = self.FindToolByName(tool_name)
+        self.ToolBar.EnableTool(tool.GetId(), enable)  # enable/disable the tool (=make the tool button clickable/not clickable and make sure it is grayed out/not grayed out)
+
     def Activate(self, tool):
         self._MakeActive(tool, True)
 

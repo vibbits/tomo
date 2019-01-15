@@ -7,6 +7,7 @@ REGULAR_LINE_WIDTH = 1           # Normal line width for drawing slice contours
 HIGHLIGHTED_LINE_WIDTH = 3       # Line width for drawing the contours of a highlighted slice
 
 MARKER_SIZE = 25                 # Size of point-of-interest, focus value, etc. markers
+HANDLE_SIZE = 8                  # Size of polygon vertex handle
 
 NORMAL_COLOR = 'Green'           # Color for drawing slice contours
 ACTIVE_COLOR = 'Red'             # Color for drawing an 'active' slice polygon handle
