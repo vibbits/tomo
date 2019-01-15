@@ -1,8 +1,6 @@
 import wx
 from wx.lib.floatcanvas import GUIMode
 
-import resources
-
 class PolygonSelectionMode(GUIMode.GUIBase):
     # Mode label, shown in the tool bar.
     NAME = "Polygon Selection"
@@ -22,22 +20,10 @@ class PolygonSelectionMode(GUIMode.GUIBase):
         self.Cursor = self.MakePolygonSelectionCursor()
 
     def MakePolygonSelectionCursor(self):
-        img = resources.crosshair.GetImage()   # FIXME This must be a different cursor!
-        hotspot_x = 12
-        hotspot_y = 12
-        if wx.Platform == '__WXMSW__':
-            img.SetOption(wx.IMAGE_OPTION_CUR_HOTSPOT_X, hotspot_x)
-            img.SetOption(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, hotspot_y)
-            return wx.Cursor(img)
-        elif wx.Platform == '__WXGTK__':
-            img.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_X, hotspot_x)
-            img.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, hotspot_y)
-            return wx.CursorFromImage(img)
-        else:
-            return None
+        return wx.NullCursor  # TODO: design a custom cursor for this operation.
 
     def OnLeftUp(self, event):
-        print('Polygon selection tool: left mouse button up {} {}; canvas={}'.format(event, event.GetPosition(), self.Canvas))
+        # print('Polygon selection tool: left mouse button up {} {}; canvas={}'.format(event, event.GetPosition(), self.Canvas))
         EventType = self.EVT_TYPE_TOMO_POLY_SELECT_LEFT_UP
         self.Canvas._RaiseMouseEvent(event, EventType)
 
