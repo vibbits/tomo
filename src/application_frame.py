@@ -162,7 +162,6 @@ class ApplicationFrame(wx.Frame):
 
         edit_menu = wx.Menu()
         self._edit_polygons_item = edit_menu.Append(wx.NewId(), "Polygons...")
-        self._edit_polygons_item.Enable(False)
         edit_menu.AppendSeparator()
         prefs_menu_item = edit_menu.Append(wx.NewId(), "Preferences...")
 
@@ -289,6 +288,9 @@ class ApplicationFrame(wx.Frame):
         self._show_side_panel(self._polygon_editor_panel, False)
         self._polygon_editor_panel.deactivate()
 
+        have_slices = len(self._model.slice_polygons) > 0
+        self._set_point_of_interest_item.Enable(have_slices)
+
     def _on_set_focus(self, event):
         self._show_side_panel(self._focus_panel, True)
         self._focus_panel.activate()
@@ -408,10 +410,6 @@ class ApplicationFrame(wx.Frame):
         # Enable the menu item for setting the point of interest
         # (We can now because we have reference slice contours - though typically we will also want to load the overview image)
         self._set_point_of_interest_item.Enable(True)
-
-        # Since the polygon editor cannot be used yet to manually add polygon slices, it must only be enabled
-        # after the user loaded an existing polygons (created for example via ImageJ).
-        self._edit_polygons_item.Enable(True)
 
     def _image_coords_to_stage_coords(self, image_coords):   # IMPROVEME: this is also coded somewhere else, use this function instead
         # Convert image coords to stage coords
