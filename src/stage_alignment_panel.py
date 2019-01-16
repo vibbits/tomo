@@ -50,7 +50,22 @@ class StageAlignmentPanel(wx.Panel):
         label = wx.StaticText(self, wx.ID_ANY, "In Odemis, move the stage to an easy to recognize landmark. Then in Tomo use the Mark tool (+) to precisely indicate the same landmark on the overview image.")
         label.Wrap(w)  # force line wrapping
 
-        self._alignment_state = wx.StaticText(self, wx.ID_ANY, "The stage is not aligned yet.")
+        self._alignment_state = wx.StaticText(self, wx.ID_ANY, "")
+        self._alignment_state.SetLabelMarkup("The stage is <span color='red'>not aligned</span> yet.")
+
+        self._stage_position_label = wx.StaticText(self, wx.ID_ANY, "Stage position: x, y")
+        self._image_coords_label = wx.StaticText(self, wx.ID_ANY, "Image coords: x, y")
+
+        self._stage_position_label.Hide()
+        self._image_coords_label.Hide()
+
+        alignment_info_sizer1 = wx.BoxSizer(wx.HORIZONTAL)
+        alignment_info_sizer1.AddSpacer(30)
+        alignment_info_sizer1.Add(self._stage_position_label)
+
+        alignment_info_sizer2 = wx.BoxSizer(wx.HORIZONTAL)
+        alignment_info_sizer2.AddSpacer(30)
+        alignment_info_sizer2.Add(self._image_coords_label)
 
         button_size = (125, -1)
         self.done_button = wx.Button(self, wx.ID_ANY, "Done", size=button_size)  # The ApplicationFame will listen to clicks on this button.
@@ -65,6 +80,8 @@ class StageAlignmentPanel(wx.Panel):
         contents.Add(pixel_size_sizer, 0, wx.ALL | wx.EXPAND, border=b)
         contents.Add(label, 0, wx.ALL | wx.EXPAND, border=b)
         contents.Add(self._alignment_state, 0, wx.ALL | wx.EXPAND, border=b)
+        contents.Add(alignment_info_sizer1, 0, wx.LEFT | wx.EXPAND, border=b)
+        contents.Add(alignment_info_sizer2, 0, wx.LEFT | wx.EXPAND, border=b)
         contents.Add(self.done_button, 0, wx.ALL | wx.CENTER, border=b)
 
         self.SetSizer(contents)
@@ -116,9 +133,11 @@ class StageAlignmentPanel(wx.Panel):
         self._canvas.redraw()
 
     def _update_alignment_state_text(self, landmark_stage_pos, landmark_image_pos):
-        self._alignment_state.SetLabelText("The stage is now aligned! The stage position is {}; the landmark image coordinates are {} ".format(landmark_stage_pos, landmark_image_pos))
-        # IMPROVEME: that text line is ugly, break it up.
-        self._alignment_state.Wrap(330)  # force line wrapping
+        self._alignment_state.SetLabelMarkup("The stage is now <span color='red'>aligned</span>!")
+        self._stage_position_label.SetLabel("Stage position: x={} y={}".format(*landmark_stage_pos))
+        self._image_coords_label.SetLabel("Image coords: x={:.1f} y={:.1f}".format(*landmark_image_pos))
+        self._stage_position_label.Show()
+        self._image_coords_label.Show()
         self.GetTopLevelParent().Layout()
 
     @staticmethod

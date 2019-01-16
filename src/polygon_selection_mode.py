@@ -18,10 +18,10 @@ class PolygonSelectionMode(BaseMode):
 
     def __init__(self, canvas=None):
         BaseMode.__init__(self, canvas)
-        self.Cursor = self.MakeCursor(resources.crosshair.GetImage(), 12, 12)  # TODO: use dedicated tool cursor instead
+        self.Cursor = wx.NullCursor  # TODO: use dedicated tool cursor instead
 
     def OnLeftUp(self, event):
-        # print('Polygon selection tool: left mouse button up {} {}'.format(event, event.GetPosition()))
+        # print('Polygon selection tool: left mouse button up {} {}; canvas={}'.format(event, event.GetPosition(), self.Canvas))
         EventType = self.EVT_TYPE_TOMO_POLY_SELECT_LEFT_UP
         self.Canvas._RaiseMouseEvent(event, EventType)
 
