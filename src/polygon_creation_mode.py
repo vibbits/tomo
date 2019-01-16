@@ -1,11 +1,9 @@
 import wx
-from wx.lib.floatcanvas import GUIMode
+from base_mode import BaseMode
 
 import resources
 
-# IMPROVEME: shouldn't this mode actually implement the polygon creation here? And interface with Canvas for drawing? Instead of combining all that in polygon_editor_panel.p?
-
-class PolygonCreationMode(GUIMode.GUIBase):
+class PolygonCreationMode(BaseMode):
     # Mode label, shown in the tool bar.
     NAME = "Polygon Creation"
 
@@ -19,27 +17,9 @@ class PolygonCreationMode(GUIMode.GUIBase):
     EVT_TOMO_POLY_CREATE_LEFT_DOWN = wx.PyEventBinder(EVT_TYPE_TOMO_POLY_CREATE_LEFT_DOWN)
     EVT_TOMO_POLY_CREATE_MOTION = wx.PyEventBinder(EVT_TYPE_TOMO_POLY_CREATE_MOTION)
 
-    # XXXXX
-
-
     def __init__(self, canvas=None):
-        GUIMode.GUIBase.__init__(self, canvas)
-        self.Cursor = self.MakePolygonCreationCursor()
-
-    def MakePolygonCreationCursor(self):
-        img = resources.crosshair.GetImage()   # FIXME This must be a different cursor!
-        hotspot_x = 12
-        hotspot_y = 12
-        if wx.Platform == '__WXMSW__':
-            img.SetOption(wx.IMAGE_OPTION_CUR_HOTSPOT_X, hotspot_x)
-            img.SetOption(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, hotspot_y)
-            return wx.Cursor(img)
-        elif wx.Platform == '__WXGTK__':
-            img.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_X, hotspot_x)
-            img.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, hotspot_y)
-            return wx.CursorFromImage(img)
-        else:
-            return None
+        BaseMode.__init__(self, canvas)
+        self.Cursor = self.MakeCursor(resources.crosshair.GetImage(), 12, 12)  # TODO: use dedicated tool cursor instead
 
     def OnLeftUp(self, event):
         print('Polygon creation tool: left mouse button up {} {}; canvas={}'.format(event, event.GetPosition(), self.Canvas))

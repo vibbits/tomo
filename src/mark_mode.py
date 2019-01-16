@@ -1,9 +1,9 @@
 import wx
-from wx.lib.floatcanvas import GUIMode
+from base_mode import BaseMode
 
 import resources
 
-class MarkMode(GUIMode.GUIBase):
+class MarkMode(BaseMode):
     # Mode label, shown in the tool bar.
     NAME = "Mark"
 
@@ -16,23 +16,8 @@ class MarkMode(GUIMode.GUIBase):
     EVT_TOMO_MARK_MOTION = wx.PyEventBinder(EVT_TYPE_TOMO_MARK_MOTION)
 
     def __init__(self, canvas=None):
-        GUIMode.GUIBase.__init__(self, canvas)
-        self.Cursor = self.MakeMarkCursor()
-
-    def MakeMarkCursor(self):
-        img = resources.crosshair.GetImage()
-        hotspot_x = 12
-        hotspot_y = 12
-        if wx.Platform == '__WXMSW__':
-            img.SetOption(wx.IMAGE_OPTION_CUR_HOTSPOT_X, hotspot_x)
-            img.SetOption(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, hotspot_y)
-            return wx.Cursor(img)
-        elif wx.Platform == '__WXGTK__':
-            img.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_X, hotspot_x)
-            img.SetOptionInt(wx.IMAGE_OPTION_CUR_HOTSPOT_Y, hotspot_y)
-            return wx.CursorFromImage(img)
-        else:
-            return None
+        BaseMode.__init__(self, canvas)
+        self.Cursor = self.MakeCursor(resources.crosshair.GetImage(), 12, 12)
 
     def OnLeftDown(self, event):
         # print('Mark tool: left mouse button down {} {}'.format(event, event.GetPosition()))
