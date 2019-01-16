@@ -52,12 +52,14 @@ class PolygonCreatorMixin():
         coords = event.GetCoords()
 
         # Update position of the handle on the last vertex
-        point = self._point_handles[-1]
-        point.SetPoint(coords)
+        self._point_handles[-1].SetPoint(coords)
 
-        # Update position of the end point of the last line
-        line = self._line_handles[-1]
-        line.Points[1] = coords
+        # Update position of the end point of the tentative lines
+        if len(self._vertices) >= 2:
+            self._line_handles[-2].Points[1] = coords
+            self._line_handles[-1].Points[0] = coords
+        else:
+            self._line_handles[-1].Points[1] = coords
 
         self._canvas.redraw(True)
 
@@ -77,6 +79,7 @@ class PolygonCreatorMixin():
             self._canvas.redraw()
             return
 
+        # Add vertex handles
         if len(self._vertices) == 1:
             h = self._canvas.Canvas.AddSquarePoint(p, Color=NORMAL_COLOR, Size=HANDLE_SIZE)
             self._point_handles.append(h)
@@ -84,8 +87,19 @@ class PolygonCreatorMixin():
         h = self._canvas.Canvas.AddSquarePoint(p, Color=NORMAL_COLOR, Size=HANDLE_SIZE)
         self._point_handles.append(h)
 
+        # Add lines
+        if len(self._vertices) == 3:
+            h = self._line_handles.pop()
+            self._canvas.remove_objects([h])
+
         h = self._canvas.Canvas.AddLine([(p[0], p[1]), (p[0], p[1])], LineColor=NORMAL_COLOR)
         self._line_handles.append(h)
+
+        if len(self._vertices) >= 2:
+            # Close the polygon to a tentative triangle or quadrilateral
+            start = self._vertices[0]
+            h = self._canvas.Canvas.AddLine([(p[0], p[1]), (start[0], start[1])], LineColor=NORMAL_COLOR)
+            self._line_handles.append(h)
 
     def _remove_temporary_polygon(self):
         self._canvas.remove_objects(self._point_handles)
