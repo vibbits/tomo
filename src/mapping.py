@@ -109,4 +109,4 @@ def repeatedly_transform_point(quads, starting_point):
 
         return transformed_points
     except:
-        return []
+        return None

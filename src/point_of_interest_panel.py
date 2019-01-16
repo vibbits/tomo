@@ -153,7 +153,7 @@ class PointOfInterestPanel(wx.Panel):
         slice_polygons = self._model.slice_polygons[reference_slice_index:]
 
         transformed_points_of_interest = mapping.repeatedly_transform_point(slice_polygons, original_point_of_interest)
-        if not transformed_points_of_interest:
+        if transformed_points_of_interest is None:
             print("An error occurred while calculating predicted points-of-interest.")  # IMPROVEME: display a warning message (e.g. in red) in the panel instead.
 
         return [original_point_of_interest] + transformed_points_of_interest
