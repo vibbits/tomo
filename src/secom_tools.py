@@ -7,15 +7,16 @@ from tools import commandline_exec
 # so we can use the exist_ok parameter of mkdir()
 from pathlib2 import Path
 
-# For autofocus
-import platform
-if platform.system() == "Windows":
-    # Stubs
-    from odemis_stubs import model
-    from odemis_stubs import align
-else:
+# Try to import actual Odemis modules. If they are not available, for example on our Windows
+# development machine, we load stub modules instead.
+try:
     from odemis import model
     from odemis.acq import align
+    odemis_stubbed = False
+except ImportError:
+    from odemis_stubs import model
+    from odemis_stubs import align
+    odemis_stubbed = True
 
 
 # This function automatically acquires multiple LM or EM images.
