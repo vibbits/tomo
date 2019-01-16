@@ -26,10 +26,13 @@ class PolygonEditorPanel(wx.Panel):
         title.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD))
         separator = wx.StaticLine(self, wx.ID_ANY)
 
-        instructions_label = wx.StaticText(self, wx.ID_ANY, ("Use the Polygon Selection tool to edit the position of the vertices of an existing polygon, or to delete a polygon altogether. "
-                                                             "Use the Polygon Creation tool to draw a completely new polygon."))
+        instructions_label1 = wx.StaticText(self, wx.ID_ANY, ("Use the Polygon Selection tool to edit the position of the vertices of an existing polygon, or to delete a polygon altogether. "))
+        instructions_label2 = wx.StaticText(self, wx.ID_ANY, ("Use the Polygon Creation tool to draw a completely new polygon. Start at the bottom left corner of the slice and add vertices counter-clockwise."))
+
+        # Force line wrapping
         w = 330
-        instructions_label.Wrap(w)  # force line wrapping
+        instructions_label1.Wrap(w)
+        instructions_label2.Wrap(w)
 
         button_size = (125, -1)
         self.done_button = wx.Button(self, wx.ID_ANY, "Done", size=button_size)  # The ApplicationFame will listen to clicks on this button.
@@ -38,7 +41,8 @@ class PolygonEditorPanel(wx.Panel):
         contents = wx.BoxSizer(wx.VERTICAL)
         contents.Add(title, 0, wx.ALL | wx.EXPAND, border=b)
         contents.Add(separator, 0, wx.ALL | wx.EXPAND, border=b)
-        contents.Add(instructions_label, 0, wx.ALL | wx.EXPAND, border=b)
+        contents.Add(instructions_label1, 0, wx.ALL | wx.EXPAND, border=b)
+        contents.Add(instructions_label2, 0, wx.ALL | wx.EXPAND, border=b)
         contents.Add(self.done_button, 0, wx.ALL | wx.CENTER, border=b)
 
         self.SetSizer(contents)
