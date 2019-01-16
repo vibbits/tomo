@@ -62,7 +62,8 @@ class OverviewImageDialog(wx.Dialog):
         defaultFile = os.path.basename(path)
         with wx.FileDialog(self, "Select the overview image",
                            defaultDir, defaultFile,
-                           wildcard="TIFF files (*.tif;*.tiff)|*.tif;*.tiff|PNG files (*.png)|*.png|JPEG files (*.jpg;*.jpeg)|*.jpg;*.jpeg") as dlg:
+                           wildcard="TIFF files (*.tif;*.tiff)|*.tif;*.tiff|PNG files (*.png)|*.png|JPEG files (*.jpg;*.jpeg)|*.jpg;*.jpeg",
+                           style=wx.FD_OPEN) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
                 path = dlg.GetPath()
                 self._model.overview_image_path = path

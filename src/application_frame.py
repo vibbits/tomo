@@ -244,8 +244,9 @@ class ApplicationFrame(wx.Frame):
         defaultDir = os.path.dirname(path)
         defaultFile = os.path.basename(path)
         with wx.FileDialog(self, "Select the slice outlines file",
-                            defaultDir, defaultFile,
-                            wildcard="JSON files (*.json)|*.json") as dlg:
+                           defaultDir, defaultFile,
+                           wildcard="JSON files (*.json)|*.json",
+                           style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
                 path = dlg.GetPath()
                 tools.json_save_polygons(path, self._model.slice_polygons)
