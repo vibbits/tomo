@@ -52,7 +52,7 @@ class TomoModel:
     template_slice_path = None
 
     # Calculated model parameters (not persistent)
-    slice_polygons = None
+    slice_polygons = []
     all_points_of_interest = None
     slice_offsets_microns = None  # stage movements to move from the point-of-interest in slice to to slice i+1, based only on mapping the slice outline quadrilaterals
     combined_offsets_microns = None  # refined stage movement (combining slice outline mapping + SIFT registration of x100 images)

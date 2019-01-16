@@ -98,7 +98,7 @@ class OverviewCanvas(TomoCanvas):
             obj.SetPoint(pos)
 
     def set_slice_polygons(self, polygons):  # slice outlines in overview image coordinates (y >= 0)
-        assert polygons is not None  # IMPROVEME: can't we use the empty list instead of None? That would make some None checking unnecessary.
+        assert polygons is not None
         self._slice_polygons = polygons
 
         # Handle slice outlines
