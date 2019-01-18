@@ -106,7 +106,9 @@ class TomoModel:
         self._config.Flush()
 
 
-    # Image scales:
+    # Note
+    #
+    # On our SECOM we have the following image resolutions:
     # +------+-------------+
     # | lens | pixels/mm   |
     # +------+-------------+
@@ -114,27 +116,3 @@ class TomoModel:
     # |  20x |  3077.38542 |
     # | 100x | 15398.49624 |
     # +------+-------------+
-
-    # Input parameters # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-    # Frank Windows
-    # overview_image_path = r'F:\Secom\sergio_x20_LM_objective_overview_image\bisstitched-0.tif'
-    # slice_polygons_path = r'E:\git\bits\bioimaging\Secom\tomo\data\bisstitched-0.points.json'
-    # lm_images_output_folder = r'E:\git\bits\bioimaging\Secom\tomo\data\output\LM'
-    # original_point_of_interest = np.array([2417, 1066]) #[1205, 996])
-    # delay_between_LM_image_acquisition_secs = 0.1  # time in seconds to pause between successive microscope commands to acquire an LM image (maybe 1 or 2 secs in reality)
-    # pixels_per_mm = 3077.38542  # of the x20 lens overview image
-    # fiji = r'e:\Fiji.app\ImageJ-win64.exe'
-    # odemis_cli = r'E:\git\bits\bioimaging\Secom\tomo\odemis-cli.bat'
-    # sift_registration_script = r'E:\git\bits\bioimaging\Secom\tomo\sift_registration.py'
-    # lm_images_prefix = 'section'                      # prefix = 'lm_slice_'   # prefix of x100 image filenames
-    # sift_input_folder = r'F:\Secom\cell1'
-    # sift_output_folder = r'F:\Secom\cell1\frank'      # os.path.join(lm_images_output_folder, 'xxxxx')
-    #
-    # Frank Ubuntu
-    # overview_image_path = r'/media/frank/FRANK EXTERNAL/Manual Backups/tomo/data/bisstitched-0.tif'
-    # slice_polygons_path = r'/media/frank/FRANK EXTERNAL/Manual Backups/tomo/data/bisstitched-0.points.json'
-    # sift_registration_script = r'/media/frank/FRANK EXTERNAL/sift_registration.py'
-    # sift_input_folder = r'/media/frank/FRANK EXTERNAL/Secom/cell1'
-    # sift_output_folder = r'/media/frank/FRANK EXTERNAL/Secom/cell1/frank'
-    # fiji = r'/home/frank/Fiji.app/ImageJ-linux64'
-    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
