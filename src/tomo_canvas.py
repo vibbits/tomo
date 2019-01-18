@@ -13,8 +13,8 @@ class TomoCanvas(NavCanvas.NavCanvas):
 
     def BuildToolbar(self):  # overrides implementation in NavCanvas
         self.Modes.extend(self._custom_modes)
-        for mode in self.Modes:
-            print("mode: {}".format(mode))
+        # for mode in self.Modes:
+        #     print("mode: {}".format(mode))
         super(TomoCanvas, self).BuildToolbar()
 
     def EnableTool(self, tool_name, enable):
