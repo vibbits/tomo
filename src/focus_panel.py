@@ -21,7 +21,9 @@ from focus_map import FocusMap
 from move_stage_mode import MoveStageMode
 from constants import POINTER_MODE_NAME
 
-import matplotlib.pyplot as plt  # CHECKME: is matplotlib present on the SECOM? On our Windows development machine?
+import matplotlib
+matplotlib.use('wxagg')
+import matplotlib.pyplot as plt
 
 class FocusPanel(wx.Panel):
     def __init__(self, parent, canvas, model):
