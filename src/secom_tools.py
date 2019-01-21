@@ -43,7 +43,7 @@ def acquire_microscope_images(mode, physical_offsets_microns, delay_between_imag
         # (Currently only for LM imaging.)
         if focus_map:
             pos = get_absolute_stage_position()
-            z = focus_map.get_focus(pos)
+            z = focus_map.get_focus_value(pos)
             if z != None:
                 set_absolute_focus_z_position(z)
 

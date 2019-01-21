@@ -1,5 +1,6 @@
 
 import numpy as np
+from interpolator import Interpolator
 
 # Reference:
 # Scattered data interpolation methods for electronic imaging systems: a survey
@@ -11,83 +12,55 @@ import numpy as np
 # Note: we could also use the MetPy package:
 # https://unidata.github.io/MetPy/latest/api/generated/metpy.interpolate.inverse_distance_to_points.html#metpy.interpolate.inverse_distance_to_points
 
-class InverseDistanceWeighingInterpolator:
-    _data = []
-    def __init__(self, data, k = 1.0):
-        """
-        XXXXX
-        :param data: an n x 3 numpy array; each row is a data point, and the columns are x, y and z respectively; given a new (x,y) we want to calculate an interpolated z
-        :param k: exponent for inverse distance weighing function; k >= 1; larger k yields an interpolated surface with bigger "plateaus" around the sample points
-        """
+class InverseDistanceWeighingInterpolator(Interpolator):
+
+    def __init__(self, known_points, known_values, k=1.0):
+        Interpolator.__init__(self, known_points, known_values)
+        # k: exponent for inverse distance weighing function; k >= 1; larger k yields an interpolated surface with bigger "plateaus" around the sample points
         assert k >= 1.0
         self._k = k
-        self._data = data
 
-    def interpolate(self, pos, eps = 1e-9):
-        """
-        XXXX
-        :param pos:
-        :param eps:
-        :return:
-        """
-        if len(self._data) == 0:
+    def prepare(self, xmin, xmax, ymin, ymax, step):
+        # Prepare a rectangular grid of interpolated values
+        self._xmin = xmin
+        self._ymin = ymin
+        # self._xmax = xmax
+        # self._ymax = ymax
+        self._step = step
+
+        xrange = np.arange(xmin, xmax, step)
+        yrange = np.arange(ymin, ymax, step)  # CHECKME: includes endpoint? if not, should we include it? perhaps np.linspace(min, max, num_samples) is more predictable in terms of the number of samples
+
+        self._grid = np.zeros((len(yrange), len(xrange)))
+
+        for i, y in enumerate(yrange):
+            for j, x in enumerate(xrange):
+                pos = np.array([x, y])
+                val = self.get_position_sample(pos)
+                self._grid[i, j] = val
+
+    def get_grid_samples(self):
+        return self._grid
+
+    def get_position_sample(self, pos):
+
+        if len(self._known_points) == 0:
             return None
 
-        posi = self._data[:, 0:2]
+        posi = self._known_points
         di = np.sqrt(np.sum((posi - pos) ** 2, axis = 1))  # di = Euclidean distance from pos to each data point
 
         # Check for the special case where pos is really close to a data point, because there d ~= 0 and h ~= infinite.
         index = np.argmin(di)
         di_min = di[index]
+        eps = 1.0e-9
         if di_min < eps:
-            z = self._data[index, 2]   # pos is very close to a data point, simply return its z
+            z = self._known_values[index]   # pos is very close to a data point, simply return its z
         else:
-            hi = 1.0 / (di ** self._k) # hi = inverse distances
-            wi = hi / np.sum(hi)       # wi = interpolation weights
+            hi = 1.0 / (di ** self._k) # hi = array with inverse distances
+            wi = hi / np.sum(hi)       # wi = array with interpolation weights
             # print(np.sum(wi))        # FOR TESTING - SHOULD BE 1
-            zi = self._data[:, 2]      # zi = sample data z
+            zi = self._known_values    # zi = array with sample data z
             z = np.dot(wi, zi)         # z = inverse distance weighted
 
         return z
-
-if __name__ == '__main__':
-
-    # Example 1: 2 scatter points
-    
-    data = np.array([[0, 0, 0],
-                     [100, 100, 1]])
-    print(data)
-
-    idwi = InverseDistanceWeighingInterpolator(data, k=1)
-
-    p1 = np.array([  0,   0]); print(p1, idwi.interpolate(p1))
-    p3 = np.array([100, 100]); print(p3, idwi.interpolate(p3))
-
-    p8 = np.array([10, 10]); print(p8, idwi.interpolate(p8))
-    p6 = np.array([25, 25]); print(p6, idwi.interpolate(p6))
-    p7 = np.array([50, 50]); print(p7, idwi.interpolate(p7))
-    p2 = np.array([75, 75]); print(p2, idwi.interpolate(p2))
-
-    p4 = np.array([  200,   200]); print(p4, idwi.interpolate(p4))
-    p5 = np.array([ 2000,  2000]); print(p5, idwi.interpolate(p5))
-
-    # Example 2: 4 scatter points
-
-    data2 = np.array([[  0,   0, 0],
-                      [100,   0, 2],
-                      [  0, 100, 1],
-                      [100, 100, 1]])
-    print(data2)
-
-    idwi = InverseDistanceWeighingInterpolator(data2, k=1)
-
-    p1 = np.array([  0,   0]); print(p1, idwi.interpolate(p1))
-    p3 = np.array([100, 100]); print(p3, idwi.interpolate(p3))
-
-    p8 = np.array([10, 10]); print(p8, idwi.interpolate(p8))
-    p6 = np.array([25, 25]); print(p6, idwi.interpolate(p6))
-    p7 = np.array([50, 50]); print(p7, idwi.interpolate(p7))  # returns the average of the values at the 4 points
-    p2 = np.array([75, 75]); print(p2, idwi.interpolate(p2))
-
-    p4 = np.array([  200,   200]); print(p4, idwi.interpolate(p4))
-    p5 = np.array([ 2000,  2000]); print(p5, idwi.interpolate(p5))
