@@ -1,7 +1,5 @@
 import wx
 import wx.grid
-import secom_tools
-from focus_map import FocusMap
 import tools
 from contour_finder import ContourFinder
 
