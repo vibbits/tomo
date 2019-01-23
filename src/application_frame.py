@@ -28,6 +28,7 @@ from stage_alignment_panel import StageAlignmentPanel
 from point_of_interest_panel import PointOfInterestPanel
 from segmentation_panel import SegmentationPanel
 from polygon_editor_panel import PolygonEditorPanel
+from about_dialog import AboutDialog
 
 class ApplicationFrame(wx.Frame):
     _model = None
@@ -343,18 +344,9 @@ class ApplicationFrame(wx.Frame):
             self._enable_menu(self._menu_state)
 
     def _on_about(self, event):
-        print('About...')
-        # TODO: write a custom implementation. We don't have wx.adv (=Phoenix) on the SECOM computer. Or does it exist somewhere else?
-        # info = wx.adv.AboutDialogInfo()
-        # info.SetName('Tomo')
-        # info.SetVersion('1.0')
-        # info.SetDescription("Prototype application for tomography on SECOM")
-        # info.SetCopyright('(c) 2018 VIB - Vlaams Instituut voor Biotechnologie')  # Not shown in the dialog on Windows?
-        # info.SetWebSite('http://www.vib.be')
-        # info.SetLicence("Proprietary. Copyright VIB, 2018.")
-        # # info.SetIcon(wx.Icon('tomo.png', wx.BITMAP_TYPE_PNG))
-        # # info.AddDeveloper('Frank Vernaillen')
-        # wx.adv.AboutBox(info)
+        dlg = AboutDialog()
+        dlg.ShowModal()
+        dlg.Destroy()
 
     def _on_exit(self, event):
         self.Close()
