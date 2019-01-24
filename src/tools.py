@@ -74,11 +74,51 @@ def read_image_as_grayscale(filename):
     This may be preferable over reading it through wxPython since (I think) wxPython expands grayscale images to RGB,
     and this is not ideal since we are dealing with potentially large images.
     :param filename: full file path of the image to read
-    :return: an OpenCV grayscale image object, or None on error
+    :return: An OpenCV grayscale image object, or None on error.
+             White pixels have a value near 255, black pixels near 0.
+             The image is indexed like this: img[y, x].
     """
     img = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
     print(img.shape)
     return img
+
+
+def sample_image(image, pos):
+    """
+    Returns the pixel value in the image at a given position. The position can be specified with sub-pixel accuracy,
+    the pixel value is then estimated via bilinear interpolation of the 4 surrounding pixels.
+    :param image: an OpenCV grayscale image, image[0][0] is the top left pixel, the first index is the y-coordinate, y-axis points down
+    :param pos: (x, y) position in the image; x and y are floating point; x=horizontal, y=vertical; origin is at the top left of image, y-axis is running down.
+    :return: the (interpolated) pixel value
+    """
+
+    # TODO: truncate pos to the image boundaries
+
+    assert(pos[1] >= 0)
+
+    x_left = int(pos[0])
+    y_top = int(pos[1])
+
+    x_right = x_left + 1
+    y_bottom = y_top + 1
+
+    x_fraction = float(pos[0] - x_left)
+    y_fraction = float(pos[1] - y_top)
+
+    assert x_fraction >= 0.0 and x_fraction < 1.0001
+    assert y_fraction >= 0.0 and y_fraction < 1.0001
+
+    # Note the conversion from unsigned byte pixels to float for safe calculations
+    val_tl = float(image[y_top][x_left])
+    val_tr = float(image[y_top][x_right])
+    val_bl = float(image[y_bottom][x_left])
+    val_br = float(image[y_bottom][x_right])
+
+    # Bilinear interpolation (val is the image intensity)
+    val_top    = val_tl + x_fraction * (val_tr - val_tl)
+    val_bottom = val_bl + x_fraction * (val_br - val_bl)
+    val = val_top + y_fraction * (val_bottom - val_top)
+    return val
 
 
 def polygon_area(polygon):  # polygon is a list of (x,y) coordinates
