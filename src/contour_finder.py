@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import tools
+import cv2
 
 class ContourFinder:
 
@@ -44,12 +45,41 @@ class ContourFinder:
     def preprocess_image(self, image_path):
         # For now just read the result of manual preprocessing in Fiji...
         # TODO: IMPLEMENT: e.g. blur image, remove dark specks, etc.
+        # http://opencvexamples.blogspot.com/2013/10/edge-detection-using-laplacian-operator.html
 
-        preprocessed_path = 'E:\\git\\bits\\bioimaging\\Secom\\tomo\\data\\20x_lens\\bisstitched-0-contrast-enhanced-mexicanhat_separable_radius40.tif'  # WORKS
-        preprocessed_path = 'E:\\git\\bits\\bioimaging\\Secom\\tomo\\data\\20x_lens\\bisstitched-0-contrast-enhanced-mexicanhat_separable_radius20-gaussianblur20pix.tif' # WORKS BETTER?
-        print('Should preprocess {} but instead we will just read the result {}'.format(image_path, preprocessed_path))
+        if True:
+            # Read preprocessed version of "20x_lens\bisstitched-0.tif" where contrast was enhanced, edges were amplified and then blurred to make gradient descent work better.
+            preprocessed_path = 'E:\\git\\bits\\bioimaging\\Secom\\tomo\\data\\20x_lens\\bisstitched-0-contrast-enhanced-mexicanhat_separable_radius40.tif'  # WORKS
+            preprocessed_path = 'E:\\git\\bits\\bioimaging\\Secom\\tomo\\data\\20x_lens\\bisstitched-0-contrast-enhanced-mexicanhat_separable_radius20-gaussianblur20pix.tif' # WORKS BETTER?
+            print('Should preprocess {} but instead we will just read the result {}'.format(image_path, preprocessed_path))
 
-        return tools.read_image_as_grayscale(preprocessed_path)
+            return tools.read_image_as_grayscale(preprocessed_path)
+        else:
+            # Here we try to obtain a similar result using OpenCV.
+            # It doesn't work yet (almost black result). Parameter values are probably not correct. We also did not do contrast enhancement first yet either.
+            image_path = 'E:\\git\\bits\\bioimaging\\Secom\\tomo\\data\\20x_lens\\oneslice_16bit.tif'
+
+            raw_img = tools.read_image_as_grayscale(image_path, cv2.IMREAD_GRAYSCALE + cv2.IMREAD_ANYDEPTH)  # IMREAD_ANYDEPTH to preserve as 16 bit
+            print('Raw: shape={} dtype={} min={} max={}'.format(raw_img.shape, raw_img.dtype, np.min(raw_img), np.max(raw_img)))
+            tools.display(raw_img, "Raw")
+
+            kernel_size = (31, 31)  # must be odd
+            sigma_x, sigma_y = 0, 0   # 0 means calculate sigma from the kernel size
+            img = cv2.GaussianBlur(raw_img, kernel_size, sigma_x, sigma_y)
+            print('Img Gauss: shape={} dtype={} min={} max={}'.format(img.shape, img.dtype, np.min(img), np.max(img)))
+            tools.display(img, "Gaussian")
+
+            ddepth = cv2.CV_16U  #cv2.CV_8U
+            kernel_size = 31
+            result = cv2.Laplacian(img, ddepth, kernel_size) * 100 #* 20  # TEST TEST TOO DARK OTHERWISE
+            print('Result Laplacian: shape={} dtype={} min={} max={}'.format(result.shape, result.dtype, np.min(result), np.max(result)))
+            tools.display(result, "Laplacian (of Gaussian)")
+
+            return result
+
+            # Laplacian(gray, dst, CV_16S, 3, 1, 0, BORDER_DEFAULT);
+            # convertScaleAbs(dst, abs_dst);
+            # imshow("result", abs_dst);
 
     def contour_to_vector(self, contour):
         """
