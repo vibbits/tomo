@@ -68,7 +68,7 @@ def read_image_as_color_image(filename):
     return img
 
 
-def read_image_as_grayscale(filename):
+def read_image_as_grayscale(filename, flags=cv2.IMREAD_GRAYSCALE):
     """
     Reads an image file and returns it as an OpenCV image object.
     This may be preferable over reading it through wxPython since (I think) wxPython expands grayscale images to RGB,
@@ -78,7 +78,7 @@ def read_image_as_grayscale(filename):
              White pixels have a value near 255, black pixels near 0.
              The image is indexed like this: img[y, x].
     """
-    img = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread(filename, flags)
     print(img.shape)
     return img
 
@@ -197,6 +197,26 @@ def polygons_hit(polygons, point):
         if is_strictly_inside(cnt, point):
             hit.append(i)
     return hit
+
+
+def is_point_in_rect(point, rect):
+    # rect: a pair (p1, p2) of opposite corners of a rectangle; p1 and p2 are numpy arrays of [x, y] coordinates
+    # point: a numpy array [x, y] of point's coordinates
+    x = point[0]
+    y = point[1]
+    xmin = min(rect[0][0], rect[1][0])
+    xmax = max(rect[0][0], rect[1][0])
+    ymin = min(rect[0][1], rect[1][1])
+    ymax = max(rect[0][1], rect[1][1])
+    return x >= xmin and x <= xmax and y >= ymin and y <= ymax
+
+def is_polygon_inside_rect(polygon, rect):
+    # returns (True/False) whether all vertices of polygon are inside a given axis-aligned rectangle
+    # rect: a pair (p1, p2) of opposite corners of a rectangle; p1 and p2 are numpy arrays of [x, y] coordinates
+    for point in polygon:
+        if not is_point_in_rect(point, rect):
+            return False
+    return True
 
 
 # def interpolate_along_line_segment(pos1, val1, pos2, val2, pos):
