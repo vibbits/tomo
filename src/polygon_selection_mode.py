@@ -32,10 +32,5 @@ class PolygonSelectionMode(BaseMode):
 
     def OnMove(self, event):
         # print('Polygon selection tool: mouse move {} {}'.format(event, event.GetPosition()))
-
-        # Process enter and leave events
-        # (see wx.lib.floatcanvas.GUIMode source code)
-        # self.Canvas.MouseOverTest(event)
-
         EventType = self.EVT_TYPE_TOMO_POLY_SELECT_MOTION
         self.Canvas._RaiseMouseEvent(event, EventType)

@@ -38,10 +38,5 @@ class PolygonCreationMode(BaseMode):
 
     def OnMove(self, event):
         # print('Polygon creation tool: mouse move {} {}'.format(event, event.GetPosition()))
-
-        # Process enter and leave events
-        # (see wx.lib.floatcanvas.GUIMode source code)
-        # self.Canvas.MouseOverTest(event)
-
         EventType = self.EVT_TYPE_TOMO_POLY_CREATE_MOTION
         self.Canvas._RaiseMouseEvent(event, EventType)
