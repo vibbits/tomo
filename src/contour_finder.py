@@ -2,6 +2,8 @@ import numpy as np
 import math
 import tools
 import cv2
+import wx
+import os
 
 class ContourFinder:
 
@@ -49,10 +51,22 @@ class ContourFinder:
 
         if True:
             # Read preprocessed version of "20x_lens\bisstitched-0.tif" where contrast was enhanced, edges were amplified and then blurred to make gradient descent work better.
-            preprocessed_path = 'E:\\git\\bits\\bioimaging\\Secom\\tomo\\data\\20x_lens\\bisstitched-0-contrast-enhanced-mexicanhat_separable_radius40.tif'  # WORKS
+            # preprocessed_path = 'E:\\git\\bits\\bioimaging\\Secom\\tomo\\data\\20x_lens\\bisstitched-0-contrast-enhanced-mexicanhat_separable_radius40.tif'  # WORKS
             preprocessed_path = 'E:\\git\\bits\\bioimaging\\Secom\\tomo\\data\\20x_lens\\bisstitched-0-contrast-enhanced-mexicanhat_separable_radius20-gaussianblur20pix.tif' # WORKS BETTER?
-            print('Should preprocess {} but instead we will just read the result {}'.format(image_path, preprocessed_path))
 
+            path = preprocessed_path
+            defaultDir = os.path.dirname(path)
+            defaultFile = os.path.basename(path)
+            with wx.FileDialog(None, "Select the preprocessed edge enhanced image",
+                               defaultDir, defaultFile,
+                               wildcard="TIFF files (*.tif;*.tiff)|*.tif;*.tiff|PNG files (*.png)|*.png|JPEG files (*.jpg;*.jpeg)|*.jpg;*.jpeg",
+                               style=wx.FD_OPEN) as dlg:
+                if dlg.ShowModal() == wx.ID_OK:
+                    path = dlg.GetPath()
+                else:
+                    path = preprocessed_path
+
+            print('Should preprocess {} but instead we will just read the result {}'.format(image_path, preprocessed_path))
             return tools.read_image_as_grayscale(preprocessed_path)
         else:
             # Here we try to obtain a similar result using OpenCV.

@@ -88,6 +88,11 @@ class OverviewCanvas(TomoCanvas):
         obj = self._slice_outlines[outline]
         obj.Points[vertex] = pos
 
+    def set_slice_outline(self, outline_index, polygon):
+        for vertex, pos in enumerate(polygon):
+            obj = self._slice_outlines[outline_index]
+            obj.Points[vertex] = pos
+
     def remove_slice_outline(self, slice_index):
         obj = self._slice_outlines.pop(slice_index)
         self.remove_objects([obj])

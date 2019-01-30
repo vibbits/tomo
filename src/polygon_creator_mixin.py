@@ -1,12 +1,14 @@
-
+import wx
 from polygon_creation_mode import PolygonCreationMode
 from constants import NORMAL_COLOR, HANDLE_SIZE
 
-class PolygonCreatorMixin():
+# TODO: listen to ESC key: if ESC is pressed then cancel construction of a new slice
 
-    def __init__(self, model, canvas):
+class PolygonCreatorMixin:
+    def __init__(self, model, canvas, selector):
         self._model = model
         self._canvas = canvas
+        self._selector = selector  # the mixin responsible for handling slice selection
 
         # Coordinates of vertices in polygon that is being constructed
         self._vertices = []
@@ -22,7 +24,7 @@ class PolygonCreatorMixin():
 
         self._canvas.Bind(PolygonCreationMode.EVT_TOMO_POLY_CREATE_MOTION, self._on_mouse_move)
         self._canvas.Bind(PolygonCreationMode.EVT_TOMO_POLY_CREATE_LEFT_UP, self._on_left_mouse_button_up)
-        self._canvas.Bind(PolygonCreationMode.EVT_TOMO_POLY_CREATE_RIGHT_UP, self._on_right_mouse_button_up)
+        self._canvas.Bind(wx.EVT_CHAR_HOOK, self._key_pressed)
 
     def stop(self):
         self._remove_temporary_polygon()
@@ -30,23 +32,16 @@ class PolygonCreatorMixin():
 
         self._canvas.Unbind(PolygonCreationMode.EVT_TOMO_POLY_CREATE_MOTION)
         self._canvas.Unbind(PolygonCreationMode.EVT_TOMO_POLY_CREATE_LEFT_UP)
-        self._canvas.Unbind(PolygonCreationMode.EVT_TOMO_POLY_CREATE_RIGHT_UP)
+        self._canvas.Unbind(wx.EVT_CHAR_HOOK)
 
-
-    def _on_right_mouse_button_up(self, event):
-        print('creator: right up')
-        # if len(self._vertices) == 0:
-        #     return
-        #
-        # point = self._point_handles.pop()
-        # line = self._line_handles.pop()
-        # self._vertices.pop()
-        # self._canvas.Canvas.RemoveObject(point)
-        # self._canvas.Canvas.RemoveObject(line)
-
+    def _key_pressed(self, event):
+        key = event.GetKeyCode()
+        print('polygon creator: keydown key={}'.format(key))
+        event.Skip()
 
     def _on_mouse_move(self, event):
         if len(self._vertices) == 0:
+            event.Skip()
             return
 
         coords = event.GetCoords()
@@ -63,6 +58,8 @@ class PolygonCreatorMixin():
 
         self._canvas.redraw(True)
 
+        event.Skip()  # CHECKME: can we just call event.Skip() as the very first line of the event handler, instead of at the end of every return path? I would think so.
+
     def _on_left_mouse_button_up(self, event):
         p = event.GetCoords()
 
@@ -76,8 +73,17 @@ class PolygonCreatorMixin():
             # Update canvas
             self._remove_temporary_polygon()
             self._canvas.set_slice_polygons(self._model.slice_polygons)
+
+            # Automatically select the new slice
+            new_slice_index = len(self._model.slice_polygons) - 1
+            self._selector.set_selected_slices([new_slice_index])
+
             self._canvas.redraw()
             return
+
+        # De-select slices if they were selected
+        if len(self._vertices) == 1:
+            self._selector.set_selected_slices([])
 
         # Add vertex handles
         if len(self._vertices) == 1:
@@ -100,6 +106,8 @@ class PolygonCreatorMixin():
             start = self._vertices[0]
             h = self._canvas.Canvas.AddLine([(p[0], p[1]), (start[0], start[1])], LineColor=NORMAL_COLOR)
             self._line_handles.append(h)
+
+        self._canvas.redraw()
 
     def _remove_temporary_polygon(self):
         self._canvas.remove_objects(self._point_handles)

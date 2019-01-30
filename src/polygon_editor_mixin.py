@@ -1,7 +1,7 @@
 import wx
 import tools
 from wx.lib.floatcanvas import FloatCanvas
-from polygon_selection_mode import PolygonSelectionMode
+from polygon_editing_mode import PolygonEditingMode
 from constants import NOTHING, NORMAL_COLOR, ACTIVE_COLOR, REGULAR_LINE_WIDTH, HIGHLIGHTED_LINE_WIDTH, HANDLE_SIZE
 
 # FIXME: If we delete a slice, then some other parts of the model may have to be invalidated.
@@ -10,79 +10,53 @@ from constants import NOTHING, NORMAL_COLOR, ACTIVE_COLOR, REGULAR_LINE_WIDTH, H
 #         Maybe we should forbid editing the slices once we've set POIs?)
 # FIXME: Key events are only received if the canvas has focus, for example by clicking it first.
 #        This is undesirable, we _always_ want the key event.
+#        For more info, and possible solution: https://forums.wxwidgets.org/viewtopic.php?t=42399
 # IMPROVEME: it would be better if the "view" layer 'listens' to model changes.
 #            For example, that if we change a slice outline or delete one,
 #            that the view layer gets a callback and can update the canvas.
 #            We can use the PyPubSub package for this. (But first check which version of this package that we need on the SECOM...)
+# NOTE: See also https://github.com/wxWidgets/Phoenix/blob/master/samples/floatcanvas/PolyEditor.py
 
 HANDLE_NAME_PREFIX = 'PolygonHandle'
 
-class PolygonEditorMixin():
 
-    def __init__(self, model, canvas):
+#######
+####### FIXME: we need to cooperate with the PolygonSelectorMixin, so ask it which polygons are selected (during start) and add handles to all of them, for example
+
+class PolygonEditorMixin:
+    def __init__(self, model, canvas, selector):
         self._model = model
         self._canvas = canvas
+        self._selector = selector  # the mixin that handles the current slice selection
 
         self._over = NOTHING  # slice number that cursor is over, or NOTHING otherwise; the slice that the cursor is over is drawn highlighted
-        self._selected = NOTHING  # currently selected slice, or NOTHING otherwise; the selected slice has handles drawn over its vertices
-        self._active_handle = NOTHING  # NOTHING if no handle is active; otherwise the index of the vertex in the '_selected' slice
-        self._dragging = NOTHING  # the index of the vertex (in the '_selected' slice contour) whose handle is being dragged; or NOTHING otherwise
+        self._slice_being_edited = NOTHING  # currently selected slice, or NOTHING otherwise; the selected slice has handles drawn over its vertices
+        self._active_handle = NOTHING  # NOTHING if no handle is active; otherwise the index of the vertex in the '_slice_being_edited' slice
+        self._dragging = NOTHING  # the index of the vertex (in the '_slice_being_edited' slice contour) whose handle is being dragged; or NOTHING otherwise
 
         # FloatCanvas objects
-        self._handles = []  # FloatCanvas objects for the handles of the currently selected slice
+        self._handles = []  # FloatCanvas objects for the handles of the currently selected slice(s)
         self._slice_numbers = []  # FloatCanvas objects for the slice numbers (so the user can see in which order they are supposed to be)
 
     def start(self):
         self._over = NOTHING
-        self._selected = NOTHING
+        self._slice_being_edited = NOTHING
         self._dragging = NOTHING
         self._active_handle = NOTHING
 
         self._handles = []
         self._slice_numbers = []
 
-        self._canvas.Bind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_MOTION, self._on_mouse_move)
-        self._canvas.Bind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_LEFT_DOWN, self._on_left_mouse_button_down)
-        self._canvas.Bind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_LEFT_UP, self._on_left_mouse_button_up)
-        self._canvas.Bind(wx.EVT_CHAR_HOOK, self._key_pressed)  # CHECKME: EVT_CHAR or EVT_CHAR_HOOK ???
+        self._canvas.Bind(PolygonEditingMode.EVT_TOMO_POLY_EDIT_MOTION, self._on_mouse_move)
+        self._canvas.Bind(PolygonEditingMode.EVT_TOMO_POLY_EDIT_LEFT_DOWN, self._on_left_mouse_button_down)
+        self._canvas.Bind(PolygonEditingMode.EVT_TOMO_POLY_EDIT_LEFT_UP, self._on_left_mouse_button_up)
 
     def stop(self):
         self._remove_slice_handles()
 
-        self._canvas.Unbind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_MOTION)
-        self._canvas.Unbind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_LEFT_DOWN)
-        self._canvas.Unbind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_LEFT_UP)
-        self._canvas.Unbind(wx.EVT_CHAR_HOOK)
-
-    def _key_pressed(self, event):
-        """
-        Handle a key press. The purpose is to be able to delete the currently selected slice if the user
-        presses the DEL key.
-        :param event:
-        """
-
-        key = event.GetKeyCode()
-        print('polygon editor: keydown key={}'.format(key))
-        if key == wx.WXK_DELETE or key == wx.WXK_NUMPAD_DELETE:
-            if self._selected != NOTHING:
-                # Remove slice from model
-                self._model.slice_polygons.pop(self._selected)
-
-                # Remove slice handles from canvas
-                self._remove_slice_handles()
-
-                # Remove slice from canvas
-                self._canvas.set_slice_polygons(self._model.slice_polygons)
-
-                # Update state
-                if self._over == self._selected:
-                    self._over = NOTHING
-                self._selected = NOTHING
-                self._dragging = NOTHING
-                self._active_handle = NOTHING
-
-                # Redraw
-                self._canvas.redraw(True)
+        self._canvas.Unbind(PolygonEditingMode.EVT_TOMO_POLY_EDIT_MOTION)
+        self._canvas.Unbind(PolygonEditingMode.EVT_TOMO_POLY_EDIT_LEFT_DOWN)
+        self._canvas.Unbind(PolygonEditingMode.EVT_TOMO_POLY_EDIT_LEFT_UP)
 
     def _on_left_mouse_button_down(self, event):
 
@@ -110,21 +84,23 @@ class PolygonEditorMixin():
 
         if self._dragging != NOTHING:
             # Update model
-            self._model.slice_polygons[self._selected][self._dragging] = pos
+            self._model.slice_polygons[self._slice_being_edited][self._dragging] = pos
 
             # Update the polygon vertex position on the canvas
-            self._canvas.set_slice_outline_vertex_position(self._selected, self._dragging, coords)
+            self._canvas.set_slice_outline_vertex_position(self._slice_being_edited, self._dragging, coords)
 
             # Update position of slice number on the canvas
-            new_center = tools.polygon_center(self._model.slice_polygons[self._selected])
+            new_center = tools.polygon_center(self._model.slice_polygons[self._slice_being_edited])
             new_center = (new_center[0], -new_center[1])
-            self._canvas.set_slice_number_position(self._selected, new_center)
+            self._canvas.set_slice_number_position(self._slice_being_edited, new_center)
 
             # Update slice handles
             self._handles[self._dragging].SetPoint(coords)
 
             # Redraw
             self._canvas.redraw(True)
+
+            event.Skip()  # Pass on the event (e.g. so that we can update the mouse position in the status bar)
             return
 
         # Check if user hovers over a slice.
@@ -136,6 +112,7 @@ class PolygonEditorMixin():
         new_over = slices_hit[0] if slices_hit else -1
 
         if old_over == new_over:
+            event.Skip()
             return
 
         if old_over != NOTHING:
@@ -147,6 +124,8 @@ class PolygonEditorMixin():
         self._canvas.redraw(True)
 
         self._over = new_over
+
+        event.Skip()
 
     def _on_left_mouse_button_up(self, event):
         """
@@ -166,10 +145,10 @@ class PolygonEditorMixin():
         # Check if user selected a slice.
         # -------------------------------
 
-        if self._over == self._selected:
+        if self._over == self._slice_being_edited:
             return
 
-        if self._selected != NOTHING:
+        if self._slice_being_edited != NOTHING:
             self._remove_slice_handles()
 
         if self._over != NOTHING:
@@ -177,7 +156,7 @@ class PolygonEditorMixin():
 
         self._canvas.redraw(True)
 
-        self._selected = self._over
+        self._slice_being_edited = self._over
 
     def _add_slice_handles(self, slice_index):
         self._handles = self._make_slice_handles(self._model.slice_polygons[slice_index])
@@ -223,7 +202,7 @@ class PolygonEditorMixin():
         """
         # print("handle enter, object = {}".format(object.Name))
         if not self._canvas.IsActive(
-                PolygonSelectionMode.NAME):  # ignore this event if the polygon selection tool is not active (but e.g. the Pointer tool is)
+                PolygonEditingMode.NAME):  # ignore this event if the polygon selection tool is not active (but e.g. the Pointer tool is)
             return
         if self._dragging != NOTHING:
             return
@@ -237,7 +216,7 @@ class PolygonEditorMixin():
         :param object: the floatcanvas object that the mouse moved away from (little square in our case)
         """
         # print("handle leave, object = {}".format(object.Name))
-        if not self._canvas.IsActive(PolygonSelectionMode.NAME):
+        if not self._canvas.IsActive(PolygonEditingMode.NAME):
             return
         if self._dragging != NOTHING:
             return

@@ -15,6 +15,7 @@ from model import TomoModel
 from mark_mode import MarkMode
 from move_stage_mode import MoveStageMode
 from polygon_selection_mode import PolygonSelectionMode
+from polygon_editing_mode import PolygonEditingMode
 from polygon_creation_mode import PolygonCreationMode
 from preferences_dialog import PreferencesDialog
 from overview_image_dialog import OverviewImageDialog
@@ -27,8 +28,14 @@ from contour_finder_panel import ContourFinderPanel
 from stage_alignment_panel import StageAlignmentPanel
 from point_of_interest_panel import PointOfInterestPanel
 from segmentation_panel import SegmentationPanel
-from polygon_editor_panel import PolygonEditorPanel
 from about_dialog import AboutDialog
+
+from polygon_selection_mode import PolygonSelectionMode
+from polygon_editing_mode import PolygonEditingMode
+from polygon_creation_mode import PolygonCreationMode
+from polygon_selector_mixin import PolygonSelectorMixin
+from polygon_editor_mixin import PolygonEditorMixin
+from polygon_creator_mixin import PolygonCreatorMixin
 
 class ApplicationFrame(wx.Frame):
     _model = None
@@ -40,7 +47,6 @@ class ApplicationFrame(wx.Frame):
     _stage_alignment_panel = None
     _point_of_interest_panel = None
     _segmentation_panel = None
-    _polygon_editor_panel = None
 
     # Menu
     _import_overview_image_item = None
@@ -48,12 +54,13 @@ class ApplicationFrame(wx.Frame):
     _lm_image_acquisition_item = None
     _em_image_acquisition_item = None
     _segment_ribbons_item = None
-    _edit_polygons_item = None
     _set_point_of_interest_item = None
     _set_focus_item = None
     _about_item = None
 
     _menu_state = None  # a tuple with enabled/disabled flags for various menu items; used when a side panel is visible and we want to behave in a modal fashion
+
+    # IMPROVEME: enable/disable saving the polygons (via the menu, _save_slice_polygons_item) if we have slice polygons (either loaded or drawn manually)
 
     def __init__(self, parent, ID, title, size=(1280, 1024), pos = wx.DefaultPosition):
         wx.Frame.__init__(self, parent, ID, title, pos, size)
@@ -75,28 +82,45 @@ class ApplicationFrame(wx.Frame):
         # set a custom cursor; often the same bitmap.)
         self._mark_mode = MarkMode()
         self._polygon_selection_mode = PolygonSelectionMode()
+        self._polygon_editing_mode = PolygonEditingMode()
         self._polygon_creation_mode = PolygonCreationMode()
         self._move_stage_mode = MoveStageMode()
         custom_modes = [(MarkMode.NAME, self._mark_mode, resources.crosshair.GetBitmap()),
                         (MoveStageMode.NAME, self._move_stage_mode, resources.movestage.GetBitmap()),
-                        (PolygonSelectionMode.NAME, self._polygon_selection_mode, Resources.getPointerBitmap()),  # TODO: create icon (a quad with moved vertex ?)
+                        (PolygonSelectionMode.NAME, self._polygon_selection_mode, Resources.getPointerBitmap()),  # TODO: create icon
+                        (PolygonEditingMode.NAME, self._polygon_editing_mode, Resources.getPointerBitmap()),  # TODO: create icon
                         (PolygonCreationMode.NAME, self._polygon_creation_mode, Resources.getPointerBitmap())]  # TODO: create icon (a quad with a + ?)
 
         # Canvas
         self._overview_canvas = OverviewCanvas(self, custom_modes)
+
+        # Slice contour manipulation mixins
+        self._selector = PolygonSelectorMixin(self._model, self._overview_canvas)
+        self._editor = PolygonEditorMixin(self._model, self._overview_canvas, self._selector)
+        self._creator = PolygonCreatorMixin(self._model, self._overview_canvas, self._selector)
 
         # By default disable the custom modes, they are only active when their corresponding side panel is visible
         for mode in custom_modes:
             tool = self._overview_canvas.FindToolByName(mode[0])
             self._overview_canvas.ToolBar.EnableTool(tool.GetId(), False)
 
+        # Slice contour handling is possible.
+        self._overview_canvas.EnableTool(PolygonSelectionMode.NAME, True)
+        self._overview_canvas.EnableTool(PolygonEditingMode.NAME, True)
+        self._overview_canvas.EnableTool(PolygonCreationMode.NAME, True)
+        self._selector.start()
+        self._editor.start()
+        self._creator.start()
+
         # Listen to mouse movements so we can show the mouse position in the status bar.
         # We also need to listen to mouse movements when some custom modes are active (since regular FloatCanvas events do not happen then).
-        self._overview_canvas.Bind(FloatCanvas.EVT_MOTION, self._on_mouse_move_over_image)
-        self._overview_canvas.Bind(MarkMode.EVT_TOMO_MARK_MOTION, self._on_mouse_move_over_image)
-        self._overview_canvas.Bind(MoveStageMode.EVT_TOMO_MOVESTAGE_MOTION, self._on_mouse_move_over_image)
-        self._overview_canvas.Bind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_MOTION, self._on_mouse_move_over_image)
-        self._overview_canvas.Bind(PolygonCreationMode.EVT_TOMO_POLY_CREATE_MOTION, self._on_mouse_move_over_image)
+        self._overview_canvas.Bind(FloatCanvas.EVT_MOTION, self._on_mouse_move_over_canvas)
+        self._overview_canvas.Bind(MarkMode.EVT_TOMO_MARK_MOTION, self._on_mouse_move_over_canvas)
+        self._overview_canvas.Bind(MoveStageMode.EVT_TOMO_MOVESTAGE_MOTION, self._on_mouse_move_over_canvas)
+        self._overview_canvas.Bind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_MOTION, self._on_mouse_move_over_canvas)
+        self._overview_canvas.Bind(PolygonEditingMode.EVT_TOMO_POLY_EDIT_MOTION, self._on_mouse_move_over_canvas)
+        self._overview_canvas.Bind(PolygonCreationMode.EVT_TOMO_POLY_CREATE_MOTION, self._on_mouse_move_over_canvas)
+        self._overview_canvas.Canvas.Bind(wx.EVT_LEAVE_WINDOW, self._on_mouse_leave_canvas)
 
         # Status bar at the bottom of the window
         self._status_label = wx.StaticText(self, wx.ID_ANY, "")
@@ -107,7 +131,7 @@ class ApplicationFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self._on_focus_done_button_click, self._focus_panel.done_button)
 
         # Contour finder side panel
-        self._contour_finder_panel = ContourFinderPanel(self, self._model, self._overview_canvas)
+        self._contour_finder_panel = ContourFinderPanel(self, self._model, self._overview_canvas, self._selector)
         self._contour_finder_panel.Show(False)
         self.Bind(wx.EVT_BUTTON, self._on_find_contours_done_button_click, self._contour_finder_panel.done_button)
 
@@ -126,18 +150,12 @@ class ApplicationFrame(wx.Frame):
         self._segmentation_panel.Show(False)
         self.Bind(wx.EVT_BUTTON, self._on_segmentation_done_button_click, self._segmentation_panel.done_button)
 
-        # Polygon editor panel
-        self._polygon_editor_panel = PolygonEditorPanel(self, self._model, self._overview_canvas)
-        self._polygon_editor_panel.Show(False)
-        self.Bind(wx.EVT_BUTTON, self._on_polygon_editor_done_button_click, self._polygon_editor_panel.done_button)
-
         # IMPROVEME: rather than adding each side panel separately we probably should add just a single side panel
         #            with a "deck" of side panel cards? Does wxPython have this concept?
 
         hori = wx.BoxSizer(wx.HORIZONTAL)
         hori.Add(self._overview_canvas, 1, wx.ALL | wx.EXPAND, border=5)
         hori.Add(self._focus_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
-        hori.Add(self._polygon_editor_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
         hori.Add(self._contour_finder_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
         hori.Add(self._stage_alignment_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
         hori.Add(self._point_of_interest_panel, 0, wx.LEFT | wx.BOTTOM | wx.RIGHT, border=5)
@@ -158,12 +176,9 @@ class ApplicationFrame(wx.Frame):
         self._import_overview_image_item = file_menu.Append(wx.NewId(), "Import Overview Image...")
         self._load_slice_polygons_item = file_menu.Append(wx.NewId(), "Load Slice Polygons...")
         self._save_slice_polygons_item = file_menu.Append(wx.NewId(), "Save Slice Polygons...")
-        self._save_slice_polygons_item.Enable(False)
         exit_menu_item = file_menu.Append(wx.NewId(), "Exit")
 
         edit_menu = wx.Menu()
-        self._edit_polygons_item = edit_menu.Append(wx.NewId(), "Polygons...")
-        edit_menu.AppendSeparator()
         prefs_menu_item = edit_menu.Append(wx.NewId(), "Preferences...")
 
         microscope_menu = wx.Menu()
@@ -180,7 +195,7 @@ class ApplicationFrame(wx.Frame):
 
         experimental_menu = wx.Menu()
         self._segment_ribbons_item = experimental_menu.Append(wx.NewId(), "Segment Ribbons...")
-        self._contour_finder_item = experimental_menu.Append(wx.NewId(), "Find slice contours...")  # gradient descent based slice contour fitting - does not work (yet?)
+        self._contour_finder_item = experimental_menu.Append(wx.NewId(), "Find slice contours...")  # an active contours (style) contour fitting prototype
         self._contour_finder_item.Enable(False)
 
         view_menu = wx.Menu()
@@ -198,7 +213,6 @@ class ApplicationFrame(wx.Frame):
         menu_bar.Append(help_menu, "&Help")
 
         self.Bind(wx.EVT_MENU, self._on_exit, exit_menu_item)
-        self.Bind(wx.EVT_MENU, self._on_edit_polygons, self._edit_polygons_item)
         self.Bind(wx.EVT_MENU, self._on_edit_preferences, prefs_menu_item)
         self.Bind(wx.EVT_MENU, self._on_import_overview_image, self._import_overview_image_item)
         self.Bind(wx.EVT_MENU, self._on_load_slice_polygons, self._load_slice_polygons_item)
@@ -220,12 +234,17 @@ class ApplicationFrame(wx.Frame):
         self._overview_canvas.set_show_slice_numbers(show_numbers)
         self._overview_canvas.redraw(True)
 
-    def _on_mouse_move_over_image(self, event):
+    def _on_mouse_move_over_canvas(self, event):
         x =  int(round(event.Coords[0]))
         y = -int(round(event.Coords[1]))  # flip y so we have the y-axis pointing down and (0,0)= top left corner of the image
         self._status_label.SetLabelText("x: {:d} y: {:d}".format(x, y))
         event.Skip()  # we're just observing the mouse moves, so pass on the event
-        # IMPROVEME: when the mouse moves outside the image area, then clear the status label text, otherwise it displays some confusing irrelevant coordinate
+
+    def _on_mouse_leave_canvas(self, event):
+        # If the mouse moves off the canvas, then clear the mouse coordinates,
+        # otherwise the last position inside the canvas would shown, which is useless and confusing.
+        self._status_label.SetLabelText("")
+        event.Skip()
 
     def _on_import_overview_image(self, event):
         with OverviewImageDialog(self._model, None, wx.ID_ANY, "Overview Image") as dlg:
@@ -238,7 +257,6 @@ class ApplicationFrame(wx.Frame):
             dlg.CenterOnScreen()
             if dlg.ShowModal() == wx.ID_OK:
                 self._do_load_slice_polygons()
-        self._save_slice_polygons_item.Enable(True)  # We now have polygons, so we can edit them and save them
 
     def _on_save_slice_polygons(self, event):
         path = self._model.slice_polygons_path  # by default suggest saving to the same location where the slices were last loaded from
@@ -281,17 +299,6 @@ class ApplicationFrame(wx.Frame):
 
     def _on_segmentation_done_button_click(self, event):
         self._show_side_panel(self._segmentation_panel, False)
-
-    def _on_edit_polygons(self, event):
-        self._show_side_panel(self._polygon_editor_panel, True)
-        self._polygon_editor_panel.activate()
-
-    def _on_polygon_editor_done_button_click(self, event):
-        self._show_side_panel(self._polygon_editor_panel, False)
-        self._polygon_editor_panel.deactivate()
-
-        have_slices = len(self._model.slice_polygons) > 0
-        self._set_point_of_interest_item.Enable(have_slices)
 
     def _on_set_focus(self, event):
         self._show_side_panel(self._focus_panel, True)

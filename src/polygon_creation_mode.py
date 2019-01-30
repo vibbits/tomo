@@ -6,11 +6,13 @@ class PolygonCreationMode(BaseMode):
     NAME = "Polygon Creation"
 
     # Event types
+    EVT_TYPE_TOMO_POLY_CREATE_LEFT_DOWN = wx.NewEventType()
     EVT_TYPE_TOMO_POLY_CREATE_LEFT_UP = wx.NewEventType()
     EVT_TYPE_TOMO_POLY_CREATE_RIGHT_UP = wx.NewEventType()
     EVT_TYPE_TOMO_POLY_CREATE_MOTION = wx.NewEventType()
 
     # Event binders
+    EVT_TOMO_POLY_CREATE_LEFT_DOWN = wx.PyEventBinder(EVT_TYPE_TOMO_POLY_CREATE_LEFT_DOWN)
     EVT_TOMO_POLY_CREATE_LEFT_UP = wx.PyEventBinder(EVT_TYPE_TOMO_POLY_CREATE_LEFT_UP)
     EVT_TOMO_POLY_CREATE_RIGHT_UP = wx.PyEventBinder(EVT_TYPE_TOMO_POLY_CREATE_RIGHT_UP)
     EVT_TOMO_POLY_CREATE_MOTION = wx.PyEventBinder(EVT_TYPE_TOMO_POLY_CREATE_MOTION)
@@ -18,6 +20,11 @@ class PolygonCreationMode(BaseMode):
     def __init__(self, canvas=None):
         BaseMode.__init__(self, canvas)
         self.Cursor = wx.NullCursor  # TODO: use dedicated tool cursor instead
+
+    def OnLeftDown(self, event):
+        # print('Polygon creation tool: left mouse button down {} {}'.format(event, event.GetPosition()))
+        EventType = self.EVT_TYPE_TOMO_POLY_CREATE_LEFT_DOWN
+        self.Canvas._RaiseMouseEvent(event, EventType)
 
     def OnLeftUp(self, event):
         # print('Polygon creation tool: left mouse button up {} {}'.format(event, event.GetPosition()))
@@ -34,7 +41,7 @@ class PolygonCreationMode(BaseMode):
 
         # Process enter and leave events
         # (see wx.lib.floatcanvas.GUIMode source code)
-        self.Canvas.MouseOverTest(event)
+        # self.Canvas.MouseOverTest(event)
 
         EventType = self.EVT_TYPE_TOMO_POLY_CREATE_MOTION
         self.Canvas._RaiseMouseEvent(event, EventType)

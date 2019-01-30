@@ -3,6 +3,7 @@ import wx.grid
 import tools
 from contour_finder import ContourFinder
 import numpy as np
+import random
 
 import matplotlib
 matplotlib.use('wxagg')
@@ -13,17 +14,18 @@ class ContourFinderPanel(wx.Panel):
     _model = None
 
     done_button = None
-    _step_button = None
+    _improve_button = None
 
     _contour_finder = None
     _preprocessed_image = None
-    _current_contour = None
+    # _current_contour = None
     _prev_polygon = None
 
-    def __init__(self, parent, model, canvas):
+    def __init__(self, parent, model, canvas, selector):
         wx.Panel.__init__(self, parent, size = (350, -1))
         self._canvas = canvas
         self._model = model
+        self._selector = selector  # mixin for handling and tracking slice contour selection
         self._contour_finder = ContourFinder()
 
         title = wx.StaticText(self, wx.ID_ANY, "Slices finder")
@@ -37,26 +39,26 @@ class ContourFinderPanel(wx.Panel):
 
         preprocess_button = wx.Button(self, wx.ID_ANY, "Preprocess", size = button_size)
 
-        self._start_button = wx.Button(self, wx.ID_ANY, "Jitter Contour", size = button_size)
-        self._start_button.Enable(False)
+        self._jitter_button = wx.Button(self, wx.ID_ANY, "Jitter Contours", size = button_size)
+        self._jitter_button.Enable(False)
 
-        self._step_button = wx.Button(self, wx.ID_ANY, "Optimize Contour", size = button_size)
-        self._step_button.Enable(False)
+        self._improve_button = wx.Button(self, wx.ID_ANY, "Improve Contours", size = button_size)
+        self._improve_button.Enable(False)
 
-        self._jitter_test_button = wx.Button(self, wx.ID_ANY, "Jitter test", size = button_size)
+        self._cloning_test_button = wx.Button(self, wx.ID_ANY, "Cloning Test", size = button_size)
+        self._cloning_test_button.Enable(False)
+
+        self._jitter_test_button = wx.Button(self, wx.ID_ANY, "Jitter Test", size = button_size)
         self._jitter_test_button.Enable(False)
-
-        self._duplication_test_button = wx.Button(self, wx.ID_ANY, "Duplication test", size = button_size)
-        self._duplication_test_button.Enable(False)
 
         self.done_button = wx.Button(self, wx.ID_ANY, "Done",
                                      size=button_size)  # Not this panel but the ApplicationFame will listen to clicks on this button.
 
         self.Bind(wx.EVT_BUTTON, self._on_preprocess_button_click, preprocess_button)
-        self.Bind(wx.EVT_BUTTON, self._on_start_button_click, self._start_button)
-        self.Bind(wx.EVT_BUTTON, self._on_step_button_click, self._step_button)
+        self.Bind(wx.EVT_BUTTON, self._on_jitter_button_click, self._jitter_button)
+        self.Bind(wx.EVT_BUTTON, self._on_improve_button_click, self._improve_button)
         self.Bind(wx.EVT_BUTTON, self._on_jitter_test_button_click, self._jitter_test_button)
-        self.Bind(wx.EVT_BUTTON, self._on_duplication_test_button_click, self._duplication_test_button)
+        self.Bind(wx.EVT_BUTTON, self._on_cloning_test_button_click, self._cloning_test_button)
 
         b = 5  # border size
         contents = wx.BoxSizer(wx.VERTICAL)
@@ -64,10 +66,10 @@ class ContourFinderPanel(wx.Panel):
         contents.Add(separator, 0, wx.ALL | wx.EXPAND, border = b)
         contents.Add(label, 0, wx.ALL | wx.EXPAND, border = b)
         contents.Add(preprocess_button, 0, wx.ALL | wx.CENTER, border = b)
-        contents.Add(self._start_button, 0, wx.ALL | wx.CENTER, border = b)
-        contents.Add(self._step_button, 0, wx.ALL | wx.CENTER, border = b)
+        contents.Add(self._jitter_button, 0, wx.ALL | wx.CENTER, border = b)
+        contents.Add(self._improve_button, 0, wx.ALL | wx.CENTER, border = b)
         contents.Add(self._jitter_test_button, 0, wx.ALL | wx.CENTER, border = b)
-        contents.Add(self._duplication_test_button, 0, wx.ALL | wx.CENTER, border = b)
+        contents.Add(self._cloning_test_button, 0, wx.ALL | wx.CENTER, border = b)
         contents.Add(self.done_button, 0, wx.ALL | wx.CENTER, border = b)
 
         self.SetSizer(contents)
@@ -86,11 +88,12 @@ class ContourFinderPanel(wx.Panel):
         # (after inversion, white will be close to 0, and black pixels >> 0)
         self._preprocessed_image = 255 - self._preprocessed_image
 
-        self._start_button.Enable(True)
+        self._improve_button.Enable(True)
+        self._jitter_button.Enable(True)
         self._jitter_test_button.Enable(True)
-        self._duplication_test_button.Enable(True)
+        self._cloning_test_button.Enable(True)
 
-    def _on_duplication_test_button_click(self, event):
+    def _on_cloning_test_button_click(self, event):
         slice_polygons = tools.json_load_polygons(self._model.slice_polygons_path)
         print('Loaded {} slice polygons from {}'.format(len(slice_polygons), self._model.slice_polygons_path))
         for contour in slice_polygons:
@@ -135,40 +138,37 @@ class ContourFinderPanel(wx.Panel):
         assert num_copies >= 0
         return [polygon + (i + 1) * displacement_vector for i in range(num_copies)]
 
-    def _on_start_button_click(self, event):
-        # Load the user-defined ground truth slice outlines (not really needed, but we can use them for assessing our result)
-        slice_polygons = tools.json_load_polygons(self._model.slice_polygons_path)
-        print('Loaded {} slice polygons from {}'.format(len(slice_polygons), self._model.slice_polygons_path))
-        true_slice1 = slice_polygons[0]
-        print(true_slice1)
-        # true_slice1 = [(1540, 1886),
-        #                (3142, 1931),
-        #                (2944,  848),
-        #                (1630,  806)]
+    def _on_jitter_button_click(self, event):
+        selected_slices = self._selector.get_selected_slices()
+        for i in selected_slices:
+            polygon = self._model.slice_polygons[i]
+            jittered_polygon = self._add_jitter(polygon, 100)
+            self._model.slice_polygons[i] = jittered_polygon  # update model
+            self._canvas.set_slice_outline(i, self._flipY(jittered_polygon))  # update canvas
+            # self._draw_contour(polygon, "Blue", False)  # Draw original polygon
+            self._canvas.redraw(True)
 
-        score = self._contour_finder.calculate_contour_score(self._preprocessed_image, self._contour_finder.contour_to_vector(true_slice1))
-        print('Score of ground truth slice outline={}'.format(score))
+    def _flipY(self, contour):  # contour is a list of coordinate pairs: [(x, y), ...]; return a new list with the y coordinated inverted (to transform between canvas and image coordinates)
+        return [(x, -y) for (x, y) in contour]
 
-        jitter = 100
-        self._current_contour = [(1540-jitter, 1886+jitter),
-                                 (3142-jitter, 1931),
-                                 (2944+jitter,  848+jitter),
-                                 (1630,  836-jitter)]  # [(x,y)...]
+    def _add_jitter(self, contour, max_delta):   # contour is a list of coordinate pairs: [(x, y), ...]
+        return [(x + random.randint(-max_delta, max_delta),
+                 y + random.randint(-max_delta, max_delta))
+                for (x, y) in contour]
 
-        self._draw_contour(self._current_contour, "Blue", True)  # initial contour
-
-        self._step_button.Enable(True)
-
-    def _on_step_button_click(self, event):
+    def _on_improve_button_click(self, event):
 
         self._contour_finder.set_optimization_parameters(h_for_gradient_approximation=1.0, max_iterations=50,
                                                          gradient_step_size=5e-3, edge_sample_distance=50.0)
 
-        optimized_contour = self._contour_finder.optimize_contour(self._preprocessed_image, self._current_contour)
-
-        self._draw_contour(optimized_contour, "Red", remove_previous=True)
-
-        self._current_contour = optimized_contour
+        selected_slices = self._selector.get_selected_slices()
+        for i in selected_slices:
+            polygon = self._model.slice_polygons[i]
+            optimized_polygon = self._contour_finder.optimize_contour(self._preprocessed_image, polygon)
+            # self._draw_contour(optimized_polygon, "Red", remove_previous=False)
+            self._model.slice_polygons[i] = optimized_polygon  # update model
+            self._canvas.set_slice_outline(i, self._flipY(optimized_polygon))  # update canvas
+            self._canvas.redraw(True)
 
     def _on_jitter_test_button_click(self, event):
         slice_polygons = tools.json_load_polygons(self._model.slice_polygons_path)
