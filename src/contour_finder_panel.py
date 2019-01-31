@@ -18,7 +18,6 @@ class ContourFinderPanel(wx.Panel):
 
     _contour_finder = None
     _preprocessed_image = None
-    # _current_contour = None
     _prev_polygon = None
 
     def __init__(self, parent, model, canvas, selector):
