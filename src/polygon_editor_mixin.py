@@ -33,14 +33,12 @@ class PolygonEditorMixin:
         self._active_handle = None  # The (floatcanvas handle object, slice index, vertex index) of the vertex/handle that the mouse is currently over, or None if the mouse is not over a handle.
         self._dragging = None  # xxxx
         self._handles = []  # List of tuples (FloatCanvas object for the handle, slice index of the handle, vertex index of the handle)
-        # self._slice_numbers = []  # FloatCanvas objects for the slice numbers (so the user can see in which order they are supposed to be)
 
     def start(self):
         # self._over = NOTHING
         # self._slice_being_edited = NOTHING
         self._dragging = None
         self._active_handle = None
-        # self._slice_numbers = []
 
         self._add_slice_handles(self._selector.get_selected_slices())
         self._canvas.redraw(True)
@@ -200,7 +198,7 @@ class PolygonEditorMixin:
         Called when the cursor moves onto an object handle (little square on a slice vertex)
         :param object: the floatcanvas object that the mouse moved onto (little square in our case)
         """
-        print("handle enter, object = {}".format(object.Name))
+        # print("handle enter, object = {}".format(object.Name))
         if self._dragging:
             return
         object.SetColor(ACTIVE_COLOR)
@@ -212,7 +210,7 @@ class PolygonEditorMixin:
         Called when the cursor moves away from an object handle (little square on a slice vertex)
         :param object: the floatcanvas object that the mouse moved away from (little square in our case)
         """
-        print("handle leave, object = {}".format(object.Name))
+        # print("handle leave, object = {}".format(object.Name))
         if self._dragging:
             return
         object.SetColor(NORMAL_COLOR)

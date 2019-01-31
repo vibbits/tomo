@@ -14,9 +14,6 @@ import resources
 from model import TomoModel
 from mark_mode import MarkMode
 from move_stage_mode import MoveStageMode
-from polygon_selection_mode import PolygonSelectionMode
-from polygon_editing_mode import PolygonEditingMode
-from polygon_creation_mode import PolygonCreationMode
 from preferences_dialog import PreferencesDialog
 from overview_image_dialog import OverviewImageDialog
 from lm_acquisition_dialog import LMAcquisitionDialog
@@ -36,6 +33,8 @@ from polygon_creation_mode import PolygonCreationMode
 from polygon_selector_mixin import PolygonSelectorMixin
 from polygon_editor_mixin import PolygonEditorMixin
 from polygon_creator_mixin import PolygonCreatorMixin
+from ribbon_builder_mixin import RibbonBuilderMixin
+from ribbon_builder_mode import RibbonBuilderMode
 
 class ApplicationFrame(wx.Frame):
     _model = None
@@ -85,11 +84,13 @@ class ApplicationFrame(wx.Frame):
         self._polygon_editing_mode = PolygonEditingMode()
         self._polygon_creation_mode = PolygonCreationMode()
         self._move_stage_mode = MoveStageMode()
+        self._ribbon_builder_mode = RibbonBuilderMode()
         custom_modes = [(MarkMode.NAME, self._mark_mode, resources.crosshair.GetBitmap()),
                         (MoveStageMode.NAME, self._move_stage_mode, resources.movestage.GetBitmap()),
                         (PolygonSelectionMode.NAME, self._polygon_selection_mode, Resources.getPointerBitmap()),  # TODO: create icon
                         (PolygonEditingMode.NAME, self._polygon_editing_mode, Resources.getPointerBitmap()),  # TODO: create icon
-                        (PolygonCreationMode.NAME, self._polygon_creation_mode, Resources.getPointerBitmap())]  # TODO: create icon (a quad with a + ?)
+                        (PolygonCreationMode.NAME, self._polygon_creation_mode, Resources.getPointerBitmap()),
+                        (RibbonBuilderMode.NAME, self._ribbon_builder_mode, Resources.getPointerBitmap())]  # TODO: create icon (a quad with a + ?)
 
         # Canvas
         self._overview_canvas = OverviewCanvas(self, custom_modes)
@@ -98,6 +99,7 @@ class ApplicationFrame(wx.Frame):
         self._selector = PolygonSelectorMixin(self._model, self._overview_canvas)
         self._editor = PolygonEditorMixin(self._model, self._overview_canvas, self._selector)
         self._creator = PolygonCreatorMixin(self._model, self._overview_canvas, self._selector)
+        self._ribbon_builder = RibbonBuilderMixin(self._model, self._overview_canvas, self._selector)
 
         # By default disable the custom modes, they are only active when their corresponding side panel is visible
         for mode in custom_modes:
@@ -107,11 +109,13 @@ class ApplicationFrame(wx.Frame):
         self._overview_canvas.RegisterTool(PolygonSelectionMode.NAME, self._selector.start, self._selector.stop)
         self._overview_canvas.RegisterTool(PolygonEditingMode.NAME, self._editor.start, self._editor.stop)
         self._overview_canvas.RegisterTool(PolygonCreationMode.NAME, self._creator.start, self._creator.stop)
+        self._overview_canvas.RegisterTool(RibbonBuilderMode.NAME, self._ribbon_builder.start, self._ribbon_builder.stop)
 
         # Slice contour handling is possible.
         self._overview_canvas.EnableTool(PolygonSelectionMode.NAME, True)
         self._overview_canvas.EnableTool(PolygonEditingMode.NAME, True)
         self._overview_canvas.EnableTool(PolygonCreationMode.NAME, True)
+        self._overview_canvas.EnableTool(RibbonBuilderMode.NAME, True)
 
         # Listen to mouse movements so we can show the mouse position in the status bar.
         # We also need to listen to mouse movements when some custom modes are active (since regular FloatCanvas events do not happen then).
@@ -121,6 +125,7 @@ class ApplicationFrame(wx.Frame):
         self._overview_canvas.Bind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_MOTION, self._on_mouse_move_over_canvas)
         self._overview_canvas.Bind(PolygonEditingMode.EVT_TOMO_POLY_EDIT_MOTION, self._on_mouse_move_over_canvas)
         self._overview_canvas.Bind(PolygonCreationMode.EVT_TOMO_POLY_CREATE_MOTION, self._on_mouse_move_over_canvas)
+        self._overview_canvas.Bind(RibbonBuilderMode.EVT_TOMO_RIBBON_BUILDER_MOTION, self._on_mouse_move_over_canvas)
         self._overview_canvas.Canvas.Bind(wx.EVT_LEAVE_WINDOW, self._on_mouse_leave_canvas)
 
         # Status bar at the bottom of the window

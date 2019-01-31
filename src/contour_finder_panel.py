@@ -148,6 +148,9 @@ class ContourFinderPanel(wx.Panel):
             # self._draw_contour(polygon, "Blue", False)  # Draw original polygon
             self._canvas.redraw(True)
 
+    # FIXME: if we are in the contour editing tool, the currently selected contours will have handles; if we then jitter or optimize the contour, the contour gets updated, but not the handles
+    # The model should publish changes and the canvas and some tools should listen to changes to the model and update itself when needed
+
     def _flipY(self, contour):  # contour is a list of coordinate pairs: [(x, y), ...]; return a new list with the y coordinated inverted (to transform between canvas and image coordinates)
         return [(x, -y) for (x, y) in contour]
 

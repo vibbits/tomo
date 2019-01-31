@@ -32,7 +32,6 @@ class ContourFinder:
         current_contour = initial_contour  # CHECKME: deep copy needed?
 
         current_contour_vector = self.contour_to_vector(current_contour)
-        print('initial contour={} score={}'.format(current_contour_vector, self.calculate_contour_score(image, current_contour_vector)))
 
         while iteration < self.max_iterations:  # FIXME: and gradient (or score?) is still changing
             gradient_vector = self._calculate_gradient(image, current_contour_vector)
@@ -41,6 +40,8 @@ class ContourFinder:
             # print('iteration {} score={}'.format(iteration, self.calculate_contour_score(image, current_contour_vector)))
             # note: the gradient points towards higher values of the function
             iteration += 1
+
+        print('Original score={} optimized score={}'.format(self.calculate_contour_score(image, self.contour_to_vector(initial_contour)), self.calculate_contour_score(image, current_contour_vector)))
 
         return self.vector_to_contour(current_contour_vector)
 
