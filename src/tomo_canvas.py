@@ -27,7 +27,7 @@ class TomoCanvas(NavCanvas.NavCanvas):
     def SetMode(self, mode):
         old_tool = self._current_tool_id
         new_tool = mode.GetId()
-        print('TomoCanvas.SetMode old={} new={}'.format(old_tool, new_tool))
+        # print('TomoCanvas.SetMode old={} new={}'.format(old_tool, new_tool))
 
         # Stop the current tool
         if old_tool in self._tools:

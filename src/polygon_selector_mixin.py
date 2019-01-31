@@ -92,7 +92,6 @@ class PolygonSelectorMixin:
         event.Skip()
 
     def _on_left_mouse_button_down(self, event):
-        print('selector mixin: left mouse up')
         start_pos = event.GetCoords()
         wh = (1, 1)
         self._selection_rect = self._canvas.Canvas.AddRectangle(start_pos, wh, LineColor='BLACK', LineStyle='Dot')
