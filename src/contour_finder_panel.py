@@ -45,9 +45,6 @@ class ContourFinderPanel(wx.Panel):
         self._improve_button = wx.Button(self, wx.ID_ANY, "Improve Contours", size = button_size)
         self._improve_button.Enable(False)
 
-        self._cloning_test_button = wx.Button(self, wx.ID_ANY, "Cloning Test", size = button_size)
-        self._cloning_test_button.Enable(False)
-
         self._jitter_test_button = wx.Button(self, wx.ID_ANY, "Jitter Test", size = button_size)
         self._jitter_test_button.Enable(False)
 
@@ -58,7 +55,6 @@ class ContourFinderPanel(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self._on_jitter_button_click, self._jitter_button)
         self.Bind(wx.EVT_BUTTON, self._on_improve_button_click, self._improve_button)
         self.Bind(wx.EVT_BUTTON, self._on_jitter_test_button_click, self._jitter_test_button)
-        self.Bind(wx.EVT_BUTTON, self._on_cloning_test_button_click, self._cloning_test_button)
 
         b = 5  # border size
         contents = wx.BoxSizer(wx.VERTICAL)
@@ -69,7 +65,6 @@ class ContourFinderPanel(wx.Panel):
         contents.Add(self._jitter_button, 0, wx.ALL | wx.CENTER, border = b)
         contents.Add(self._improve_button, 0, wx.ALL | wx.CENTER, border = b)
         contents.Add(self._jitter_test_button, 0, wx.ALL | wx.CENTER, border = b)
-        contents.Add(self._cloning_test_button, 0, wx.ALL | wx.CENTER, border = b)
         contents.Add(self.done_button, 0, wx.ALL | wx.CENTER, border = b)
 
         self.SetSizer(contents)
@@ -91,47 +86,6 @@ class ContourFinderPanel(wx.Panel):
         self._improve_button.Enable(True)
         self._jitter_button.Enable(True)
         self._jitter_test_button.Enable(True)
-        self._cloning_test_button.Enable(True)
-
-    def _on_cloning_test_button_click(self, event):
-        slice_polygons = tools.json_load_polygons(self._model.slice_polygons_path)
-        print('Loaded {} slice polygons from {}'.format(len(slice_polygons), self._model.slice_polygons_path))
-        for contour in slice_polygons:
-            self._draw_contour(contour, "BLUE", remove_previous=False)
-
-        # Predict slices in the ribbon via simple translation + copy
-        slice1 = slice_polygons[0]
-        slice2 = slice_polygons[1]
-        displacement_vector = slice2[0] - slice1[0]
-        num_copies = 9
-        new_slices = self._duplicate_polygons(slice1, displacement_vector, num_copies)
-        for contour in new_slices:
-            self._draw_contour(contour, "GREEN", remove_previous=False)
-
-        # Optimize the approximate contours
-        self._contour_finder.set_optimization_parameters(h_for_gradient_approximation=1.0, max_iterations=150,
-                                                         gradient_step_size=5e-3, edge_sample_distance=40.0)
-
-        for contour in new_slices:
-            optimized_contour = self._contour_finder.optimize_contour(self._preprocessed_image, contour)
-            self._draw_contour(optimized_contour, "RED", remove_previous=False)
-
-        # Ribbon 2
-        ribbon2_slice1 = np.array([[9679, 2199], [11280, 2039], [10949, 987], [9640, 1113]])
-        ribbon2_slice1_bottom_left = ribbon2_slice1[0] # np.array([9679, 2199])
-        ribbon2_slice2_bottom_left = np.array([9778, 3282])
-
-        # Predict slices in ribbon 2 via copy and translate from the first (user defined) slice in ribbon 2 and an analogous (user defined) point on slice 2.
-        displacement_vector = ribbon2_slice2_bottom_left - ribbon2_slice1_bottom_left
-        num_copies = 9
-        new_slices = self._duplicate_polygons(ribbon2_slice1, displacement_vector, num_copies)
-        for contour in new_slices:
-            self._draw_contour(contour, "GREEN", remove_previous=False)
-
-        # Optimize the approximate contours
-        for contour in new_slices:
-            optimized_contour = self._contour_finder.optimize_contour(self._preprocessed_image, contour)
-            self._draw_contour(optimized_contour, "RED", remove_previous=False)
 
     def _duplicate_polygons(self, polygon, displacement_vector, num_copies):
         # displacement_vector = np.array[dx,dy]
