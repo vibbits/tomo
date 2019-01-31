@@ -38,13 +38,13 @@ class ContourFinderPanel(wx.Panel):
 
         preprocess_button = wx.Button(self, wx.ID_ANY, "Preprocess", size = button_size)
 
-        self._jitter_button = wx.Button(self, wx.ID_ANY, "Jitter Contours", size = button_size)
-        self._jitter_button.Enable(False)
-
         self._improve_button = wx.Button(self, wx.ID_ANY, "Improve Contours", size = button_size)
         self._improve_button.Enable(False)
 
-        self._jitter_test_button = wx.Button(self, wx.ID_ANY, "Jitter Test", size = button_size)
+        self._jitter_button = wx.Button(self, wx.ID_ANY, "Jitter Contours", size = button_size)  # For testing only
+        self._jitter_button.Enable(False)
+
+        self._jitter_test_button = wx.Button(self, wx.ID_ANY, "Jitter Test", size = button_size)  # For testing only
         self._jitter_test_button.Enable(False)
 
         self.done_button = wx.Button(self, wx.ID_ANY, "Done",
@@ -61,8 +61,8 @@ class ContourFinderPanel(wx.Panel):
         contents.Add(separator, 0, wx.ALL | wx.EXPAND, border = b)
         contents.Add(label, 0, wx.ALL | wx.EXPAND, border = b)
         contents.Add(preprocess_button, 0, wx.ALL | wx.CENTER, border = b)
-        contents.Add(self._jitter_button, 0, wx.ALL | wx.CENTER, border = b)
         contents.Add(self._improve_button, 0, wx.ALL | wx.CENTER, border = b)
+        contents.Add(self._jitter_button, 0, wx.ALL | wx.CENTER, border = b)
         contents.Add(self._jitter_test_button, 0, wx.ALL | wx.CENTER, border = b)
         contents.Add(self.done_button, 0, wx.ALL | wx.CENTER, border = b)
 
