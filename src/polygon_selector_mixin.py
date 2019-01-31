@@ -27,7 +27,7 @@ class PolygonSelectorMixin:
         self._canvas.Bind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_MOTION, self._on_mouse_move)
         self._canvas.Bind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_LEFT_DOWN, self._on_left_mouse_button_down)
         self._canvas.Bind(PolygonSelectionMode.EVT_TOMO_POLY_SELECT_LEFT_UP, self._on_left_mouse_button_up)
-        self._canvas.Bind(wx.EVT_CHAR_HOOK, self._key_pressed)
+        self._canvas.Bind(wx.EVT_CHAR_HOOK, self.key_pressed)
         self._canvas.Canvas.Bind(wx.EVT_LEAVE_WINDOW, self._on_leave_canvas)
 
     def stop(self):
@@ -39,7 +39,7 @@ class PolygonSelectorMixin:
 
         self._remove_selection_rectangle()
 
-    def _key_pressed(self, event):
+    def key_pressed(self, event):  # Note: this may be called by other mixins, so even when the selection tool is not active (i.e. outside of start()/stop()).
         key = event.GetKeyCode()
         print('polygon selector: keydown key={} shiftDown={} ctrldown={} cmdDown={} altdown={}'.format(key, event.shiftDown, event.controlDown,
                                                                                                        event.cmdDown, event.altDown))
@@ -92,6 +92,7 @@ class PolygonSelectorMixin:
         event.Skip()
 
     def _on_left_mouse_button_down(self, event):
+        print('selector mixin: left mouse up')
         start_pos = event.GetCoords()
         wh = (1, 1)
         self._selection_rect = self._canvas.Canvas.AddRectangle(start_pos, wh, LineColor='BLACK', LineStyle='Dot')

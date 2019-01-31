@@ -36,7 +36,8 @@ class PolygonCreatorMixin:
 
     def _key_pressed(self, event):
         key = event.GetKeyCode()
-        print('polygon creator: keydown key={}'.format(key))
+        # print('polygon creator: keydown key={}, passing on to the selector mixin'.format(key))
+        self._selector.key_pressed(event)  # IMPROVEME? Perhaps a bit iffy, needed because the SelectorMixin does not listen to events when it is not active. Maybe it should listen to key events all the time? We want to be able to press DEL or CTRL-A to delete/select-all also while in the polygon editor. Or we could add public methods to delete/selectall in the CreatorMixin?
         event.Skip()
 
     def _on_mouse_move(self, event):
