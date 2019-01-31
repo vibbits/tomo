@@ -41,7 +41,8 @@ class PolygonSelectorMixin:
 
     def _key_pressed(self, event):
         key = event.GetKeyCode()
-        print('polygon selector: keydown key={}'.format(key))
+        print('polygon selector: keydown key={} shiftDown={} ctrldown={} cmdDown={} altdown={}'.format(key, event.shiftDown, event.controlDown,
+                                                                                                       event.cmdDown, event.altDown))
         if key == wx.WXK_DELETE or key == wx.WXK_NUMPAD_DELETE:
             # Delete the selected slices
 
@@ -67,6 +68,12 @@ class PolygonSelectorMixin:
         elif key == wx.WXK_ESCAPE:
             # Deselect all
             self.set_selected_slices([])
+            self._canvas.redraw(True)
+
+        elif key == 65 and event.controlDown and not event.shiftDown:  # IMPROVEME: can this be written down cleaner? Using wx.KeyboardState or so? And get rid of the hard-coded 'A' value
+            # CTRL-A pressed, select all
+            total_num_slices = len(self._model.slice_polygons)
+            self.set_selected_slices([i for i in range(total_num_slices)])
             self._canvas.redraw(True)
 
     def _on_leave_canvas(self, event):

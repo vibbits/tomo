@@ -29,44 +29,44 @@ class PolygonEditorMixin:
         self._canvas = canvas
         self._selector = selector  # the mixin that handles the current slice selection
 
-        self._over = NOTHING  # slice number that cursor is over, or NOTHING otherwise; the slice that the cursor is over is drawn highlighted
-        self._slice_being_edited = NOTHING  # currently selected slice, or NOTHING otherwise; the selected slice has handles drawn over its vertices
-        self._active_handle = NOTHING  # NOTHING if no handle is active; otherwise the index of the vertex in the '_slice_being_edited' slice
-        self._dragging = NOTHING  # the index of the vertex (in the '_slice_being_edited' slice contour) whose handle is being dragged; or NOTHING otherwise
-
-        # FloatCanvas objects
-        self._handles = []  # FloatCanvas objects for the handles of the currently selected slice(s)
-        self._slice_numbers = []  # FloatCanvas objects for the slice numbers (so the user can see in which order they are supposed to be)
+        # self._over = NOTHING  # slice number that cursor is over, or NOTHING otherwise; the slice that the cursor is over is drawn highlighted
+        # self._slice_being_edited = NOTHING  # currently selected slice, or NOTHING otherwise; the selected slice has handles drawn over its vertices
+        # self._active_handle = NOTHING  # NOTHING if no handle is active; otherwise the index of the vertex in the '_slice_being_edited' slice
+        # self._dragging = NOTHING  # the index of the vertex (in the '_slice_being_edited' slice contour) whose handle is being dragged; or NOTHING otherwise
+        #
+        self._handles = []  # List of tuples (FloatCanvas object for the handle, slice index of the handle, vertex index of the handle)
+        # self._slice_numbers = []  # FloatCanvas objects for the slice numbers (so the user can see in which order they are supposed to be)
 
     def start(self):
-        self._over = NOTHING
-        self._slice_being_edited = NOTHING
-        self._dragging = NOTHING
-        self._active_handle = NOTHING
+        # self._over = NOTHING
+        # self._slice_being_edited = NOTHING
+        # self._dragging = NOTHING
+        # self._active_handle = NOTHING
+        # self._slice_numbers = []
 
-        self._handles = []
-        self._slice_numbers = []
+        # self._handles = XXXX make the handles, draw them, and start checking for hover events on them
+        self._add_slice_handles(self._selector.get_selected_slices())
+        self._canvas.redraw(True)
 
         self._canvas.Bind(PolygonEditingMode.EVT_TOMO_POLY_EDIT_MOTION, self._on_mouse_move)
         self._canvas.Bind(PolygonEditingMode.EVT_TOMO_POLY_EDIT_LEFT_DOWN, self._on_left_mouse_button_down)
         self._canvas.Bind(PolygonEditingMode.EVT_TOMO_POLY_EDIT_LEFT_UP, self._on_left_mouse_button_up)
 
     def stop(self):
-        self._remove_slice_handles()
-
         self._canvas.Unbind(PolygonEditingMode.EVT_TOMO_POLY_EDIT_MOTION)
         self._canvas.Unbind(PolygonEditingMode.EVT_TOMO_POLY_EDIT_LEFT_DOWN)
         self._canvas.Unbind(PolygonEditingMode.EVT_TOMO_POLY_EDIT_LEFT_UP)
+        self._remove_slice_handles()
 
     def _on_left_mouse_button_down(self, event):
-
-        # Check if user clicked on a handle to start dragging it.
-        # -------------------------------------------------------
-        if self._active_handle != NOTHING:
-            # The mouse is over a handle, and the user presses the mouse button down,
-            # so we remember which handle is being dragged so we can update the slice contour
-            # when we receive mouse move events later on.
-            self._dragging = self._active_handle
+        pass
+        # # Check if user clicked on a handle to start dragging it.
+        # # -------------------------------------------------------
+        # if self._active_handle != NOTHING:
+        #     # The mouse is over a handle, and the user presses the mouse button down,
+        #     # so we remember which handle is being dragged so we can update the slice contour
+        #     # when we receive mouse move events later on.
+        #     self._dragging = self._active_handle
 
     def _on_mouse_move(self, event):
         """
@@ -79,51 +79,51 @@ class PolygonEditorMixin:
         pos = (coords[0], -coords[1])
         # print("Mouse move, position: %i, %i" % pos)
 
-        # Check if user was dragging a handle.
-        # ------------------------------------
-
-        if self._dragging != NOTHING:
-            # Update model
-            self._model.slice_polygons[self._slice_being_edited][self._dragging] = pos
-
-            # Update the polygon vertex position on the canvas
-            self._canvas.set_slice_outline_vertex_position(self._slice_being_edited, self._dragging, coords)
-
-            # Update position of slice number on the canvas
-            new_center = tools.polygon_center(self._model.slice_polygons[self._slice_being_edited])
-            new_center = (new_center[0], -new_center[1])
-            self._canvas.set_slice_number_position(self._slice_being_edited, new_center)
-
-            # Update slice handles
-            self._handles[self._dragging].SetPoint(coords)
-
-            # Redraw
-            self._canvas.redraw(True)
-
-            event.Skip()  # Pass on the event (e.g. so that we can update the mouse position in the status bar)
-            return
-
-        # Check if user hovers over a slice.
-        # ----------------------------------
-
-        slices_hit = tools.polygons_hit(self._model.slice_polygons, pos)
-
-        old_over = self._over
-        new_over = slices_hit[0] if slices_hit else -1
-
-        if old_over == new_over:
-            event.Skip()
-            return
-
-        if old_over != NOTHING:
-            self._canvas.set_slice_outline_linewidth(old_over, REGULAR_LINE_WIDTH)
-
-        if new_over != NOTHING:
-            self._canvas.set_slice_outline_linewidth(new_over, HIGHLIGHTED_LINE_WIDTH)
-
-        self._canvas.redraw(True)
-
-        self._over = new_over
+        # # Check if user was dragging a handle.
+        # # ------------------------------------
+        #
+        # if self._dragging != NOTHING:
+        #     # Update model
+        #     self._model.slice_polygons[self._slice_being_edited][self._dragging] = pos
+        #
+        #     # Update the polygon vertex position on the canvas
+        #     self._canvas.set_slice_outline_vertex_position(self._slice_being_edited, self._dragging, coords)
+        #
+        #     # Update position of slice number on the canvas
+        #     new_center = tools.polygon_center(self._model.slice_polygons[self._slice_being_edited])
+        #     new_center = (new_center[0], -new_center[1])
+        #     self._canvas.set_slice_number_position(self._slice_being_edited, new_center)
+        #
+        #     # Update slice handles
+        #     self._handles[self._dragging].SetPoint(coords)
+        #
+        #     # Redraw
+        #     self._canvas.redraw(True)
+        #
+        #     event.Skip()  # Pass on the event (e.g. so that we can update the mouse position in the status bar)
+        #     return
+        #
+        # # Check if user hovers over a slice.
+        # # ----------------------------------
+        #
+        # slices_hit = tools.polygons_hit(self._model.slice_polygons, pos)
+        #
+        # old_over = self._over
+        # new_over = slices_hit[0] if slices_hit else -1
+        #
+        # if old_over == new_over:
+        #     event.Skip()
+        #     return
+        #
+        # if old_over != NOTHING:
+        #     self._canvas.set_slice_outline_linewidth(old_over, REGULAR_LINE_WIDTH)
+        #
+        # if new_over != NOTHING:
+        #     self._canvas.set_slice_outline_linewidth(new_over, HIGHLIGHTED_LINE_WIDTH)
+        #
+        # self._canvas.redraw(True)
+        #
+        # self._over = new_over
 
         event.Skip()
 
@@ -134,56 +134,57 @@ class PolygonEditorMixin:
         2. The user clicked inside a slice in order to select it.
         """
 
-        # Check if user released a handle.
-        # --------------------------------
+        pass
+        # # Check if user released a handle.
+        # # --------------------------------
+        #
+        # if self._dragging != NOTHING:
+        #     # The user released a slice handle that was being dragged.
+        #     self._dragging = NOTHING
+        #     return
+        #
+        # # Check if user selected a slice.
+        # # -------------------------------
+        #
+        # if self._over == self._slice_being_edited:
+        #     return
+        #
+        # if self._slice_being_edited != NOTHING:
+        #     self._remove_slice_handles()
+        #
+        # if self._over != NOTHING:
+        #     self._add_slice_handles(self._over)
+        #
+        # self._canvas.redraw(True)
+        #
+        # self._slice_being_edited = self._over
 
-        if self._dragging != NOTHING:
-            # The user released a slice handle that was being dragged.
-            self._dragging = NOTHING
-            return
-
-        # Check if user selected a slice.
-        # -------------------------------
-
-        if self._over == self._slice_being_edited:
-            return
-
-        if self._slice_being_edited != NOTHING:
-            self._remove_slice_handles()
-
-        if self._over != NOTHING:
-            self._add_slice_handles(self._over)
-
-        self._canvas.redraw(True)
-
-        self._slice_being_edited = self._over
-
-    def _add_slice_handles(self, slice_index):
-        self._handles = self._make_slice_handles(self._model.slice_polygons[slice_index])
+    def _add_slice_handles(self, slices):
+        self._handles = self._make_slice_handles(slices)
         self._bind_hover_events(self._handles)
 
-    def _make_slice_handles(self, pts):
-        """
-        :param pts: a list of slice vertices coordinates
-        :return: a list with floatcanvas objects representing handles (little squares) placed over the given vertex positions (pts)
-        """
+    def _make_slice_handles(self, slices):
         handles = []
-        pts = [(p[0], -p[1]) for p in
-               pts]  # note: flip y to convert from image coordinates (with y >= 0) back to canvas coords
-        for p in pts:
-            h = self._canvas.Canvas.AddSquarePoint(p, Color=NORMAL_COLOR, Size=HANDLE_SIZE)
-            # h = self._canvas.Canvas.AddRectangle(p, (20,20), LineColor=NORMAL_COLOR) # rectangles are subject to zooming in/out (undesirable; can we suppress this?)
-            handles.append(h)
+        for slice_idx in slices:
+            polygon = self._model.slice_polygons[slice_idx]
+            for vertex_idx, p in enumerate(polygon):
+                p = (p[0], -p[1]) # note: flip y to convert from image coordinates (with y >= 0) back to canvas coords
+                h = self._canvas.Canvas.AddSquarePoint(p, Color=NORMAL_COLOR, Size=HANDLE_SIZE)
+                # h = self._canvas.Canvas.AddRectangle(p, (20,20), LineColor=NORMAL_COLOR) # rectangles are subject to zooming in/out (undesirable; can we suppress this?)
+                handle = (h, slice_idx, vertex_idx)
+                handles.append(handle)
         return handles
 
     def _bind_hover_events(self, handles):
         """
         Register callbacks for when the cursor moves onto or away from the slice handles.
-        :param handles: list of floatcanvas objects (the slice handles), one per slice vertex.
+        :param handles: list of tuples (floatcanvas object, slice index, vertex index).
         """
-        for i, h in enumerate(handles):
-            h.Name = '{}{}'.format(HANDLE_NAME_PREFIX,
-                                   i)  # the name string encodes the vertex index number, we'll need it if the user drags the handle to modify the slice contour
+        for handle in handles:
+            h, slice_idx, vertex_idx = handle
+            # Encode the slice and vertex index numbers in the handle's name,
+            # we'll need them if the user drags the handle to modify the right slice contour
+            h.Name = '{}:{}:{}'.format(HANDLE_NAME_PREFIX, slice_idx, vertex_idx)
             h.Bind(FloatCanvas.EVT_FC_ENTER_OBJECT, self._handle_enter)
             h.Bind(FloatCanvas.EVT_FC_LEAVE_OBJECT, self._handle_leave)
 
@@ -192,7 +193,8 @@ class PolygonEditorMixin:
         Remove the handles on the currently selected slice.
         Handles are little squares for modifying the slice contour.
         """
-        self._canvas.remove_objects(self._handles)
+        objs = [h for (h, _, _) in self._handles]
+        self._canvas.remove_objects(objs)
         self._handles = []
 
     def _handle_enter(self, object):
@@ -200,26 +202,26 @@ class PolygonEditorMixin:
         Called when the cursor moves onto an object handle (little square on a slice vertex)
         :param object: the floatcanvas object that the mouse moved onto (little square in our case)
         """
-        # print("handle enter, object = {}".format(object.Name))
-        if not self._canvas.IsActive(
-                PolygonEditingMode.NAME):  # ignore this event if the polygon selection tool is not active (but e.g. the Pointer tool is)
-            return
-        if self._dragging != NOTHING:
-            return
-        object.SetColor(ACTIVE_COLOR)
-        self._active_handle = int(object.Name.split(HANDLE_NAME_PREFIX)[1])
-        self._canvas.redraw(True)
+        print("handle enter, object = {}".format(object.Name))
+        # if not self._canvas.IsActive(
+        #         PolygonEditingMode.NAME):  # ignore this event if the polygon selection tool is not active (but e.g. the Pointer tool is)
+        #     return
+        # if self._dragging != NOTHING:
+        #     return
+        # object.SetColor(ACTIVE_COLOR)
+        # self._active_handle = int(object.Name.split(HANDLE_NAME_PREFIX)[1])
+        # self._canvas.redraw(True)
 
     def _handle_leave(self, object):
         """
         Called when the cursor moves away from an object handle (little square on a slice vertex)
         :param object: the floatcanvas object that the mouse moved away from (little square in our case)
         """
-        # print("handle leave, object = {}".format(object.Name))
-        if not self._canvas.IsActive(PolygonEditingMode.NAME):
-            return
-        if self._dragging != NOTHING:
-            return
-        object.SetColor(NORMAL_COLOR)
-        self._active_handle = NOTHING
-        self._canvas.redraw(True)
+        print("handle leave, object = {}".format(object.Name))
+        # if not self._canvas.IsActive(PolygonEditingMode.NAME):
+        #     return
+        # if self._dragging != NOTHING:
+        #     return
+        # object.SetColor(NORMAL_COLOR)
+        # self._active_handle = NOTHING
+        # self._canvas.redraw(True)
