@@ -6,7 +6,9 @@ import numpy as np
 
 # IMPROVEME: add ability to interactively extend the selection with additional slices
 # IMPROVEME: add ability to interactively de-select specific slices
-# IMPROVEME: do a select all slices if ctrl-a is pressed
+# IMPROVEME: add ability to move slices (whether selected or not). If the mouse hovers over an edge, change to cursor to indicate a possible move. Then when left button goes down, switch that 1 polygon to selected and update its position during the mouse move until the mouse button is released.
+# IMPROVEME: add Edit>Delete (Del) and Edit>Select All (ctrl-a) to the menu bar
+# IMPROVEME: add ability to duplicate a slice (to build ribbons interactively we can use a copy of the last slice on the previous ribbon to start a new ribbon)
 
 class PolygonSelectorMixin:
     def __init__(self, model, canvas):
