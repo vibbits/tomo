@@ -115,6 +115,9 @@ class RibbonBuilderMixin:
             # Remove ghosts
             self._remove_ghosts()
 
+            # Remove handles on the template polygon. We're done replicating it anyway.
+            self._remove_slice_handles()
+
             # Add temporary polygons to the model
             self._model.slice_polygons.extend(self._ghost_slices)
 
@@ -199,8 +202,6 @@ class RibbonBuilderMixin:
         :param object: the floatcanvas object that the mouse moved away from (little square in our case)
         """
         # print("handle leave, object = {}".format(object.Name))
-        if self._dragging:
-            return
         object.SetColor(NORMAL_COLOR)
         self._active_handle = None
         self._canvas.redraw(True)
