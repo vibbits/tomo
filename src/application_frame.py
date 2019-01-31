@@ -104,13 +104,14 @@ class ApplicationFrame(wx.Frame):
             tool = self._overview_canvas.FindToolByName(mode[0])
             self._overview_canvas.ToolBar.EnableTool(tool.GetId(), False)
 
+        self._overview_canvas.RegisterTool(PolygonSelectionMode.NAME, self._selector.start, self._selector.stop)
+        self._overview_canvas.RegisterTool(PolygonEditingMode.NAME, self._editor.start, self._editor.stop)
+        self._overview_canvas.RegisterTool(PolygonCreationMode.NAME, self._creator.start, self._creator.stop)
+
         # Slice contour handling is possible.
         self._overview_canvas.EnableTool(PolygonSelectionMode.NAME, True)
         self._overview_canvas.EnableTool(PolygonEditingMode.NAME, True)
         self._overview_canvas.EnableTool(PolygonCreationMode.NAME, True)
-        self._selector.start()
-        self._editor.start()
-        self._creator.start()
 
         # Listen to mouse movements so we can show the mouse position in the status bar.
         # We also need to listen to mouse movements when some custom modes are active (since regular FloatCanvas events do not happen then).
