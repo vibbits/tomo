@@ -66,12 +66,12 @@ class PolygonSelectorMixin:
             self._canvas.redraw(True)
 
         elif key == wx.WXK_ESCAPE:
-            # Deselect all
+            # Deselect all slices
             self.set_selected_slices([])
             self._canvas.redraw(True)
 
-        elif key == 65 and event.controlDown and not event.shiftDown:  # IMPROVEME: can this be written down cleaner? Using wx.KeyboardState or so? And get rid of the hard-coded 'A' value
-            # CTRL-A pressed, select all
+        elif key == ord('A') and event.controlDown and not event.shiftDown:  # IMPROVEME: can this be written down cleaner? Using wx.KeyboardState or so?
+            # CTRL-A pressed, select all slices
             total_num_slices = len(self._model.slice_polygons)
             self.set_selected_slices([i for i in range(total_num_slices)])
             self._canvas.redraw(True)
