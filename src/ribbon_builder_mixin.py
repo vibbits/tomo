@@ -88,7 +88,7 @@ class RibbonBuilderMixin:
         template_polygon = self._model.slice_polygons[slice_idx]
         orig_pos = template_polygon[vertex_idx]
         total_displacement = np.array(pos) - np.array(orig_pos)
-        print('pos now={} origpos={} total_displacement={}'.format(np.array(pos), np.array(orig_pos), total_displacement))
+        # print('pos now={} origpos={} total_displacement={}'.format(np.array(pos), np.array(orig_pos), total_displacement))
         desired_num_copies = self._guess_desired_number_of_copies(template_polygon, total_displacement)
         assert desired_num_copies > 0
         slice_displacement = total_displacement / desired_num_copies
