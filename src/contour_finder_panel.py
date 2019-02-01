@@ -116,7 +116,7 @@ class ContourFinderPanel(wx.Panel):
 
     def _on_improve_button_click(self, event):
 
-        self._contour_finder.set_optimization_parameters(h_for_gradient_approximation=1.0, max_iterations=50,
+        self._contour_finder.set_optimization_parameters(h_for_gradient_approximation=1.0, max_iterations=100, vertex_distance_threshold=0.5,
                                                          gradient_step_size=5e-3, edge_sample_distance=50.0)
 
         selected_slices = self._selector.get_selected_slices()

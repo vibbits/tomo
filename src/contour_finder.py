@@ -12,13 +12,17 @@ class ContourFinder:
         self.max_iterations = 50
         self.gradient_step_size = 5e-3
         self.edge_sample_distance = 50.0
+        self.vertex_distance_threshold = 0.5
 
-    def set_optimization_parameters(self, h_for_gradient_approximation, max_iterations, gradient_step_size, edge_sample_distance):
+    def set_optimization_parameters(self, h_for_gradient_approximation, max_iterations, vertex_distance_threshold, gradient_step_size, edge_sample_distance):
         # :param h_for_gradient_approximation: used for numeric gradient approximation: gradient = (f(x+h)-f(x)) / h
         # :param max_iterations: the maximum number of iterations of gradient descent that will be performed to improve the slice contour
+        # :param vertex_distance_threshold: if during an iteration of the iterative process of improving the slice polygon shape, all vertices moved less than this threshold distance, then we assume we're close to the optimum contour shape and stop iterating.
         # :param gradient_step_size: the distance to move along the gradient during each iteration of gradient descent
+        # :param edge_sample_distance: XXX
         self.h_for_gradient_approximation = h_for_gradient_approximation
         self.max_iterations = max_iterations
+        self.vertex_distance_threshold = vertex_distance_threshold
         self.gradient_step_size = gradient_step_size
         self.edge_sample_distance = edge_sample_distance
 
@@ -26,24 +30,36 @@ class ContourFinder:
         """
         :param image: preprocessed overview image with the ribbons of slices
         :param initial_contour: list of (x,y) vertex coordinates
-        :return: optimized contour    # FIXME: what if there is not really a contour in that neighborhood of the image? return score too, so we can compare it to the score of the initial contour somehow?
+        :return: optimized contour    # IMPROVEME? what if there is not really a contour in that neighborhood of the image? return score too, so we can compare it to the score of the initial contour somehow?
         """
         iteration = 0
-        current_contour = initial_contour  # CHECKME: deep copy needed?
+        vertex_distance_change = 10 * self.vertex_distance_threshold  # 10 just to initialize to something > the initial threshold
+        previous_contour_vector = self.contour_to_vector(initial_contour)
 
+        current_contour = initial_contour  # CHECKME: deep copy needed?
         current_contour_vector = self.contour_to_vector(current_contour)
 
-        while iteration < self.max_iterations:  # FIXME: and gradient (or score?) is still changing
+        while vertex_distance_change > self.vertex_distance_threshold and iteration < self.max_iterations:
             gradient_vector = self._calculate_gradient(image, current_contour_vector)
             current_contour_vector = current_contour_vector + self.gradient_step_size * gradient_vector   # we are looking for a maximum of the score, so we move along the positive gradient
             # print('Contour update: gradient step size={} gradient vector={} update={}'.format(self.gradient_step_size, gradient_vector, self.gradient_step_size * gradient_vector))
             # print('iteration {} score={}'.format(iteration, self.calculate_contour_score(image, current_contour_vector)))
             # note: the gradient points towards higher values of the function
+            vertex_distance_change = np.max(self._vertex_distances(previous_contour_vector, current_contour_vector))
+            # print('   iteration={} change={}'.format(iteration, vertex_distance_change))
+            previous_contour_vector = current_contour_vector
             iteration += 1
 
-        print('Original score={} optimized score={}'.format(self.calculate_contour_score(image, self.contour_to_vector(initial_contour)), self.calculate_contour_score(image, current_contour_vector)))
+        print('Original score={} optimized score after {} iterations={} last max vertex displacement={}'.format(self.calculate_contour_score(image, self.contour_to_vector(initial_contour)), iteration, self.calculate_contour_score(image, current_contour_vector), vertex_distance_change))
 
         return self.vector_to_contour(current_contour_vector)
+
+    def _vertex_distances(self, contour1, contour2):
+        # contour1 and 2 are numpy row vectors [x1, y1, x2, y2, ..., xn, yn] where n=number of vertices (=4 because are sections are quadrilaterals)
+        # returns a numpy array (with n elements) with the Euclidean distance between corresponding vertices in the two contours
+        difference = contour1.reshape(-1, 2) - contour2.reshape(-1, 2)  # reshape to an nx2 matrix (so each row is the x,y of a vertex), and subtract
+        distances = np.linalg.norm(difference, axis=1)  # distances[i] = euclidean distances between vertex i in contour1 and contour2
+        return distances
 
     def preprocess_image(self, image_path):
         # For now just read the result of manual preprocessing in Fiji...
