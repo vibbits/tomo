@@ -83,8 +83,8 @@ class ContourFinder:
                 else:
                     path = preprocessed_path
 
-            print('Should preprocess {} but instead we will just read the result {}'.format(image_path, preprocessed_path))
-            return tools.read_image_as_grayscale(preprocessed_path)
+            print('Should preprocess {} but instead we will just read the result {}'.format(image_path, path))
+            return tools.read_image_as_grayscale(path)
         else:
             # Here we try to obtain a similar result using OpenCV.
             # It doesn't work yet (almost black result). Parameter values are probably not correct. We also did not do contrast enhancement first yet either.
