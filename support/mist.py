@@ -44,8 +44,8 @@ if __name__ == "__main__":
         filename = sys.argv[1]
         parsed_lines = process(filename)
         positions = [line['position'] for line in parsed_lines]
-        positions_array = np.array(positions)
-        print(positions_array)
+        positions_matrix = np.array(positions)
+        print(positions_matrix)
     else:
         print('Usage: mist.py [mist output file.txt]')
         sys.exit(1)
