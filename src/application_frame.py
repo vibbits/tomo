@@ -202,7 +202,7 @@ class ApplicationFrame(wx.Frame):
         experimental_menu = wx.Menu()
         self._segment_ribbons_item = experimental_menu.Append(wx.NewId(), "Segment Ribbons...")
         self._contour_finder_item = experimental_menu.Append(wx.NewId(), "Find slice contours...")  # an active contours (style) contour fitting prototype
-        self._contour_finder_item.Enable(False)
+        #self._contour_finder_item.Enable(False)  # FIXME: commented out for testing
 
         view_menu = wx.Menu()
         self._show_slice_numbers_item = view_menu.Append(wx.NewId(), "Show slice numbers", kind=wx.ITEM_CHECK)

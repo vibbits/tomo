@@ -29,7 +29,7 @@ from application_frame import ApplicationFrame
 #
 #   4. pip install opencv-python
 #   5. pip install wxpython                  # (this is not needed: conda install -c anaconda wxpython)
-#   (6. pip install pypubsub==3.3.0          # we use an old version of PyPubSub because newer versions are Python 3 only (https://github.com/schollii/pypubsub/issues/9)) - probably not used anymore in tomo
+#   6. pip install pypubsub==3.3.0          # we use an old version of PyPubSub because newer versions are Python 3 only (https://github.com/schollii/pypubsub/issues/9)
 #   7. pip install networkx
 #   8. pip install joblib
 #   9. pip install pathlib2
@@ -49,6 +49,7 @@ from application_frame import ApplicationFrame
 # - conda install networkx
 # - conda install joblib
 # - pip install naturalneighbor    # there is no conda package
+# - TODO: conda or pip install pypubsub==3.3.0
 #
 # And for some experiments also:
 # - conda install scipy
@@ -68,6 +69,7 @@ from application_frame import ApplicationFrame
 #   - On this actual SECOM computer we have a full Odemis installation.
 #   - We do *not* use Anaconda here.
 #   - The wxPython sources are in /usr/lib/python2.7/dist-packages/wx-3.0-gtk2/wx
+#   - PyPubSub 3.3.0  (PyPubSub version 4.0 is NOT compatible with Python 2)
 
 def main():
     print('Environment:\n  Python: {}.{}.{}\n  OpenCV: {}\n  wxPython: {}'.format(sys.version_info[0], sys.version_info[1], sys.version_info[2], cv2.__version__, wx.version()))

@@ -74,8 +74,9 @@ def read_image_as_grayscale(filename, flags=cv2.IMREAD_GRAYSCALE):
     This may be preferable over reading it through wxPython since (I think) wxPython expands grayscale images to RGB,
     and this is not ideal since we are dealing with potentially large images.
     :param filename: full file path of the image to read
+    :param flags: XXX e.g. cv2.IMREAD_GRAYSCALE to convert image to grayscale after reading;
+                           cv2.IMREAD_ANYDEPTH to preserve 16-bit images as 16-bit (otherwise we get 8-bit automatically)
     :return: An OpenCV grayscale image object, or None on error.
-             White pixels have a value near 255, black pixels near 0.
              The image is indexed like this: img[y, x].
     """
     img = cv2.imread(filename, flags)
@@ -92,10 +93,14 @@ def sample_image(image, pos):
     :return: the (interpolated) pixel value
     """
 
-    # TODO: truncate pos to the image boundaries
+    # Clip pos to image boundaries
+    # We clip the right and bottom edges by 'eps' to make it easier for the code below to handle the case where pos=(_, image_width-1) or (image_height-1, _).
+    eps = 1e-4
+    image_height, image_width = image.shape
+    pos[0] = max(0, min(pos[0], image_height-1-eps))
+    pos[1] = max(0, min(pos[1], image_width-1-eps))
 
-    assert(pos[1] >= 0)
-
+    # Find interpolation factors
     x_left = int(pos[0])
     y_top = int(pos[1])
 

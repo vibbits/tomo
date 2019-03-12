@@ -9,6 +9,9 @@ import matplotlib
 matplotlib.use('wxagg')
 import matplotlib.pyplot as plt
 
+import cv2
+# import wx
+
 # IMPROVEME: add a Settings panel with the ContourFinder optimization parameters
 # IMPROVEME: add settings for preprocessing the overview image (edge enhancement) ?
 # FIXME: if we are in the contour editing tool, the currently selected contours will have handles; if we then jitter or optimize the contour, the contour gets updated, but not the handles
@@ -85,7 +88,12 @@ class ContourFinderPanel(wx.Panel):
 
         # invert so we can then maximize the amount of black pixels "collected" by the edges
         # (after inversion, white will be close to 0, and black pixels >> 0)
-        self._preprocessed_image = 255 - self._preprocessed_image
+        # self._preprocessed_image = 255 - self._preprocessed_image
+
+        cv2.namedWindow('prep') #, flags=cv2.WINDOW_NORMAL)
+        cv2.imshow('prep', self._preprocessed_image)
+
+        print('_on_preprocess_button_click: preprocessed image shape={}'.format(self._preprocessed_image.shape))
 
         self._improve_button.Enable(True)
         self._jitter_button.Enable(True)
