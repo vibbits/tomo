@@ -1,11 +1,6 @@
 import numpy as np
 import math
 import tools
-import cv2
-import wx
-import os
-from matplotlib import pyplot as plt
-# from interactive_preprocessing import InteractivePreprocessing
 
 class ContourFinder:
 

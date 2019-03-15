@@ -8,7 +8,6 @@ import cv2
 import os
 from preprocess_dialog import PreprocessDialog
 
-# IMPROVEME: add a Settings panel with the ContourFinder optimization parameters
 # FIXME: if we are in the contour editing tool, the currently selected contours will have handles; if we then jitter or optimize the contour,
 #        the contour gets updated, but not the handles.
 # IMPROVEME: The model should publish changes and the canvas and some tools should listen to changes to the model and update itself when needed
@@ -24,23 +23,39 @@ class ContourFinderPanel(wx.Panel):
         self._prev_polygon = None
         self._preprocessed_image = None
 
+        # Contour energy minimization parameters
+        # TODO: combine into a structure, this class already has too many member variables
+        self.h_for_gradient_approximation = 1.0
+        self.max_iterations = 100
+        self.vertex_distance_threshold = 0.5
+        self.gradient_step_size = 5e-3
+        self.edge_sample_distance = 100.0
+
+        # Build UI
         title = wx.StaticText(self, wx.ID_ANY, "Slices finder")
         title.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD))
         separator = wx.StaticLine(self, wx.ID_ANY)
 
-        preprocessing_label = wx.StaticText(self, wx.ID_ANY, "Preprocessing")
-        preprocessing_label.Wrap(330)  # force line wrapping
+        # Contour energy minimization edit fields
+        w = 40
+        self._h_for_gradient_approximation_edit = wx.TextCtrl(self, wx.ID_ANY, str(self.h_for_gradient_approximation), size=(w, -1))
+        self._max_iterations_edit = wx.TextCtrl(self, wx.ID_ANY, str(self.max_iterations), size=(w, -1))
+        self._vertex_distance_threshold_edit = wx.TextCtrl(self, wx.ID_ANY, str(self.vertex_distance_threshold), size=(w, -1))
+        self._gradient_step_size_edit = wx.TextCtrl(self, wx.ID_ANY, str(self.gradient_step_size), size=(w, -1))
+        self._edge_sample_distance_edit = wx.TextCtrl(self, wx.ID_ANY, str(self.edge_sample_distance), size=(w, -1))
 
-        contours_label = wx.StaticText(self, wx.ID_ANY, "Contours")
-        contours_label.Wrap(330)  # force line wrapping
+        self.Bind(wx.EVT_TEXT, self._on_h_for_gradient_approximation_change, self._h_for_gradient_approximation_edit)
+        self.Bind(wx.EVT_TEXT, self._on_max_iterations_change, self._max_iterations_edit)
+        self.Bind(wx.EVT_TEXT, self._on_gradient_step_size_change, self._gradient_step_size_edit)
+        self.Bind(wx.EVT_TEXT, self._on_edge_sample_distance_change, self._edge_sample_distance_edit)
+        self.Bind(wx.EVT_TEXT, self._on_vertex_distance_threshold_change, self._vertex_distance_threshold_edit)
 
-        debugging_label = wx.StaticText(self, wx.ID_ANY, "Debugging")
-        debugging_label.Wrap(330)  # force line wrapping
-
+        # Buttons
         button_size = (125, -1)
 
         preprocess_button = wx.Button(self, wx.ID_ANY, "Preprocess", size = button_size)
         load_button = wx.Button(self, wx.ID_ANY, "Load", size = button_size)
+
         self._show_button = wx.Button(self, wx.ID_ANY, "Show", size=button_size)
         self._show_button.Enable(False)
 
@@ -50,8 +65,7 @@ class ContourFinderPanel(wx.Panel):
         self._jitter_button = wx.Button(self, wx.ID_ANY, "Jitter Contours", size = button_size)  # For testing only
         self._jitter_button.Enable(False)
 
-        self.done_button = wx.Button(self, wx.ID_ANY, "Done",
-                                     size=button_size)  # Not this panel but the ApplicationFame will listen to clicks on this button.
+        self.done_button = wx.Button(self, wx.ID_ANY, "Done", size=button_size)  # Not this panel but the ApplicationFame will listen to clicks on this button.
 
         self.Bind(wx.EVT_BUTTON, self._on_preprocess_button_click, preprocess_button)
         self.Bind(wx.EVT_BUTTON, self._on_jitter_button_click, self._jitter_button)
@@ -59,22 +73,40 @@ class ContourFinderPanel(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self._on_load_button_click, load_button)
         self.Bind(wx.EVT_BUTTON, self._on_show_button_click, self._show_button)
 
+        parameters_sizer = wx.FlexGridSizer(cols=2, vgap=4, hgap=14)
+        parameters_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Gradient estimation h:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
+        parameters_sizer.Add(self._h_for_gradient_approximation_edit, flag=wx.RIGHT)
+        parameters_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Max iterations:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
+        parameters_sizer.Add(self._max_iterations_edit, flag=wx.RIGHT)
+        parameters_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Gradient descent step size:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
+        parameters_sizer.Add(self._gradient_step_size_edit, flag=wx.RIGHT)
+        parameters_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Edge sample distance:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
+        parameters_sizer.Add(self._edge_sample_distance_edit, flag=wx.RIGHT)
+        parameters_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Vertex distance threshold:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
+        parameters_sizer.Add(self._vertex_distance_threshold_edit, flag=wx.RIGHT)
+
+        contours_box = wx.StaticBox(self, -1, 'Contours')
+        contours_sizer = wx.StaticBoxSizer(contours_box, wx.VERTICAL)
+        contours_sizer.Add(parameters_sizer, 0, wx.ALL | wx.CENTER, 10)
+        contours_sizer.Add(self._improve_button, 0, wx.ALL | wx.CENTER, 10)
+
+        preprocessing_box = wx.StaticBox(self, -1, 'Preprocessing')
+        preprocessing_sizer = wx.StaticBoxSizer(preprocessing_box, wx.VERTICAL)
+        preprocessing_sizer.Add(preprocess_button, 0, wx.ALL | wx.CENTER, 10)
+        preprocessing_sizer.Add(load_button, 0, wx.ALL | wx.CENTER, 10)
+        preprocessing_sizer.Add(self._show_button, 0, wx.ALL | wx.CENTER, 10)
+
+        debugging_box = wx.StaticBox(self, -1, 'Debugging')
+        debugging_sizer = wx.StaticBoxSizer(debugging_box, wx.VERTICAL)
+        debugging_sizer.Add(self._jitter_button, 0, wx.ALL | wx.CENTER, 10)
+
         b = 5  # border size
         contents = wx.BoxSizer(wx.VERTICAL)
         contents.Add(title, 0, wx.ALL | wx.EXPAND, border=b)
         contents.Add(separator, 0, wx.ALL | wx.EXPAND, border=b)
-
-        contents.Add(preprocessing_label, 0, wx.ALL | wx.EXPAND, border=b)
-        contents.Add(preprocess_button, 0, wx.ALL | wx.CENTER, border=b)
-        contents.Add(load_button, 0, wx.ALL | wx.CENTER, border=b)
-        contents.Add(self._show_button, 0, wx.ALL | wx.CENTER, border=b)
-
-        contents.Add(contours_label, 0, wx.ALL | wx.EXPAND, border=b)
-        contents.Add(self._improve_button, 0, wx.ALL | wx.CENTER, border=b)
-
-        contents.Add(debugging_label, 0, wx.ALL | wx.EXPAND, border=b)
-        contents.Add(self._jitter_button, 0, wx.ALL | wx.CENTER, border=b)
-
+        contents.Add(preprocessing_sizer, 0, wx.ALL | wx.EXPAND, border=b)
+        contents.Add(contours_sizer, 0, wx.ALL | wx.EXPAND, border=b)
+        contents.Add(debugging_sizer, 0, wx.ALL | wx.EXPAND, border=b)
         contents.Add(self.done_button, 0, wx.ALL | wx.CENTER, border=b)
 
         self.SetSizer(contents)
@@ -85,6 +117,26 @@ class ContourFinderPanel(wx.Panel):
 
     def deactivate(self):
         pass
+
+    def _on_h_for_gradient_approximation_change(self, event):
+        self.h_for_gradient_approximation = float(self._h_for_gradient_approximation_edit.GetValue())
+        print('h_for_gradient_approximation={}'.format(self.h_for_gradient_approximation))
+
+    def _on_max_iterations_change(self, event):
+        self.max_iterations = float(self._max_iterations_edit.GetValue())
+        print('max_iterations={}'.format(self.max_iterations))
+
+    def _on_gradient_step_size_change(self, event):
+        self.gradient_step_size = float(self._gradient_step_size_edit.GetValue())
+        print('gradient_step_size={}'.format(self.gradient_step_size))
+
+    def _on_edge_sample_distance_change(self, event):
+        self.edge_sample_distance = float(self._edge_sample_distance_edit.GetValue())
+        print('edge_sample_distance={}'.format(self.edge_sample_distance))
+
+    def _on_vertex_distance_threshold_change(self, event):
+        self.vertex_distance_threshold = float(self._vertex_distance_threshold_edit.GetValue())
+        print('vertex_distance_threshold={}'.format(self.vertex_distance_threshold))
 
     def _on_load_button_click(self, event):
         # Read preprocessed version of "20x_lens\bisstitched-0.tif" where contrast was enhanced, edges were amplified and then blurred to make gradient descent work better.
@@ -146,7 +198,7 @@ class ContourFinderPanel(wx.Panel):
         selected_slices = self._selector.get_selected_slices()
         for i in selected_slices:
             polygon = self._model.slice_polygons[i]
-            jittered_polygon = self._add_jitter(polygon, 100)
+            jittered_polygon = self._add_jitter(polygon, 80)
             self._model.slice_polygons[i] = jittered_polygon  # update model
             self._canvas.set_slice_outline(i, self._flipY(jittered_polygon))  # update canvas
             # self._draw_contour(polygon, "Blue", False)  # Draw original polygon
@@ -161,9 +213,11 @@ class ContourFinderPanel(wx.Panel):
                 for (x, y) in contour]
 
     def _on_improve_button_click(self, event):
-
-        self._contour_finder.set_optimization_parameters(h_for_gradient_approximation=1.0, max_iterations=100, vertex_distance_threshold=0.5,
-                                                         gradient_step_size=5e-3, edge_sample_distance=50.0)
+        self._contour_finder.set_optimization_parameters(self.h_for_gradient_approximation,
+                                                         self.max_iterations,
+                                                         self.vertex_distance_threshold,
+                                                         self.gradient_step_size,
+                                                         self.edge_sample_distance)
 
         selected_slices = self._selector.get_selected_slices()
         for i in selected_slices:
