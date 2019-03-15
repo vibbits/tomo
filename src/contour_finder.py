@@ -5,7 +5,7 @@ import cv2
 import wx
 import os
 from matplotlib import pyplot as plt
-from interactive_preprocessing import InteractivePreprocessing
+# from interactive_preprocessing import InteractivePreprocessing
 
 class ContourFinder:
 
@@ -63,95 +63,6 @@ class ContourFinder:
         distances = np.linalg.norm(difference, axis=1)  # distances[i] = euclidean distances between vertex i in contour1 and contour2
         return distances
 
-    def relevant_intensity_range(self, img, lo_percentile, hi_percentile, plot_histogram=True):
-        # Build image histogram
-        max_intensity = self.get_max_possible_intensity(img)
-        num_bins = max_intensity + 1
-        histogram = cv2.calcHist([img], [0], None, [num_bins], [0, max_intensity])
-
-        # Find intensity value for the low and hi percentiles
-        # (e.g. 1 and 99-th percentile, of 0.5 and 99.5th percentile)
-        # These percentiles produce better contrast enhancement than just the minimum and maximum image intensity values,
-        # because the microscope images often have a thin but very dark border that we want to ignore.
-        lo_val = self.get_histogram_percentile(histogram, lo_percentile)
-        hi_val = self.get_histogram_percentile(histogram, hi_percentile)
-
-        if plot_histogram:
-            min_val = np.min(img)
-            max_val = np.max(img)
-            plt.plot(histogram, '-')
-            plt.axvline(min_val, color='b', linestyle=':')
-            plt.axvline(max_val, color='b', linestyle=':')
-            plt.axvline(lo_val, color='r', linestyle=':')
-            plt.axvline(hi_val, color='r', linestyle=':')
-            plt.legend(['histogram', 'min', 'max', 'lo percentile', 'hi percentile'])
-            plt.xlim([0, max_intensity])
-            plt.show()
-
-        return lo_val, hi_val
-
-    def preprocess_image(self, image_path):
-        # For now just read the result of manual preprocessing in Fiji...
-        # TODO: IMPLEMENT: e.g. blur image, remove dark specks, etc.
-        # http://opencvexamples.blogspot.com/2013/10/edge-detection-using-laplacian-operator.html
-
-        # Imporant note: for the iterative contour finding to work well, the preprocessed image should have an intensity profile around the edges
-        # that varies smoothly, from relatively "far" from the edge, and with no local minima/maxima in the neighborhood. I suspect that local minima are the cause
-        # for the behaviour where the contour seems to get stuck in the neighborhood of the true contour. These local minima are probably caused by intensity variations in background or lighting.
-        # Ideally preprocessing would turn the overview image first into a binary image with edges/no edges, which we then gaussian blur.
-        # Applying an edge detector which does not binarize the image, and no thresholding, followed by gaussian blur preserves these local intensity variations and results
-        # in an iterative contour finding which seems to get stuck sometimes. (At least these local minima are my theory of what happens...)
-
-        # Example:
-        # bisstitched-0.tif (=16 bit, a few black 0 pixels at the border, rest is a peak around 35000 to 41000)
-        # - Fiji > shift-ctrl c: contrast enhance (min=35779, max=42819, set, apply => histogram now more or less a bump between 0 and 65535)
-        # - Fiji > Plugins > Mexican Hat Filter > Separable, r=20 (=> image is now a binary image, with background=white=65535 and edges=black=0; edges are about 17 black pixels wide)
-        # . Optional, probably interesting: remove small specks (Fiji: particle analysis etc.)
-        # - Fiji > Process > Filters > Gaussian Blur, Sigma (Radius)=20  (=image is now a 16-bit image where near edges the intensity drop from 65000 to 46386 and back up over a distance of about 110 px)
-        # bisstitched-0-contrast-enhanced-mexicanhat_separable_radius20-gaussianblur20pix.tif
-
-
-        if False:
-            # Preprocessed as follows in Fiji:
-            # xxx
-
-            # Read preprocessed version of "20x_lens\bisstitched-0.tif" where contrast was enhanced, edges were amplified and then blurred to make gradient descent work better.
-            # preprocessed_path = 'E:\\git\\bits\\bioimaging\\Secom\\tomo\\data\\20x_lens\\bisstitched-0-contrast-enhanced-mexicanhat_separable_radius40.tif'  # WORKS
-            preprocessed_path = 'E:\\git\\bits\\bioimaging\\Secom\\tomo\\data\\20x_lens\\bisstitched-0-contrast-enhanced-mexicanhat_separable_radius20-gaussianblur20pix.tif' # WORKS BETTER?
-
-            path = preprocessed_path
-            defaultDir = os.path.dirname(path)
-            defaultFile = os.path.basename(path)
-            with wx.FileDialog(None, "Select the preprocessed edge enhanced image",
-                               defaultDir, defaultFile,
-                               wildcard="TIFF files (*.tif;*.tiff)|*.tif;*.tiff|PNG files (*.png)|*.png|JPEG files (*.jpg;*.jpeg)|*.jpg;*.jpeg",
-                               style=wx.FD_OPEN) as dlg:
-                if dlg.ShowModal() == wx.ID_OK:
-                    path = dlg.GetPath()
-                else:
-                    path = preprocessed_path
-
-            print('Should preprocess {} but instead we will just read the result {}'.format(image_path, path))
-            img = tools.read_image_as_grayscale(path)
-            assert img.type == np.uint8
-            img = 255 - img
-            return img
-
-        else:
-            # Here we try to obtain a similar result using OpenCV.
-            # It doesn't work yet (almost black result). Parameter values are probably not correct. We also did not do contrast enhancement first yet either.
-            #image_path = 'E:\\git\\bits\\bioimaging\\Secom\\tomo\\data\\20x_lens\\oneslice_16bit.tif'  # user_min_val, user_max_val = 35779, 42819 (~0.5 and 99.5 percentiles)
-
-            img = tools.read_image_as_grayscale(image_path, cv2.IMREAD_GRAYSCALE + cv2.IMREAD_ANYDEPTH)  # IMREAD_ANYDEPTH to preserve as 16 bit
-            # print('Raw: shape={} dtype={} min={} max={}'.format(img.shape, img.dtype, np.min(img), np.max(img)))
-            # tools.display(img, "Raw")
-
-            # Let user interactively check the preprocessing parameters first.
-            ui = InteractivePreprocessing(img)  # NOTE: this does not wait - so does not work as expected
-
-            # Afterwards preprocess the complete image with latest parameter set.
-            # FIXME: this is wrong: return self.preprocess(img)  since InteractivePreprocessing() did not wait.
-            return img
 
     def contour_to_vector(self, contour):
         """
