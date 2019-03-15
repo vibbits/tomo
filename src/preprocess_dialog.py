@@ -23,9 +23,9 @@ class PreprocessDialog(wx.Dialog):
         # Preprocessing parameters
         self.histogram, self.lo_percentile_val, self.hi_percentile_val = relevant_intensity_range(self.orig_img, 2, 98)  # we need to do this on the full original image, but rest of interactive preprocessing will be on a cropped version of the original, for speed.
         self.step = 5   # preprocessing step (0=original image, 1=blurred image, 2=..., 5=final preprocessed result)
-        self.gaussian_kernel1_size = 31
-        self.gaussian_kernel2_size = 31
-        self.laplacian_delta = -100
+        self.gaussian_kernel1_size = 29  # must be odd; larger kernels will suppress noise more
+        self.gaussian_kernel2_size = 63  # must be odd; larger kernels will result in a wider edge, useful for attracting approximate slice contours from further away
+        self.laplacian_delta = -270
 
         # Figure out number of tiles in the image
         img_height, img_width = img.shape
@@ -58,7 +58,7 @@ class PreprocessDialog(wx.Dialog):
         self.tile_y_slider = wx.Slider(self, value=self.tile_y, minValue=0, maxValue=num_tiles_vertical-1, style=wx.SL_HORIZONTAL | wx.SL_LABELS, size=slider_size)
         self.blur1_slider = wx.Slider(self, value=(self.gaussian_kernel1_size - 3) / 2, minValue=0, maxValue=20, style=wx.SL_HORIZONTAL | wx.SL_LABELS, size=slider_size)
         self.delta_slider = wx.Slider(self, value=self.laplacian_delta, minValue=-500, maxValue=500, style=wx.SL_HORIZONTAL | wx.SL_LABELS, size=slider_size)
-        self.blur2_slider = wx.Slider(self, value=(self.gaussian_kernel2_size - 3) / 2, minValue=0, maxValue=40, style=wx.SL_HORIZONTAL | wx.SL_LABELS, size=slider_size)
+        self.blur2_slider = wx.Slider(self, value=(self.gaussian_kernel2_size - 3) / 2, minValue=0, maxValue=80, style=wx.SL_HORIZONTAL | wx.SL_LABELS, size=slider_size)
 
         self.step_slider.Bind(wx.EVT_SLIDER, self._on_preprocessing_step)
         self.tile_x_slider.Bind(wx.EVT_SLIDER, self._on_tile_x)
@@ -72,22 +72,31 @@ class PreprocessDialog(wx.Dialog):
 
         b = 5  # border size
 
-        contents = wx.BoxSizer(wx.HORIZONTAL)
-
         self.image_ctrl = wx.StaticBitmap(self, wx.ID_ANY, empty_bitmap())
 
+        sliders_sizer = wx.FlexGridSizer(cols=2, vgap=4, hgap=14)
+        sliders_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Preprocessing Step:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
+        sliders_sizer.Add(self.step_slider, flag=wx.RIGHT)
+        sliders_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Tile X:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
+        sliders_sizer.Add(self.tile_x_slider, flag=wx.RIGHT)
+        sliders_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Tile Y:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
+        sliders_sizer.Add(self.tile_y_slider, flag=wx.RIGHT)
+        sliders_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Denoising Blur:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
+        sliders_sizer.Add(self.blur1_slider, flag=wx.RIGHT)
+        sliders_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Laplacian Delta:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
+        sliders_sizer.Add(self.delta_slider, flag=wx.RIGHT)
+        sliders_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Edge Blur:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
+        sliders_sizer.Add(self.blur2_slider, flag=wx.RIGHT)
+
         controls = wx.BoxSizer(wx.VERTICAL)
-        controls.Add(self.step_slider, 0, wx.ALL | wx.EXPAND, border=b)
-        controls.Add(self.tile_x_slider, 0, wx.ALL | wx.EXPAND, border=b)
-        controls.Add(self.tile_y_slider, 0, wx.ALL | wx.EXPAND, border=b)
-        controls.Add(self.blur1_slider, 0, wx.ALL | wx.EXPAND, border=b)
-        controls.Add(self.delta_slider, 0, wx.ALL | wx.EXPAND, border=b)
-        controls.Add(self.blur2_slider, 0, wx.ALL | wx.EXPAND, border=b)
+        controls.Add(sliders_sizer, 0, wx.ALL | wx.EXPAND, border=b)
+        controls.AddSpacer(14)
         controls.Add(histogram_button, 0, wx.ALL | wx.CENTER, border=b)
-        # TODO: add a bit of vertical space here
+        controls.AddSpacer(20)
         controls.Add(cancel_button, 0, wx.ALL | wx.CENTER, border=b)
         controls.Add(accept_button, 0, wx.ALL | wx.CENTER, border=b)
 
+        contents = wx.BoxSizer(wx.HORIZONTAL)
         contents.Add(self.image_ctrl, 0, wx.ALL | wx.EXPAND, border=b)
         contents.Add(controls, 0, wx.ALL | wx.EXPAND, border=b)
 
