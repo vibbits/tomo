@@ -246,8 +246,10 @@ def grayscale_image_float_to_8bit(image):
 
 
 def empty_bitmap():
-    return wx.Bitmap(TILE_SIZE, TILE_SIZE)
-
+    # wx.EmptyBitmap() is deprecated but needed for wxPython Classic on the SECOM computer:
+    # return wx.Bitmap(TILE_SIZE, TILE_SIZE)
+    # does not work there.
+    return wx.EmptyBitmap(TILE_SIZE, TILE_SIZE)
 
 def get_tile(image, tile_x, tile_y):
     # The given image is assumed to consist of tiles of size TILE_SIZE x TILE_SIZE pixels. The tile (tile_x, tile_y)
@@ -371,7 +373,10 @@ def wx_bitmap_from_OpenCV_image(image):
     conversion = cv2.COLOR_GRAY2RGB
     image = cv2.cvtColor(image, conversion)
     height, width = image.shape[:2]
-    bitmap = wx.Bitmap.FromBuffer(width, height, image)
+    bitmap = wx.BitmapFromBuffer(width, height, image)
+    # wx.BitmapFromBuffer() is deprecated but needed for wxPython Classic on the SECOM computer:
+    # bitmap = wx.Bitmap.FromBuffer(width, height, image)
+    # does not work there.
     return bitmap
 
 
