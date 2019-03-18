@@ -168,6 +168,12 @@ class ContourFinderPanel(wx.Panel):
         img = tools.read_image_as_grayscale(self._model.overview_image_path,
                                             cv2.IMREAD_GRAYSCALE + cv2.IMREAD_ANYDEPTH)  # IMREAD_ANYDEPTH to preserve as 16 bit
 
+        # IMPROVEME: while the preprocess() code at first sight ought to be able to work with 8-bit images,
+        #            it does not seem to produce nice preprocessed edge images. With 16-bit image it does seem to work,
+        #            so for now we convert 8-bit to 16-bit here.
+        if img.dtype == np.uint8:
+            img = img.astype(np.uint16) * 257
+
         with PreprocessDialog(img, self._model, None, wx.ID_ANY, "Preprocess Overview Image") as dlg:
             dlg.CenterOnScreen()
             if dlg.ShowModal() == wx.OK:
