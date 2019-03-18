@@ -202,7 +202,7 @@ class ApplicationFrame(wx.Frame):
         experimental_menu = wx.Menu()
         self._segment_ribbons_item = experimental_menu.Append(wx.NewId(), "Segment Ribbons...")
         self._contour_finder_item = experimental_menu.Append(wx.NewId(), "Find slice contours...")  # an active contours (style) contour fitting prototype
-        #self._contour_finder_item.Enable(False)  # FIXME: commented out for testing
+        self._contour_finder_item.Enable(False)
 
         view_menu = wx.Menu()
         self._show_slice_numbers_item = view_menu.Append(wx.NewId(), "Show slice numbers", kind=wx.ITEM_CHECK)
@@ -400,7 +400,7 @@ class ApplicationFrame(wx.Frame):
         # and the same one in Odemis. This constitutes stage - overview image alignment.
         self._align_stage_item.Enable(True)
 
-        # Experimental: gradient descent slice contour finding (needs an overview image and, for now, ground truth slice outlines for comparison)
+        # Experimental: gradient descent slice contour finding (needs an overview image)
         self._contour_finder_item.Enable(True)
 
     def _do_load_slice_polygons(self):
