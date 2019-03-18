@@ -12,11 +12,16 @@ class ContourFinder:
         self.vertex_distance_threshold = 0.5
 
     def set_optimization_parameters(self, h_for_gradient_approximation, max_iterations, vertex_distance_threshold, gradient_step_size, edge_sample_distance):
-        # :param h_for_gradient_approximation: used for numeric gradient approximation: gradient = (f(x+h)-f(x)) / h
-        # :param max_iterations: the maximum number of iterations of gradient descent that will be performed to improve the slice contour
-        # :param vertex_distance_threshold: if during an iteration of the iterative process of improving the slice polygon shape, all vertices moved less than this threshold distance, then we assume we're close to the optimum contour shape and stop iterating.
-        # :param gradient_step_size: the distance to move along the gradient during each iteration of gradient descent
-        # :param edge_sample_distance: XXX
+        """
+        XXX
+        :param h_for_gradient_approximation: step size h used for numeric gradient approximation: gradient = (f(x+h)-f(x)) / h
+               IMPROVEME? (f(x+h/2)-f(x-h/2))/h is probably a better estimate
+        :param max_iterations: the maximum number of iterations of gradient descent that will be performed to improve the slice contour
+        :param vertex_distance_threshold: if during an iteration of the iterative process of improving the slice polygon shape,
+               all vertices moved less than this threshold distance, then we assume we're close to the optimum contour shape and stop iterating.
+        :param gradient_step_size: the distance to move along the gradient during each iteration of gradient descent
+        :param edge_sample_distance: XXX
+        """
         self.h_for_gradient_approximation = h_for_gradient_approximation
         self.max_iterations = max_iterations
         self.vertex_distance_threshold = vertex_distance_threshold
@@ -27,13 +32,13 @@ class ContourFinder:
         """
         :param image: preprocessed overview image with the ribbons of slices
         :param initial_contour: list of (x,y) vertex coordinates
-        :return: optimized contour    # IMPROVEME? what if there is not really a contour in that neighborhood of the image? return score too, so we can compare it to the score of the initial contour somehow?
+        :return: optimized contour
         """
         iteration = 0
         vertex_distance_change = 10 * self.vertex_distance_threshold  # 10 just to initialize to something > the initial threshold
         previous_contour_vector = self.contour_to_vector(initial_contour)
 
-        current_contour = initial_contour  # CHECKME: deep copy needed?
+        current_contour = initial_contour
         current_contour_vector = self.contour_to_vector(current_contour)
 
         while vertex_distance_change > self.vertex_distance_threshold and iteration < self.max_iterations:
@@ -137,7 +142,7 @@ class ContourFinder:
         :param p2: a pair (x2, y2), coordinates of the end point of the segment
         :return: XXX
         """
-        # IMPROVEME
+        # IMPROVEME?
         # This definition of score is not perfect: the algorithm tends to make the edges a bit too long:
         # the fact that this way less 'blackness' per pixel is collected, is compensated by the longer edges.
         # Maybe we ought to use some space-scale concept: the original edges get blurred relatively heavily to be able
@@ -146,6 +151,15 @@ class ContourFinder:
         # a new equilibrium (closer to the true edge center) exists where the contour does not gain so much anymore from being longer
         # but passing through less dark pixels, and instead will move closer to the edge center again?
         # Or can we define a different score that does not have this undesirable effect of preferring too long edges?
+        # TODO?
+        # Perhaps experiment with a score function that is a weighed version of the current score and a scalar value that measures how
+        # much the shape of the slice contour resembles the shape of a template slice contour.
+        # TODO?
+        # A common failure of the active contour seems to be that the slice edge gets stuck parallel to, but not on, the actual slice edge.
+        # Perhaps, after the optimization stops, we could sample the neigbourhood of the slice for better slice shapes. For example by trying
+        # to move each slice edge parallel to itself and checking the score to see if it better (maybe after running a couple of extra gradient descent steps).
+        # Or, after optimization, we could jitter the solution's vertices a bit and run the optimization again. Then compare the scores of a couple of final
+        # slice contours obtained that way.
 
         v1 = np.array(p1)
         v2 = np.array(p2)
