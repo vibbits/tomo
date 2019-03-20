@@ -72,7 +72,8 @@ class ContourFinderPanel(wx.Panel):
         self._jitter_button = wx.Button(self, wx.ID_ANY, "Jitter Contours", size = button_size)  # For testing only
         self._jitter_button.Enable(False)
 
-        build_ribbon_button = wx.Button(self, wx.ID_ANY, "Add Slices", size = button_size)  # For testing only
+        self._build_ribbon_button = wx.Button(self, wx.ID_ANY, "Add Slices", size = button_size)  # For testing only
+        self._build_ribbon_button.Enable(False)
 
         self.done_button = wx.Button(self, wx.ID_ANY, "Done", size=button_size)  # Not this panel but the ApplicationFame will listen to clicks on this button.
 
@@ -82,7 +83,7 @@ class ContourFinderPanel(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self._on_load_button_click, load_button)
         self.Bind(wx.EVT_BUTTON, self._on_save_button_click, self._save_button)
         self.Bind(wx.EVT_BUTTON, self._on_show_button_click, self._show_button)
-        self.Bind(wx.EVT_BUTTON, self._on_build_ribbon_button_click, build_ribbon_button)
+        self.Bind(wx.EVT_BUTTON, self._on_build_ribbon_button_click, self._build_ribbon_button)
 
         parameters_sizer = wx.FlexGridSizer(cols=2, vgap=4, hgap=14)
         parameters_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Gradient estimation h:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
@@ -121,8 +122,7 @@ class ContourFinderPanel(wx.Panel):
 
         ribbon_box = wx.StaticBox(self, -1, 'Ribbon')
         ribbon_sizer = wx.StaticBoxSizer(ribbon_box, wx.VERTICAL)
-        # ribbon_sizer.Add(xxx_button, 0, wx.ALL | wx.CENTER, 10) # one slice
-        ribbon_sizer.Add(build_ribbon_button, 0, wx.ALL | wx.CENTER, 10) # several slices
+        ribbon_sizer.Add(self._build_ribbon_button, 0, wx.ALL | wx.CENTER, 10)
         ribbon_sizer.Add(ribbon_params_sizer, 0, wx.ALL | wx.CENTER, 10)
 
         b = 5  # border size
@@ -233,10 +233,11 @@ class ContourFinderPanel(wx.Panel):
         # Display the preprocessed image (either loaded or just calculated)
         show_preprocessed_image(self._preprocessed_image)
 
-        self._improve_button.Enable(True)
-        self._jitter_button.Enable(True)
         self._show_button.Enable(True)
         self._save_button.Enable(True)
+        self._improve_button.Enable(True)
+        self._build_ribbon_button(True)
+        self._jitter_button.Enable(True)
 
     def _on_show_button_click(self, event):
         show_preprocessed_image(self._preprocessed_image)
@@ -263,7 +264,12 @@ class ContourFinderPanel(wx.Panel):
         """
         return [(x, -y) for (x, y) in contour]
 
-    def _add_jitter(self, contour, max_delta):   # contour is a list of coordinate pairs: [(x, y), ...]
+    def _add_jitter(self, contour, max_delta):
+        """
+        :param contour: a list of coordinate pairs: [(x, y), ...] representing the slice contour vertices in ccw order
+        :param max_delta:
+        :return:
+        """
         return [(x + random.randint(-max_delta, max_delta),
                  y + random.randint(-max_delta, max_delta))
                 for (x, y) in contour]
