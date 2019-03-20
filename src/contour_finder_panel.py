@@ -236,7 +236,7 @@ class ContourFinderPanel(wx.Panel):
         self._show_button.Enable(True)
         self._save_button.Enable(True)
         self._improve_button.Enable(True)
-        self._build_ribbon_button(True)
+        self._build_ribbon_button.Enable(True)
         self._jitter_button.Enable(True)
 
     def _on_show_button_click(self, event):
