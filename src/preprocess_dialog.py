@@ -206,13 +206,13 @@ class PreprocessDialog(wx.Dialog):
 
     def _on_gaussian1_kernel_size(self, event):
         size = event.GetEventObject().GetValue()
-        self.gaussian_kernel1_size = 2 * size + 3  # kernel size must be odd, we want it to be at least 4, and opencv trackbars always start at 0, so convert here
+        self.gaussian_kernel1_size = 2 * size + 3  # kernel size must be odd, and our sliders have steps of 1 (we could use +1 instead of +3 if we use 1 als the lowest slider value instead of 0)
         self.preprocess(self.orig_img_crop)
         self._redraw_window()
 
     def _on_gaussian2_kernel_size(self, event):
         size = event.GetEventObject().GetValue()
-        self.gaussian_kernel2_size = 2 * size + 3  # kernel size must be odd, we want it to be at least 4, and opencv trackbars always start at 0, so convert here
+        self.gaussian_kernel2_size = 2 * size + 3  # kernel size must be odd, and our sliders have steps of 1
         self.preprocess(self.orig_img_crop)
         self._redraw_window()
 
@@ -220,7 +220,6 @@ class PreprocessDialog(wx.Dialog):
         self.laplacian_delta = event.GetEventObject().GetValue()
         self.preprocess(self.orig_img_crop)
         self._redraw_window()
-
 
 # To speedup previewing the result of image processing,
 # we only show a chunk (a "tile") of the complete image.
