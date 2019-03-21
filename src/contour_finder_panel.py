@@ -18,7 +18,7 @@ from preprocess_dialog import PreprocessDialog
 class ContourFinderPanel(wx.Panel):
 
     def __init__(self, parent, model, canvas, selector):
-        wx.Panel.__init__(self, parent, size = (350, -1))
+        wx.Panel.__init__(self, parent, size=(350, -1))
         self._canvas = canvas
         self._model = model
         self._selector = selector  # mixin for handling and tracking slice contour selection
@@ -26,7 +26,7 @@ class ContourFinderPanel(wx.Panel):
         self._prev_polygon = None
         self._preprocessed_image = None
 
-        self._num_slices = 1  # number of new slices to detect by extending a seed slice contour
+        self._num_slices = 1  # number of new slices to detect by extending a seed slice contour and using the preprocessed overview image which highlights edges
 
         # Contour energy minimization parameters
         # TODO: combine into a structure, this class already has too many member variables
@@ -75,10 +75,14 @@ class ContourFinderPanel(wx.Panel):
         self._build_ribbon_button = wx.Button(self, wx.ID_ANY, "Add Slices", size = button_size)  # For testing only
         self._build_ribbon_button.Enable(False)
 
+        self._score_button = wx.Button(self, wx.ID_ANY, "Contour Score", size = button_size)  # For testing only
+        self._score_button.Enable(False)
+
         self.done_button = wx.Button(self, wx.ID_ANY, "Done", size=button_size)  # Not this panel but the ApplicationFame will listen to clicks on this button.
 
         self.Bind(wx.EVT_BUTTON, self._on_preprocess_button_click, preprocess_button)
         self.Bind(wx.EVT_BUTTON, self._on_jitter_button_click, self._jitter_button)
+        self.Bind(wx.EVT_BUTTON, self._on_score_button_click, self._score_button)
         self.Bind(wx.EVT_BUTTON, self._on_improve_button_click, self._improve_button)
         self.Bind(wx.EVT_BUTTON, self._on_load_button_click, load_button)
         self.Bind(wx.EVT_BUTTON, self._on_save_button_click, self._save_button)
@@ -99,19 +103,20 @@ class ContourFinderPanel(wx.Panel):
 
         contours_box = wx.StaticBox(self, -1, 'Contours')
         contours_sizer = wx.StaticBoxSizer(contours_box, wx.VERTICAL)
-        contours_sizer.Add(parameters_sizer, 0, wx.ALL | wx.CENTER, 10)
-        contours_sizer.Add(self._improve_button, 0, wx.ALL | wx.CENTER, 10)
+        contours_sizer.Add(parameters_sizer, 0, wx.ALL | wx.CENTER, 5)
+        contours_sizer.Add(self._improve_button, 0, wx.ALL | wx.CENTER, 5)
 
         preprocessing_box = wx.StaticBox(self, -1, 'Preprocessing')
         preprocessing_sizer = wx.StaticBoxSizer(preprocessing_box, wx.VERTICAL)
-        preprocessing_sizer.Add(preprocess_button, 0, wx.ALL | wx.CENTER, 10)
-        preprocessing_sizer.Add(load_button, 0, wx.ALL | wx.CENTER, 10)
-        preprocessing_sizer.Add(self._save_button, 0, wx.ALL | wx.CENTER, 10)
-        preprocessing_sizer.Add(self._show_button, 0, wx.ALL | wx.CENTER, 10)
+        preprocessing_sizer.Add(preprocess_button, 0, wx.BOTTOM | wx.CENTER, 5)
+        preprocessing_sizer.Add(load_button, 0, wx.BOTTOM | wx.CENTER, 5)
+        preprocessing_sizer.Add(self._save_button, 0, wx.BOTTOM | wx.CENTER, 5)
+        preprocessing_sizer.Add(self._show_button, 0, wx.BOTTOM | wx.CENTER, 5)
 
         debugging_box = wx.StaticBox(self, -1, 'Debugging')
         debugging_sizer = wx.StaticBoxSizer(debugging_box, wx.VERTICAL)
-        debugging_sizer.Add(self._jitter_button, 0, wx.ALL | wx.CENTER, 10)
+        debugging_sizer.Add(self._jitter_button, 0, wx.ALL | wx.CENTER, 5)
+        debugging_sizer.Add(self._score_button, 0, wx.ALL | wx.CENTER, 5)
 
         self._num_slices_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._num_slices), size=(w, -1))
         self.Bind(wx.EVT_TEXT, self._on_num_slices_change, self._num_slices_edit)
@@ -122,10 +127,10 @@ class ContourFinderPanel(wx.Panel):
 
         ribbon_box = wx.StaticBox(self, -1, 'Ribbon')
         ribbon_sizer = wx.StaticBoxSizer(ribbon_box, wx.VERTICAL)
-        ribbon_sizer.Add(self._build_ribbon_button, 0, wx.ALL | wx.CENTER, 10)
-        ribbon_sizer.Add(ribbon_params_sizer, 0, wx.ALL | wx.CENTER, 10)
+        ribbon_sizer.Add(ribbon_params_sizer, 0, wx.ALL | wx.CENTER, 5)
+        ribbon_sizer.Add(self._build_ribbon_button, 0, wx.ALL | wx.CENTER, 5)
 
-        b = 5  # border size
+        b = 2  # border size
         contents = wx.BoxSizer(wx.VERTICAL)
         contents.Add(title, 0, wx.ALL | wx.EXPAND, border=b)
         contents.Add(separator, 0, wx.ALL | wx.EXPAND, border=b)
@@ -168,11 +173,14 @@ class ContourFinderPanel(wx.Panel):
         self.vertex_distance_threshold = float(self._vertex_distance_threshold_edit.GetValue())
         print('vertex_distance_threshold={}'.format(self.vertex_distance_threshold))
 
+    def _on_score_button_click(self, event):
+        print('Contour score: {} = {} + {} + {} + {}'.format(0, 0, 0, 0, 0))
+
     def _on_load_button_click(self, event):
         # Read preprocessed version of "20x_lens\bisstitched-0.tif" where contrast was enhanced, edges were amplified and then blurred to make gradient descent work better.
         # preprocessed_path = 'E:\\git\\bits\\bioimaging\\Secom\\tomo\\data\\20x_lens\\bisstitched-0-contrast-enhanced-mexicanhat_separable_radius40.tif'  # works
         preprocessed_path = 'E:\\git\\bits\\bioimaging\\Secom\\tomo\\data\\20x_lens\\bisstitched-0-contrast-enhanced-mexicanhat_separable_radius20-gaussianblur20pix.tif'  # also works (better?)
-        # IMPROVEME:
+        # IMPROVEME: remember the most recently used preprocessed image path
 
         path = preprocessed_path
         defaultDir = os.path.dirname(path)
@@ -184,7 +192,7 @@ class ContourFinderPanel(wx.Panel):
             if dlg.ShowModal() == wx.ID_OK:
                 path = dlg.GetPath()
 
-                print('Should preprocess {} but instead we will just read the result {}'.format(self._model.overview_image_path, path))
+                print('Loading preprocessed overview image {}'.format(path))
                 image = tools.read_image_as_grayscale(path)
 
                 # The images we preprocessed with Fiji had edges that were XXXcolorXXX
@@ -238,6 +246,7 @@ class ContourFinderPanel(wx.Panel):
         self._improve_button.Enable(True)
         self._build_ribbon_button.Enable(True)
         self._jitter_button.Enable(True)
+        self._score_button.Enable(True)
 
     def _on_show_button_click(self, event):
         show_preprocessed_image(self._preprocessed_image)
@@ -312,23 +321,25 @@ class ContourFinderPanel(wx.Panel):
         slice = self._model.slice_polygons[slice_idx]
         slice = [np.array(vertex) for vertex in slice]  # convert from [(x,y)] to [np.array] for easier calculations on point vectors
 
-        num_slices = self._num_slices  # number of new slices to discover starting with 'slice' as a seed and using the preprocessed overview image which highlights edges
-
         mat = _estimate_initial_transformation(slice)
-        for i in range(num_slices):
+        for i in range(self._num_slices):
             # Predict an approximate next slice (approximate shape and approximate position)
             new_slice = _transform_slice(slice, mat)
             self._draw_contour(new_slice, "Blue")
 
             # Use gradient descent to find the true location and shape of the next slice,
             # in the neighborhood of our approximation.
-            new_slice_tup = [(x,y) for (x,y) in new_slice] # convert from numpy arrays to (x,y) pairs   # FIXME: avoid this by letting optimize_contour accept numpy arrays as vertices
+            new_slice_tup = [(x, y) for (x, y) in
+                             new_slice]  # convert from numpy arrays to (x,y) pairs   # FIXME: avoid this by letting optimize_contour accept numpy arrays as vertices
             new_slice = self._contour_finder.optimize_contour(self._preprocessed_image, new_slice_tup)
-            new_slice = [np.array(vertex) for vertex in new_slice]  # convert from [(x,y)] to [np.array] for easier calculations on point vectors
+            slice_for_model = new_slice
+            new_slice = [np.array(vertex) for vertex in
+                         new_slice]  # convert from [(x,y)] to [np.array] for easier calculations on point vectors
 
-            # Debugging: for now just draw it
-            # TODO: add it to the model instead (see _on_improve_button_click)
-            self._draw_contour(new_slice, "Red")
+            # Add to model and update canvas.
+            self._model.slice_polygons.extend([slice_for_model])
+            self._canvas.set_slice_polygons(self._model.slice_polygons)
+            self._canvas.redraw(True)
 
             # XXX
             mat = _estimate_transformation(slice, new_slice)

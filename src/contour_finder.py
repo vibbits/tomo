@@ -34,8 +34,19 @@ class ContourFinder:
         :param initial_contour: list of (x,y) vertex coordinates
         :return: optimized contour
         """
+
+        # We are trying to maximize the score. The score is measured in the preprocessed overview image,
+        # where edges are white (high intensity) and background black (low intensity).
+        # So edge pixels in the preprocessed image score many points, background pixels few point.
+        # The problem is that this seems to make the gradient descent algorithm incorrectly make the short edge of a slice
+        # too long because this way it can score more points by picking up more edge pixels of the long edge of the slice that
+        # it is attached too... (At least that is the theory - TODO needs to be checked.)
+        # We could inhibit this behavior by adding another term to the score function which punishes differences in shape between
+        # a template slice (or the previous slice) and the optimized one.
+        # Or maybe we should normalize the score by distance. So the score might increase by picking up more edge pixels, but the contour becomes longer too.
+
         iteration = 0
-        vertex_distance_change = 10 * self.vertex_distance_threshold  # 10 just to initialize to something > the initial threshold
+        vertex_distance_change = 10 * self.vertex_distance_threshold  # 10 just to initialize to something larger than the initial threshold
         previous_contour_vector = self.contour_to_vector(initial_contour)
 
         current_contour = initial_contour
@@ -52,7 +63,9 @@ class ContourFinder:
             previous_contour_vector = current_contour_vector
             iteration += 1
 
-        print('Original score={} optimized score after {} iterations={} last max vertex displacement={}'.format(self.calculate_contour_score(image, self.contour_to_vector(initial_contour)), iteration, self.calculate_contour_score(image, current_contour_vector), vertex_distance_change))
+        initial_score = self.calculate_contour_score(image, self.contour_to_vector(initial_contour))
+        final_score = self.calculate_contour_score(image, current_contour_vector)
+        print('Original score={} optimized score after {} iterations={} last max vertex displacement={}'.format(initial_score, iteration, final_score, vertex_distance_change))
 
         return self.vector_to_contour(current_contour_vector)
 
@@ -173,7 +186,15 @@ class ContourFinder:
         approx_distance_between_samples = self.edge_sample_distance
         num_samples = max(1, int(distance_v1_v2 / approx_distance_between_samples))
         exact_distance_between_samples = distance_v1_v2 / num_samples
-        sample_weight = distance_v1_v2 / num_samples
+
+        # 1) One possible scoring function which works
+        # sample_weight = distance_v1_v2 / num_samples
+
+        # 2) Below is another scoring function, which seems to work better in a ribbon-growing experiment.
+        #    The factor 1000 was needed so that the other parameters such as gradient descent step size etc
+        #    could be preserved as is (compared to the score that is proportional to the distance between p1 and p2).
+        sample_weight = 1000.0 / num_samples
+
         score = 0.0
         for i in range(num_samples):
             pos = v1 + i * exact_distance_between_samples * direction
