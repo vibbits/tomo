@@ -314,17 +314,21 @@ class ContourFinderPanel(wx.Panel):
                                                          self.gradient_step_size,
                                                          self.edge_sample_distance)
 
-        selected_slices = self._selector.get_selected_slices()
-        slice_idx = selected_slices[0]  # pick first selected slice
-                                        # FIXME: warn if multiple slices are selected (in fact, we must make sure to disable
-                                        #        the 'build ribbon' button if there are multiple slices - for that we will need the pubsub mechanism to listen to selection changes)
-        slice = self._model.slice_polygons[slice_idx]
-        slice = [np.array(vertex) for vertex in slice]  # convert from [(x,y)] to [np.array] for easier calculations on point vectors
+        selected_slice_indices = self._selector.get_selected_slices()
+        selected_slice_indices = selected_slice_indices[-2:]   # normally only one or two slices should be selected, if more are selected, then we take the last two.
 
-        mat = _estimate_initial_transformation(slice)
+        # IMPROVEME: make sure to disable the 'build ribbon' button if there are more than 2 selected slices (for that we will need the pubsub mechanism to listen to selection changes)
+
+        # Collect the actual slice contours of the slices with the given indices.
+        slices = [self._model.slice_polygons[i] for i in selected_slice_indices]
+
+        # convert from [(x,y)] to [np.array] for easier calculations on point vectors
+        slices = [[np.array(vertex) for vertex in slic] for slic in slices]
+
+        slic, mat = _ribbon_building_bootstrap(slices)
         for i in range(self._num_slices):
             # Predict an approximate next slice (approximate shape and approximate position)
-            new_slice = _transform_slice(slice, mat)
+            new_slice = _transform_slice(slic, mat)
             self._draw_contour(new_slice, "Blue")
 
             # Use gradient descent to find the true location and shape of the next slice,
@@ -333,8 +337,7 @@ class ContourFinderPanel(wx.Panel):
                              new_slice]  # convert from numpy arrays to (x,y) pairs   # FIXME: avoid this by letting optimize_contour accept numpy arrays as vertices
             new_slice = self._contour_finder.optimize_contour(self._preprocessed_image, new_slice_tup)
             slice_for_model = new_slice
-            new_slice = [np.array(vertex) for vertex in
-                         new_slice]  # convert from [(x,y)] to [np.array] for easier calculations on point vectors
+            new_slice = [np.array(vertex) for vertex in new_slice]  # convert from [(x,y)] to [np.array] for easier calculations on point vectors
 
             # Add to model and update canvas.
             self._model.slice_polygons.extend([slice_for_model])
@@ -342,8 +345,20 @@ class ContourFinderPanel(wx.Panel):
             self._canvas.redraw(True)
 
             # XXX
-            mat = _estimate_transformation(slice, new_slice)
-            slice = new_slice
+            mat = _estimate_transformation(slic, new_slice)
+            slic = new_slice
+
+
+def _ribbon_building_bootstrap(slices):
+    assert len(slices) == 1 or len(slices) == 2
+    if len(slices) == 1:
+        mat = _estimate_initial_transformation(slices[0])
+        slic = slices[0]
+    else:
+        mat = _estimate_transformation(slices[0], slices[1])
+        slic = slices[1]
+
+    return slic, mat
 
 
 def _estimate_initial_transformation(slice):
