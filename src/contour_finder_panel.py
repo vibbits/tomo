@@ -1,5 +1,4 @@
 import wx
-import wx.grid
 import tools
 from contour_finder import ContourFinder
 import numpy as np
@@ -213,13 +212,16 @@ class ContourFinderPanel(wx.Panel):
             if dlg.ShowModal() == wx.ID_OK:
                 path = dlg.GetPath()
                 success = tools.save_image(self._preprocessed_image, path)
-                assert success  # IMPROVEME: pop up dialog on failure
+                assert success  # IMPROVEME: pop up dialog informing the user about success or failure of saving
                 print('Preprocessed overview image saved to {}'.format(path))
 
     def _on_preprocess_button_click(self, event):
-
+        wait = wx.BusyInfo("Loading {}".format(self._model.overview_image_path))
+        # Read the overview image at its full bit depth
+        # (We already have it in memory, but only as 8-bit.)
         img = tools.read_image_as_grayscale(self._model.overview_image_path,
                                             cv2.IMREAD_GRAYSCALE + cv2.IMREAD_ANYDEPTH)  # IMREAD_ANYDEPTH to preserve as 16 bit
+        del wait
 
         # IMPROVEME: while the preprocess() code at first sight ought to be able to work with 8-bit images,
         #            it does not seem to produce nice preprocessed edge images. With 16-bit image it does seem to work,
@@ -257,10 +259,11 @@ class ContourFinderPanel(wx.Panel):
         return [polygon + (i + 1) * displacement_vector for i in range(num_copies)]
 
     def _on_jitter_button_click(self, event):
+        MAX_JITTER_DISTANCE = 80  # in x and in y
         selected_slices = self._selector.get_selected_slices()
         for i in selected_slices:
             polygon = self._model.slice_polygons[i]
-            jittered_polygon = self._add_jitter(polygon, 80)
+            jittered_polygon = self._add_jitter(polygon, MAX_JITTER_DISTANCE)
             self._model.slice_polygons[i] = jittered_polygon  # update model
             self._canvas.set_slice_outline(i, self._flipY(jittered_polygon))  # update canvas
             # self._draw_contour(polygon, "Blue", False)  # Draw original polygon
@@ -366,39 +369,50 @@ def _estimate_initial_transformation(slice):
     mid_top = (slice[2] + slice[3]) / 2.0
 
     translation = mid_bottom - mid_top
-    rotation = 0  # TODO? Or is just a translation actually good enough because of the active contours step afterwards?
 
-    return _build_transformation_matrix(translation, rotation)
+    # The rotation angle would be:
+    # (a) the angle between the top and the bottom edge of the slice
+    # plus
+    # (b) the angle due to a possible wedge-shaped gap between slices.
+    # For now we assume that the top and bottom edge of the slice are parallel (IMPROVE)
+    # and the gap cannot be estimated from a single slice. So we assume the rotation angle to be zero for now.
+    # rotation_angle = 0
+
+    return _build_transformation_matrix(translation)
 
 
 def _estimate_transformation(slice1, slice2):
     """
     XXX
-    :param slice1: num
+    :param slice1:
     :param slice2:
-    :return: a tuple (translation, rotation), where translation is the translation from slice1 to slice 2,
-             and rotation the rotation in degrees clockwise to transform slice1 into slice2.
-             Note that the transformation is only approximate, since slice2 will not be a rigid transformation of slice1
+    :return: a 3x3 numpy transformation matrix that transforms the coordinates of slice1 into the coordinates of the
+             approximate position of slice2, assuming that slice2 is attached at the bottom edge of slice1,
+             forming a ribbon.
     """
 
-    # estime translation
+    # Estimate translation
     mid_top1 = (slice1[2] + slice1[3]) / 2.0
     mid_top2 = (slice2[2] + slice2[3]) / 2.0
     translation = mid_top2 - mid_top1
 
-    # estimation rotation from angle between top1 en top2, in degrees
-    rotation = 0  # TODO? Or is just a translation actually good enough because of the active contours step afterwards?
+    # Estimate rotation from angle between top1 en top2, in degrees
+    # Not yet implemented!
+    # rotation_angle = 0
 
-    return _build_transformation_matrix(translation, rotation)
+    return _build_transformation_matrix(translation)
 
 
-def _build_transformation_matrix(translation, angle_degrees):  # CHECKME: degrees cw or ccw?
+def _build_transformation_matrix(translation):
+    # Note: if rotation ever needs to be implemented, then we will need both the rotation angle and the rotation
+    # center as additional arguments. The full transformation then consists of (1) translating the rotation center to
+    # the origin, (2) rotating, (3) translating back, and (4) the translation from one slice to the next.
+
     tx, ty = translation
-    # FIXME: handle rotation
-    mat = np.array([[1.0, 0, tx],
-                    [0, 1.0, ty],
-                    [0, 0, 1]])
 
+    mat = np.array([[1, 0, tx],
+                    [0, 1, ty],
+                    [0, 0,  1]])
     return mat
 
 
