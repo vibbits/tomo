@@ -3,15 +3,11 @@
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
 
 import numpy as np
-import math
 import cv2
 import wx
 import matplotlib
 matplotlib.use('wxagg')
 from matplotlib import pyplot as plt
-
-# IMPROVEME: rather than use a tile x/y slider, it would be nice if the user could click and drag on the preview tile
-#            to move its position with respect to the complete overview image
 
 class PreprocessDialog(wx.Dialog):
     def __init__(self, img, model, parent, ID, title, size=wx.DefaultSize, pos=wx.DefaultPosition, style=wx.DEFAULT_DIALOG_STYLE):
@@ -22,20 +18,13 @@ class PreprocessDialog(wx.Dialog):
 
         # Preprocessing parameters
         self.histogram, self.lo_percentile_val, self.hi_percentile_val = relevant_intensity_range(self.orig_img, 2, 98)  # we need to do this on the full original image, but rest of interactive preprocessing will be on a cropped version of the original, for speed.
-        self.step = 5   # preprocessing step (0=original image, 1=blurred image, 2=..., 5=final preprocessed result)
+        self.step = 0   # preprocessing step (0=original image, 1=blurred image, 2=..., 5=final preprocessed result)
         self.gaussian_kernel1_size = 29  # must be odd; larger kernels will suppress noise more
         self.gaussian_kernel2_size = 63  # must be odd; larger kernels will result in a wider edge, useful for attracting approximate slice contours from further away
         self.laplacian_delta = -270
 
-        # Figure out number of tiles in the image
-        img_height, img_width = img.shape
-        num_tiles_vertical = int(math.ceil(float(img_height) / TILE_SIZE))
-        num_tiles_horizontal = int(math.ceil(float(img_width) / TILE_SIZE))
-
-        # Show preview of approximately the middle tile
-        self.tile_x = num_tiles_horizontal / 2
-        self.tile_y = num_tiles_vertical / 2
-        self.orig_img_crop = get_tile(img, self.tile_x, self.tile_y)
+        self.tile_top_left = (0, 0)
+        self.orig_img_crop = get_tile(img, self.tile_top_left[0], self.tile_top_left[1])
 
         # Results of different preprocessing steps
         self.contrast_enhanced_img = None
@@ -43,8 +32,6 @@ class PreprocessDialog(wx.Dialog):
         self.laplacian = None
         self.abs_laplacian = None
         self.result = None
-
-        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
         # Build UI
         button_size = (125, -1)
@@ -54,15 +41,11 @@ class PreprocessDialog(wx.Dialog):
 
         slider_size = (250, -1)
         self.step_slider = wx.Slider(self, value=self.step, minValue=0, maxValue=5, style=wx.SL_HORIZONTAL | wx.SL_LABELS, size=slider_size)
-        self.tile_x_slider = wx.Slider(self, value=self.tile_x, minValue=0, maxValue=num_tiles_horizontal-1, style=wx.SL_HORIZONTAL | wx.SL_LABELS, size=slider_size)
-        self.tile_y_slider = wx.Slider(self, value=self.tile_y, minValue=0, maxValue=num_tiles_vertical-1, style=wx.SL_HORIZONTAL | wx.SL_LABELS, size=slider_size)
         self.blur1_slider = wx.Slider(self, value=(self.gaussian_kernel1_size - 3) / 2, minValue=0, maxValue=20, style=wx.SL_HORIZONTAL | wx.SL_LABELS, size=slider_size)
         self.delta_slider = wx.Slider(self, value=self.laplacian_delta, minValue=-500, maxValue=500, style=wx.SL_HORIZONTAL | wx.SL_LABELS, size=slider_size)
         self.blur2_slider = wx.Slider(self, value=(self.gaussian_kernel2_size - 3) / 2, minValue=0, maxValue=80, style=wx.SL_HORIZONTAL | wx.SL_LABELS, size=slider_size)
 
         self.step_slider.Bind(wx.EVT_SLIDER, self._on_preprocessing_step)
-        self.tile_x_slider.Bind(wx.EVT_SLIDER, self._on_tile_x)
-        self.tile_y_slider.Bind(wx.EVT_SLIDER, self._on_tile_y)
         self.blur1_slider.Bind(wx.EVT_SLIDER, self._on_gaussian1_kernel_size)
         self.delta_slider.Bind(wx.EVT_SLIDER, self._on_laplacian_delta)
         self.blur2_slider.Bind(wx.EVT_SLIDER, self._on_gaussian2_kernel_size)
@@ -73,14 +56,12 @@ class PreprocessDialog(wx.Dialog):
         b = 5  # border size
 
         self.image_ctrl = wx.StaticBitmap(self, wx.ID_ANY, empty_bitmap())
+        self.image_ctrl.Bind(wx.EVT_LEFT_DOWN, self._on_left_down)  # listen to mouse drags on the preview bitmap
+        self.image_ctrl.Bind(wx.EVT_LEFT_UP, self._on_left_up)
 
         sliders_sizer = wx.FlexGridSizer(cols=2, vgap=4, hgap=14)
         sliders_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Preprocessing Step:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
         sliders_sizer.Add(self.step_slider, flag=wx.RIGHT)
-        sliders_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Tile X:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
-        sliders_sizer.Add(self.tile_x_slider, flag=wx.RIGHT)
-        sliders_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Tile Y:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
-        sliders_sizer.Add(self.tile_y_slider, flag=wx.RIGHT)
         sliders_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Denoising Blur:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
         sliders_sizer.Add(self.blur1_slider, flag=wx.RIGHT)
         sliders_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Laplacian Delta:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
@@ -184,24 +165,31 @@ class PreprocessDialog(wx.Dialog):
         bitmap = wx_bitmap_from_OpenCV_image(img)
         self.image_ctrl.SetBitmap(bitmap)
 
+    def _on_left_down(self, event):
+        x, y = event.GetPosition()
+        self._move_down_position = (x, y)
+
+    def _on_left_up(self, event):
+        # Figure out the new top-left corner of the preview
+        x, y = event.GetPosition()
+        prevx, prevy = self._move_down_position
+        dx = x - prevx
+        dy = y - prevy
+        height, width = self.orig_img.shape[:2]
+        topleftx = min(max(0, self.tile_top_left[0] - dx), width - TILE_SIZE)
+        toplefty = min(max(0, self.tile_top_left[1] - dy), height - TILE_SIZE)
+
+        # Update the preview bitmap with the new preview tile
+        self.tile_top_left = (topleftx, toplefty)
+        self.orig_img_crop = get_tile(self.orig_img, topleftx, toplefty)
+        self.preprocess(self.orig_img_crop)
+        self._redraw_window()
+
     def _on_show_histogram(self, event):
         plot_intensity_histogram(self.orig_img, self.histogram, self.lo_percentile_val, self.hi_percentile_val)
 
     def _on_preprocessing_step(self, event):
         self.step = event.GetEventObject().GetValue()
-        self._redraw_window()
-
-    def _on_tile_x(self, event):
-        self.tile_x = event.GetEventObject().GetValue()
-        self._on_tile()
-
-    def _on_tile_y(self, event):
-        self.tile_y = event.GetEventObject().GetValue()
-        self._on_tile()
-
-    def _on_tile(self):
-        self.orig_img_crop = get_tile(self.orig_img, self.tile_x, self.tile_y)
-        self.preprocess(self.orig_img_crop)
         self._redraw_window()
 
     def _on_gaussian1_kernel_size(self, event):
@@ -250,16 +238,9 @@ def empty_bitmap():
     # does not work there.
     return wx.EmptyBitmap(TILE_SIZE, TILE_SIZE)
 
-def get_tile(image, tile_x, tile_y):
-    # The given image is assumed to consist of tiles of size TILE_SIZE x TILE_SIZE pixels. The tile (tile_x, tile_y)
-    # is returned. tile_x and tile_y are 0-based indices, counting from the top left corner of image.
-    img_height, img_width = image.shape
-    tile_start_x = tile_x * TILE_SIZE
-    tile_start_y = tile_y * TILE_SIZE
-    tile_end_x = min((tile_x + 1) * TILE_SIZE, img_width)
-    tile_end_y = min((tile_y + 1) * TILE_SIZE, img_height)
-    return image[tile_start_y: tile_end_y,
-               tile_start_x: tile_end_x]
+
+def get_tile(image, x, y):
+    return image[y:y+TILE_SIZE, x:x+TILE_SIZE]
 
 
 def get_max_possible_intensity(image):
@@ -335,6 +316,7 @@ def plot_intensity_histogram(image, histogram, lo_val, hi_val):
     plt.axvline(hi_val, color='r', linestyle=':')
     plt.legend(['histogram', 'min', 'max', 'lo percentile', 'hi percentile'])
     margin = 5  # expand x limits a bit so extreme values do not overlap with plot outline box.
+    # FIXME: margin should depend on xlim, so percentage; 5 not enough for 16 bit images
     plt.xlim([-margin, max_intensity + margin])
     plt.show()
 
