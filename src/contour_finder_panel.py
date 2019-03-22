@@ -34,6 +34,7 @@ class ContourFinderPanel(wx.Panel):
         self.vertex_distance_threshold = 0.5
         self.gradient_step_size = 5e-3
         self.edge_sample_distance = 100.0
+        self.verbose = False
 
         # Build UI
         title = wx.StaticText(self, wx.ID_ANY, "Slices finder")
@@ -68,14 +69,17 @@ class ContourFinderPanel(wx.Panel):
         self._improve_button = wx.Button(self, wx.ID_ANY, "Improve Contours", size = button_size)
         self._improve_button.Enable(False)
 
-        self._jitter_button = wx.Button(self, wx.ID_ANY, "Jitter Contours", size = button_size)  # For testing only
+        self._jitter_button = wx.Button(self, wx.ID_ANY, "Jitter Contours", size = button_size)
         self._jitter_button.Enable(False)
 
-        self._build_ribbon_button = wx.Button(self, wx.ID_ANY, "Add Slices", size = button_size)  # For testing only
+        self._build_ribbon_button = wx.Button(self, wx.ID_ANY, "Add Slices", size = button_size)
         self._build_ribbon_button.Enable(False)
 
-        self._score_button = wx.Button(self, wx.ID_ANY, "Contour Score", size = button_size)  # For testing only
+        self._score_button = wx.Button(self, wx.ID_ANY, "Contour Score", size = button_size)
         self._score_button.Enable(False)
+
+        verbose_checkbox = wx.CheckBox(self, wx.ID_ANY, label="Verbose")
+        verbose_checkbox.SetValue(self.verbose)
 
         self.done_button = wx.Button(self, wx.ID_ANY, "Done", size=button_size)  # Not this panel but the ApplicationFame will listen to clicks on this button.
 
@@ -87,6 +91,7 @@ class ContourFinderPanel(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self._on_save_button_click, self._save_button)
         self.Bind(wx.EVT_BUTTON, self._on_show_button_click, self._show_button)
         self.Bind(wx.EVT_BUTTON, self._on_build_ribbon_button_click, self._build_ribbon_button)
+        self.Bind(wx.EVT_CHECKBOX, self._on_verbose_checkbox, verbose_checkbox)
 
         parameters_sizer = wx.FlexGridSizer(cols=2, vgap=4, hgap=14)
         parameters_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Gradient estimation h:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
@@ -116,6 +121,7 @@ class ContourFinderPanel(wx.Panel):
         debugging_sizer = wx.StaticBoxSizer(debugging_box, wx.VERTICAL)
         debugging_sizer.Add(self._jitter_button, 0, wx.ALL | wx.CENTER, 5)
         debugging_sizer.Add(self._score_button, 0, wx.ALL | wx.CENTER, 5)
+        debugging_sizer.Add(verbose_checkbox, 0, wx.ALL | wx.CENTER, 5)
 
         self._num_slices_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._num_slices), size=(w, -1))
         self.Bind(wx.EVT_TEXT, self._on_num_slices_change, self._num_slices_edit)
@@ -147,6 +153,18 @@ class ContourFinderPanel(wx.Panel):
 
     def deactivate(self):
         pass
+
+    def _set_contour_finder_options(self):
+        self._contour_finder.set_optimization_parameters(self.h_for_gradient_approximation,
+                                                         self.max_iterations,
+                                                         self.vertex_distance_threshold,
+                                                         self.gradient_step_size,
+                                                         self.edge_sample_distance,
+                                                         self.verbose)
+
+    def _on_verbose_checkbox(self, event):
+        self.verbose = event.GetEventObject().GetValue()
+        print('verbose={}'.format(self.verbose))
 
     def _on_num_slices_change(self, event):
         self._num_slices = int(self._num_slices_edit.GetValue())
@@ -287,11 +305,7 @@ class ContourFinderPanel(wx.Panel):
                 for (x, y) in contour]
 
     def _on_improve_button_click(self, event):
-        self._contour_finder.set_optimization_parameters(self.h_for_gradient_approximation,
-                                                         self.max_iterations,
-                                                         self.vertex_distance_threshold,
-                                                         self.gradient_step_size,
-                                                         self.edge_sample_distance)
+        self._set_contour_finder_options()
 
         selected_slices = self._selector.get_selected_slices()
         for i in selected_slices:
@@ -302,20 +316,9 @@ class ContourFinderPanel(wx.Panel):
             self._canvas.set_slice_outline(i, self._flipY(optimized_polygon))  # update canvas
             self._canvas.redraw(True)
 
-    def _draw_contour(self, contour, color = "Green", remove_previous=False):
-        pts = [(p[0], -p[1]) for p in contour]
-        if remove_previous and (self._prev_polygon is not None):
-            self._canvas.remove_objects([self._prev_polygon])
-        self._prev_polygon = self._canvas.Canvas.AddPolygon(pts, LineColor=color)
-        self._canvas.Canvas.Draw()
-
     def _on_build_ribbon_button_click(self, event):
 
-        self._contour_finder.set_optimization_parameters(self.h_for_gradient_approximation,
-                                                         self.max_iterations,
-                                                         self.vertex_distance_threshold,
-                                                         self.gradient_step_size,
-                                                         self.edge_sample_distance)
+        self._set_contour_finder_options()
 
         selected_slice_indices = self._selector.get_selected_slices()
         selected_slice_indices = selected_slice_indices[-2:]   # normally only one or two slices should be selected, if more are selected, then we take the last two.
@@ -350,6 +353,13 @@ class ContourFinderPanel(wx.Panel):
             # XXX
             mat = _estimate_transformation(slic, new_slice)
             slic = new_slice
+
+    def _draw_contour(self, contour, color="Green", remove_previous=False):
+        pts = [(p[0], -p[1]) for p in contour]
+        if remove_previous and (self._prev_polygon is not None):
+            self._canvas.remove_objects([self._prev_polygon])
+        self._prev_polygon = self._canvas.Canvas.AddPolygon(pts, LineColor=color)
+        self._canvas.Canvas.Draw()
 
 
 def _ribbon_building_bootstrap(slices):

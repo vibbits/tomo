@@ -10,8 +10,9 @@ class ContourFinder:
         self.gradient_step_size = 5e-3
         self.edge_sample_distance = 50.0
         self.vertex_distance_threshold = 0.5
+        self.verbose = False
 
-    def set_optimization_parameters(self, h_for_gradient_approximation, max_iterations, vertex_distance_threshold, gradient_step_size, edge_sample_distance):
+    def set_optimization_parameters(self, h_for_gradient_approximation, max_iterations, vertex_distance_threshold, gradient_step_size, edge_sample_distance, verbose):
         """
         XXX
         :param h_for_gradient_approximation: step size h used for numeric gradient approximation: gradient = (f(x+h)-f(x)) / h
@@ -21,12 +22,14 @@ class ContourFinder:
                all vertices moved less than this threshold distance, then we assume we're close to the optimum contour shape and stop iterating.
         :param gradient_step_size: the distance to move along the gradient during each iteration of gradient descent
         :param edge_sample_distance: XXX
+        :param verbose: XXX
         """
         self.h_for_gradient_approximation = h_for_gradient_approximation
         self.max_iterations = max_iterations
         self.vertex_distance_threshold = vertex_distance_threshold
         self.gradient_step_size = gradient_step_size
         self.edge_sample_distance = edge_sample_distance
+        self.verbose = verbose
 
     def optimize_contour(self, image, initial_contour):
         """
@@ -55,17 +58,19 @@ class ContourFinder:
         while vertex_distance_change > self.vertex_distance_threshold and iteration < self.max_iterations:
             gradient_vector = self._calculate_gradient(image, current_contour_vector)
             current_contour_vector = current_contour_vector + self.gradient_step_size * gradient_vector   # we are looking for a maximum of the score, so we move along the positive gradient
-            print('Contour update: gradient step size={} pos update={}'.format(self.gradient_step_size, self.gradient_step_size * gradient_vector))
-            print('Iteration {} score={}'.format(iteration, self.calculate_contour_score(image, current_contour_vector)))
+            if self.verbose:
+                print('Contour update: gradient step size={} pos update={}'.format(self.gradient_step_size, self.gradient_step_size * gradient_vector))
+                print('Iteration {} score={}'.format(iteration, self.calculate_contour_score(image, current_contour_vector)))
             # note: the gradient points towards higher values of the function
             vertex_distance_change = np.max(self._vertex_distances(previous_contour_vector, current_contour_vector))
             # print('   iteration={} change={}'.format(iteration, vertex_distance_change))
             previous_contour_vector = current_contour_vector
             iteration += 1
 
-        initial_score = self.calculate_contour_score(image, self.contour_to_vector(initial_contour))
-        final_score = self.calculate_contour_score(image, current_contour_vector)
-        print('Original score={} optimized score after {} iterations={} last max vertex displacement={}'.format(initial_score, iteration, final_score, vertex_distance_change))
+        if self.verbose:
+            initial_score = self.calculate_contour_score(image, self.contour_to_vector(initial_contour))
+            final_score = self.calculate_contour_score(image, current_contour_vector)
+            print('Original score={} optimized score after {} iterations={} last max vertex displacement={}'.format(initial_score, iteration, final_score, vertex_distance_change))
 
         return self.vector_to_contour(current_contour_vector)
 
