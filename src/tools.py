@@ -78,16 +78,14 @@ def read_image_as_grayscale(filename, flags=cv2.IMREAD_GRAYSCALE):
              The image is indexed like this: img[y, x].
     """
     img = cv2.imread(filename, flags)
-    print(img.shape)
     return img
 
 def save_image(image, filename):
     """
-    :param image: the image data as a numpy array (currently only 8-bit grayscale images are supported)
+    :param image: the image data as a numpy array (8-bit and 16-bit grayscale images are supported, when saving to TIFF)
     :param filename: filename to save the image to; extension determines the file format type
     :return: True if saving was successful, False otherwise
     """
-    assert image.dtype == np.uint8  # only 8-bit has been tested
     assert len(image.shape) == 2  # only grayscale has been tested
     return cv2.imwrite(filename, image)
 
