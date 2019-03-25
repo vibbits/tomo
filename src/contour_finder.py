@@ -134,7 +134,7 @@ class ContourFinder:
 
         return gradient
 
-    def calculate_contour_score(self, image, contour_vector):
+    def calculate_contour_scores(self, image, contour_vector):
         """
         XXX
         :param image:
@@ -143,14 +143,18 @@ class ContourFinder:
         """
         n = len(contour_vector)
         assert(n % 2 == 0)
-        score = 0.0
+        scores = np.zeros(n // 2)   # The score for each of the contour polygon segments
         for i in range(0, n, 2):  # e.g. if n==8 we get i = 0, 2, 4, 6
             x1 = contour_vector[ i         ]
             y1 = contour_vector[ i + 1     ]
             x2 = contour_vector[(i + 2) % n]
             y2 = contour_vector[(i + 3) % n]
-            score += self._calculate_segment_score(image, (x1, y1), (x2, y2))
-        return score
+            scores[i // 2] = self._calculate_segment_score(image, (x1, y1), (x2, y2))
+        return scores
+
+    def calculate_contour_score(self, image, contour_vector):
+        segment_scores = self.calculate_contour_scores(image, contour_vector)
+        return np.sum(segment_scores)
 
     def _calculate_segment_score(self, image, p1, p2):
         """
