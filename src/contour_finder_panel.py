@@ -356,6 +356,8 @@ class ContourFinderPanel(wx.Panel):
             slice_for_model = new_slice
             new_slice = [np.array(vertex) for vertex in new_slice]  # convert from [(x,y)] to [np.array] for easier calculations on point vectors
 
+            # TODO: compare score of contour with that of previous contours and if < threshold * previous score or average score, then discard contour and stop building ribbon (we then presume that either we reached the end of the ribbon, or there was a kink in the ribbon which contour optimization could not deal with)
+
             # Add to model and update canvas.
             self._model.slice_polygons.extend([slice_for_model])
             self._canvas.set_slice_polygons(self._model.slice_polygons)
