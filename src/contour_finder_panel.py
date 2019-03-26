@@ -1,6 +1,7 @@
 import wx
 import tools
 from contour_finder import ContourFinder
+from contour_finder import contour_to_vector
 import numpy as np
 import random
 import cv2
@@ -200,14 +201,14 @@ class ContourFinderPanel(wx.Panel):
         selected_slices = self._selector.get_selected_slices()
         for i in selected_slices:
             contour = self._model.slice_polygons[i]
-            contour_vector = self._contour_finder.contour_to_vector(contour)
+            contour_vector = contour_to_vector(contour)
             s1, s2, s3, s4 = self._contour_finder.calculate_contour_scores(self._preprocessed_image, contour_vector)
-            print('Contour {} score = {} = {} + {} + {} + {}'.format(i, s1 + s2 + s3 + s4, s1, s2, s3, s4))
+            print('Slice #{} score = {:.1f} = {:.1f} + {:.1f} + {:.1f} + {:.1f}'.format(i+1, s1 + s2 + s3 + s4, s1, s2, s3, s4))
 
     def _on_load_button_click(self, event):
         # Read preprocessed version of "20x_lens\bisstitched-0.tif" where contrast was enhanced, edges were amplified and then blurred to make gradient descent work better.
-        # preprocessed_path = 'E:\\git\\bits\\bioimaging\\Secom\\tomo\\data\\20x_lens\\bisstitched-0-contrast-enhanced-mexicanhat_separable_radius40.tif'  # works
-        preprocessed_path = 'E:\\git\\bits\\bioimaging\\Secom\\tomo\\data\\20x_lens\\bisstitched-0-contrast-enhanced-mexicanhat_separable_radius20-gaussianblur20pix.tif'  # also works (better?)
+        # preprocessed_path = 'E:\\git\\bits\\bioimaging\\Secom\\tomo\\data\\20x_lens\\bisstitched-0-contrast-enhanced-mexicanhat_separable_radius40-inverted.tif'  # works
+        preprocessed_path = 'E:\\git\\bits\\bioimaging\\Secom\\tomo\\data\\20x_lens\\bisstitched-0-contrast-enhanced-mexicanhat_separable_radius20-gaussianblur20pix-inverted.tif'  # also works (better?)
         # IMPROVEME: remember the most recently used preprocessed image path
 
         path = preprocessed_path
@@ -219,16 +220,8 @@ class ContourFinderPanel(wx.Panel):
                            style=wx.FD_OPEN) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
                 path = dlg.GetPath()
-
                 print('Loading preprocessed overview image {}'.format(path))
-                image = tools.read_image_as_grayscale(path)
-
-                # The images we preprocessed with Fiji had edges that were XXXcolorXXX
-                # but our active contours algorithm needs them to be XXXcolorXXXX, so invert it.
-                # FIXME - instead invert those few preprocessed images from Fiji!
-                assert image.dtype == np.uint8
-                self._preprocessed_image = 255 - image
-
+                self._preprocessed_image = tools.read_image_as_grayscale(path)
                 self._got_preprocessed_image()
 
     def _on_save_button_click(self, event):
@@ -350,20 +343,19 @@ class ContourFinderPanel(wx.Panel):
 
             # Use gradient descent to find the true location and shape of the next slice,
             # in the neighborhood of our approximation.
-            new_slice_tup = [(x, y) for (x, y) in
-                             new_slice]  # convert from numpy arrays to (x,y) pairs   # FIXME: avoid this by letting optimize_contour accept numpy arrays as vertices
-            new_slice = self._contour_finder.optimize_contour(self._preprocessed_image, new_slice_tup)
-            slice_for_model = new_slice
-            new_slice = [np.array(vertex) for vertex in new_slice]  # convert from [(x,y)] to [np.array] for easier calculations on point vectors
+            slice_for_model = self._contour_finder.optimize_contour(self._preprocessed_image, new_slice)
 
-            # TODO: compare score of contour with that of previous contours and if < threshold * previous score or average score, then discard contour and stop building ribbon (we then presume that either we reached the end of the ribbon, or there was a kink in the ribbon which contour optimization could not deal with)
+            # TODO: compare score of contour with that of previous contours and if < threshold * previous score or average score,
+            #       then discard contour and stop building ribbon (we then presume that either we reached the end of the ribbon,
+            #       or there was a kink in the ribbon which contour optimization could not deal with).
 
             # Add to model and update canvas.
             self._model.slice_polygons.extend([slice_for_model])
             self._canvas.set_slice_polygons(self._model.slice_polygons)
             self._canvas.redraw(True)
 
-            # XXX
+            # Prepare for estimating the next slice
+            new_slice = [np.array(vertex) for vertex in slice_for_model]  # convert from [(x,y)] to [np.array([x,y])] for easier calculations on point vectors
             mat = _estimate_transformation(slic, new_slice)
             slic = new_slice
 

@@ -50,10 +50,10 @@ class ContourFinder:
 
         iteration = 0
         vertex_distance_change = 10 * self.vertex_distance_threshold  # 10 just to initialize to something larger than the initial threshold
-        previous_contour_vector = self.contour_to_vector(initial_contour)
+        previous_contour_vector = contour_to_vector(initial_contour)
 
         current_contour = initial_contour
-        current_contour_vector = self.contour_to_vector(current_contour)
+        current_contour_vector = contour_to_vector(current_contour)
 
         while vertex_distance_change > self.vertex_distance_threshold and iteration < self.max_iterations:
             gradient_vector = self._calculate_gradient(image, current_contour_vector)
@@ -62,49 +62,17 @@ class ContourFinder:
                 print('Contour update: gradient step size={} pos update={}'.format(self.gradient_step_size, self.gradient_step_size * gradient_vector))
                 print('Iteration {} score={}'.format(iteration, self.calculate_contour_score(image, current_contour_vector)))
             # note: the gradient points towards higher values of the function
-            vertex_distance_change = np.max(self._vertex_distances(previous_contour_vector, current_contour_vector))
+            vertex_distance_change = np.max(_vertex_distances(previous_contour_vector, current_contour_vector))
             # print('   iteration={} change={}'.format(iteration, vertex_distance_change))
             previous_contour_vector = current_contour_vector
             iteration += 1
 
         if self.verbose:
-            initial_score = self.calculate_contour_score(image, self.contour_to_vector(initial_contour))
+            initial_score = self.calculate_contour_score(image, contour_to_vector(initial_contour))
             final_score = self.calculate_contour_score(image, current_contour_vector)
             print('Original score={} optimized score after {} iterations={} last max vertex displacement={}'.format(initial_score, iteration, final_score, vertex_distance_change))
 
-        return self.vector_to_contour(current_contour_vector)
-
-    def _vertex_distances(self, contour1, contour2):
-        # contour1 and 2 are numpy row vectors [x1, y1, x2, y2, ..., xn, yn] where n=number of vertices (=4 because are sections are quadrilaterals)
-        # returns a numpy array (with n elements) with the Euclidean distance between corresponding vertices in the two contours
-        difference = contour1.reshape(-1, 2) - contour2.reshape(-1, 2)  # reshape to an nx2 matrix (so each row is the x,y of a vertex), and subtract
-        distances = np.linalg.norm(difference, axis=1)  # distances[i] = euclidean distances between vertex i in contour1 and contour2
-        return distances
-
-
-    def contour_to_vector(self, contour):
-        """
-        Turn a list of vertex coordinates of a contour into a numpy row vector. Useful for optimization algorithms such as gradient descent.
-        :param contour: a list of vertex coordinates [(x1, y2), (x2, y2), ..., (xn, yn)] representing a contour
-        :return: a numpy row vector [x1, y1, x2, y2, ..., xn, yn]
-        """
-        num_vertices = len(contour)
-        vec = np.zeros(2 * num_vertices)
-        for i in range(0, num_vertices):
-            x, y = contour[i]
-            vec[2 * i    ] = x
-            vec[2 * i + 1] = y
-        return vec
-
-    def vector_to_contour(self, vec):
-        """
-        :param vec: a numpy row vector representation [x1, y1, x2, y2, ..., xn, yn] of a contour
-        :return: a list of vertex coordinates [(x1, y2), (x2, y2), ..., (xn, yn)]
-        """
-        dim = len(vec)
-        assert(dim % 2 == 0)
-        pts = list(vec.reshape((dim / 2, 2)))   # lst = [np.array([x1, y1]), ..., np.array([xn,yn])]
-        return [tuple(p) for p in pts]          # [(x1,y1),...,(xn,yn)]
+        return vector_to_contour(current_contour_vector)
 
     def _calculate_gradient(self, image, contour_vector):
         """
@@ -209,3 +177,39 @@ class ContourFinder:
             pos = v1 + i * exact_distance_between_samples * direction
             score += tools.sample_image(image, pos) * sample_weight
         return score
+
+
+def contour_to_vector(contour):
+    """
+    Turn a list of vertex coordinates of a contour into a numpy row vector. Useful for optimization algorithms such as gradient descent.
+    :param contour: a list of vertex coordinates [(x1, y1), (x2, y2), ..., (xn, yn)] or [np.array([x1,y 1]), ..., np.array([xn, yn])] representing a contour
+    :return: a numpy row vector [x1, y1, x2, y2, ..., xn, yn]
+    """
+    num_vertices = len(contour)
+    vec = np.zeros(2 * num_vertices)
+    for i in range(0, num_vertices):
+        x, y = contour[i]
+        vec[2 * i    ] = x
+        vec[2 * i + 1] = y
+    return vec
+
+
+def vector_to_contour(vec):
+    """
+    :param vec: a numpy row vector representation [x1, y1, x2, y2, ..., xn, yn] of a contour
+    :return: a list of vertex coordinates [(x1, y2), (x2, y2), ..., (xn, yn)]
+    """
+    dim = len(vec)
+    assert(dim % 2 == 0)
+    pts = list(vec.reshape((dim / 2, 2)))   # lst = [np.array([x1, y1]), ..., np.array([xn,yn])]
+    return [tuple(p) for p in pts]          # [(x1,y1),...,(xn,yn)]
+
+
+def _vertex_distances(contour1, contour2):
+    # contour1 and 2 are numpy row vectors [x1, y1, x2, y2, ..., xn, yn] where n=number of vertices (=4 because are sections are quadrilaterals)
+    # returns a numpy array (with n elements) with the Euclidean distance between corresponding vertices in the two contours
+    difference = contour1.reshape(-1, 2) - contour2.reshape(-1, 2)  # reshape to an nx2 matrix (so each row is the x,y of a vertex), and subtract
+    distances = np.linalg.norm(difference, axis=1)  # distances[i] = euclidean distances between vertex i in contour1 and contour2
+    return distances
+
+
