@@ -1,8 +1,7 @@
 # Frank Vernaillen
-# September 2018
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
+# 2018-2019
 
-import numpy as np
 import wx
 
 class TomoModel:
@@ -25,40 +24,38 @@ class TomoModel:
     _KEY_SIFT_INPUT_FOLDER = 'sift_input_folder'
     _KEY_SIFT_OUTPUT_FOLDER = 'sift_output_folder'
     _KEY_TEMPLATE_SLICE_PATH = 'template_slice_path'
-
-    # Persistent storage
-    _config = None
-
-    # User defined model parameters (will be made persistent)
-    overview_image_path = None
-    slice_polygons_path = None
-    ribbons_mask_path = None
-    lm_images_output_folder = None
-    em_images_output_folder = None
-    #lm_do_autofocus = False
-    #lm_max_autofocus_change_nanometers = 0.0
-    original_point_of_interest = None
-    delay_between_LM_image_acquisition_secs = 0.0  # time in seconds to pause between successive microscope commands to acquire an LM image (maybe 1 or 2 secs in reality)
-    delay_between_EM_image_acquisition_secs = 0.0  # time in seconds to pause between successive microscope commands to acquire an EM image (maybe 1 or 2 secs in reality)
-    overview_image_pixels_per_mm = 0.0  # of the e.g. x20 lens overview image
-    sift_images_pixels_per_mm = 0.0 # of the e.g. x100 lens LM images that will be acquired and used for SIFT registration
-    fiji_path = None
-    odemis_cli = None
-    sift_registration_script = None
-    lm_images_prefix = None  # prefix of x100 image filenames
-    em_images_prefix = None  # prefix of EM image filenames
-    sift_input_folder = None
-    sift_output_folder = None
-    template_slice_path = None
-
-    # Calculated model parameters (not persistent)
-    slice_polygons = []
-    all_points_of_interest = None
-    slice_offsets_microns = None  # stage movements to move from the point-of-interest in slice to to slice i+1, based only on mapping the slice outline quadrilaterals
-    combined_offsets_microns = None  # refined stage movement (combining slice outline mapping + SIFT registration of x100 images)
-    overview_image_to_stage_coord_trf = None # a numpy 3 x 3 homogeneous transformation matrix from overview image (pixel) coordinates to stage position coordinates (in mm); the third row of the matrix is [0 0 1], and it transforms a column matrix [xi; yi; 1]
+    # _KEY_PREPROCESSED_OVERVIEW_IMAGE_PATH = 'preprocessed_overview_image_path'
 
     def __init__(self):
+        # User defined model parameters (will be made persistent)
+        self.overview_image_path = None  # path to the overview image; it shows an overview of the section ribbons; typically obtained by stitching many LM image tiles together
+        self.slice_polygons_path = None
+        self.ribbons_mask_path = None
+        self.lm_images_output_folder = None
+        self.em_images_output_folder = None
+        self.original_point_of_interest = None
+        self.delay_between_LM_image_acquisition_secs = 0.0  # time in seconds to pause between successive microscope commands to acquire an LM image (maybe 1 or 2 secs in reality)
+        self.delay_between_EM_image_acquisition_secs = 0.0  # time in seconds to pause between successive microscope commands to acquire an EM image (maybe 1 or 2 secs in reality)
+        self.overview_image_pixels_per_mm = 0.0  # of the e.g. x20 lens overview image
+        self.sift_images_pixels_per_mm = 0.0  # of the e.g. x100 lens LM images that will be acquired and used for SIFT registration
+        self.fiji_path = None  # path to the Fiji executable; a headless Fiji is called in the background to perform LM image registration using one of the Fiji plugins
+        self.odemis_cli = None  # path to the Odemis CLI (command line interface) tool
+        self.sift_registration_script = None
+        self.lm_images_prefix = None  # prefix of x100 image filenames
+        self.em_images_prefix = None  # prefix of EM image filenames
+        self.sift_input_folder = None
+        self.sift_output_folder = None
+        self.template_slice_path = None
+        # self.preprocessed_overview_image_path = None  # the path of the most recently loaded preprocessed overview image
+
+        # Calculated model parameters (not persistent)
+        self.slice_polygons = []
+        self.all_points_of_interest = None
+        self.slice_offsets_microns = None  # stage movements to move from the point-of-interest in slice to to slice i+1, based only on mapping the slice outline quadrilaterals
+        self.combined_offsets_microns = None  # refined stage movement (combining slice outline mapping + SIFT registration of x100 images)
+        self.overview_image_to_stage_coord_trf = None  # a numpy 3 x 3 homogeneous transformation matrix from overview image (pixel) coordinates to stage position coordinates (in mm); the third row of the matrix is [0 0 1], and it transforms a column matrix [xi; yi; 1]
+
+        # Persistent storage
         self._config = wx.Config('be.vib.bits.tomo')
         self.read_parameters()
 
@@ -80,8 +77,7 @@ class TomoModel:
         self.sift_output_folder                      = self._config.Read(TomoModel._KEY_SIFT_OUTPUT_FOLDER, r'/home/secom/development/tomo/data/output/LM')
         self.sift_images_pixels_per_mm               = self._config.ReadFloat(TomoModel._KEY_SIFT_IMAGES_PIXELS_PER_MM, 15398.49624)
         self.template_slice_path                     = self._config.Read(TomoModel._KEY_TEMPLATE_SLICE_PATH, r'/home/secom/some/folder/template_slice_contour.json')
-        #self.lm_do_autofocus                         = False # self._config.ReadBool(TomoModel._KEY_LM_DO_AUTOFOCUS, True) # FIXME: autofocus does not work, may have to be removed
-        #self.lm_max_autofocus_change_nanometers      = self._config.ReadFloat(TomoModel._KEY_LM_MAX_AUTOFOCUS_CHANGE_NANOMETERS, 50.0)
+        # self.preprocessed_overview_image_path        = self._config.Read(TomoModel._KEY_PREPROCESSED_OVERVIEW_IMAGE_PATH, r'/home/secom/development/tomo/data/preprocessed_overview_image.tif')
 
     def write_parameters(self):
         self._config.Write(TomoModel._KEY_OVERVIEW_IMAGE_PATH, self.overview_image_path)
@@ -101,10 +97,8 @@ class TomoModel:
         self._config.Write(TomoModel._KEY_SIFT_OUTPUT_FOLDER, self.sift_output_folder)
         self._config.WriteFloat(TomoModel._KEY_SIFT_IMAGES_PIXELS_PER_MM, self.sift_images_pixels_per_mm)
         self._config.Write(TomoModel._KEY_TEMPLATE_SLICE_PATH, self.template_slice_path)
-        #self._config.WriteBool(TomoModel._KEY_LM_DO_AUTOFOCUS, self.lm_do_autofocus)
-        #self._config.WriteFloat(TomoModel._KEY_LM_MAX_AUTOFOCUS_CHANGE_NANOMETERS, self.lm_max_autofocus_change_nanometers)
+        # self._config.Write(TomoModel._KEY_PREPROCESSED_OVERVIEW_IMAGE_PATH, self.preprocessed_overview_image_path)
         self._config.Flush()
-
 
     # Note
     #
