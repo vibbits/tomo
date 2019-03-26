@@ -41,7 +41,7 @@ class ContourFinderPanel(wx.Panel):
         self.max_iterations = 100
         self.vertex_distance_threshold = 0.5
         self.gradient_step_size = 5e-3
-        self.edge_sample_distance = 100.0
+        self.edge_sample_distance = 10.0
         self.verbose = False
 
         self._set_contour_finder_options()
