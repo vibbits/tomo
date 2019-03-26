@@ -60,7 +60,7 @@ class ContourFinder:
             current_contour_vector = current_contour_vector + self.gradient_step_size * gradient_vector   # we are looking for a maximum of the score, so we move along the positive gradient
             if self.verbose:
                 print('Contour update: gradient step size={} pos update={}'.format(self.gradient_step_size, self.gradient_step_size * gradient_vector))
-                print('Iteration {} score={}'.format(iteration, self.calculate_contour_score(image, current_contour_vector)))
+                print('Iteration {} score={}'.format(iteration, self.calculate_total_contour_score(image, current_contour_vector)))
             # note: the gradient points towards higher values of the function
             vertex_distance_change = np.max(_vertex_distances(previous_contour_vector, current_contour_vector))
             # print('   iteration={} change={}'.format(iteration, vertex_distance_change))
@@ -68,8 +68,8 @@ class ContourFinder:
             iteration += 1
 
         if self.verbose:
-            initial_score = self.calculate_contour_score(image, contour_to_vector(initial_contour))
-            final_score = self.calculate_contour_score(image, current_contour_vector)
+            initial_score = self.calculate_total_contour_score(image, contour_to_vector(initial_contour))
+            final_score = self.calculate_total_contour_score(image, current_contour_vector)
             print('Original score={} optimized score after {} iterations={} last max vertex displacement={}'.format(initial_score, iteration, final_score, vertex_distance_change))
 
         return vector_to_contour(current_contour_vector)
@@ -88,49 +88,55 @@ class ContourFinder:
         h = self.h_for_gradient_approximation
 
         gradient = np.zeros(n, np.float)
-        contour_score = self.calculate_contour_score(image, contour_vector)
+        contour_score = self.calculate_total_contour_score(image, contour_vector)
         for i in range(0, n):
             # Build displacement vector, it only displaces a single x or y coordinate
             delta = np.zeros(n, np.float)
             delta[i] = h
 
             # Calculate score if one endpoint is displaced slightly
-            dispaced_contour_score = self.calculate_contour_score(image, contour_vector + delta)
+            dispaced_contour_score = self.calculate_total_contour_score(image, contour_vector + delta)
 
             # Numerically estimate the gradient in the i-th direction
             gradient[i] = (dispaced_contour_score - contour_score) / h
 
         return gradient
 
-    def calculate_contour_scores(self, image, contour_vector):
+    def calculate_contour_score_samples(self, image, contour_vector):
         """
         XXX
         :param image:
         :param contour_vector:
-        :return:
+        :return: a list of n (4 in our case) lists; each of the n lists holds the score samples along the n contour edges
         """
         n = len(contour_vector)
         assert(n % 2 == 0)
-        scores = np.zeros(n // 2)   # The score for each of the contour polygon segments
+        scores = [[] for i in range(n // 2)]
         for i in range(0, n, 2):  # e.g. if n==8 we get i = 0, 2, 4, 6
             x1 = contour_vector[ i         ]
             y1 = contour_vector[ i + 1     ]
             x2 = contour_vector[(i + 2) % n]
             y2 = contour_vector[(i + 3) % n]
-            scores[i // 2] = self._calculate_segment_score(image, (x1, y1), (x2, y2))
+            scores[i // 2] = self._calculate_segment_score_samples(image, (x1, y1), (x2, y2))
         return scores
 
-    def calculate_contour_score(self, image, contour_vector):
-        segment_scores = self.calculate_contour_scores(image, contour_vector)
-        return np.sum(segment_scores)
+    def calculate_total_contour_score(self, image, contour_vector):
+        """
 
-    def _calculate_segment_score(self, image, p1, p2):
+        :param image:
+        :param contour_vector:
+        :return: the total score of the contour (a scalar value); contours with a larger score a more likely to represent a true section contour
+        """
+        segment_scores = self.calculate_contour_score_samples(image, contour_vector)
+        return np.sum(np.sum(segment_scores))  # total score is the sum of all score samples, obtained over all contour edges
+
+    def _calculate_segment_score_samples(self, image, p1, p2):
         """
         XXXX
         :param image: XXX
         :param p1: a pair (x1, y1), coordinates of the starting point of the segment
         :param p2: a pair (x2, y2), coordinates of the end point of the segment
-        :return: XXX
+        :return: a list with score samples along the line segment p1-p2
         """
         # IMPROVEME?
         # This definition of score is not perfect: the algorithm tends to make the edges a bit too long:
@@ -172,12 +178,12 @@ class ContourFinder:
         #    could be preserved as is (compared to the score that is proportional to the distance between p1 and p2).
         sample_weight = 1000.0 / num_samples
 
-        score = 0.0
+        scores = [0.0] * num_samples
         for i in range(num_samples):
             pos = v1 + i * exact_distance_between_samples * direction
-            score += tools.sample_image(image, pos) * sample_weight
-        return score
-
+            scores[i] = tools.sample_image(image, pos) * sample_weight
+        return scores
+        # Important CHECKME: Is the score normalized by contour length? If not, change this, I think it should be.
 
 def contour_to_vector(contour):
     """

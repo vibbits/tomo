@@ -7,6 +7,9 @@ import random
 import cv2
 import os
 from preprocess_dialog import PreprocessDialog
+import matplotlib
+matplotlib.use('wxagg')
+from matplotlib import pyplot as plt
 
 # FIXME: if we are in the contour editing tool, the currently selected contours will have handles; if we then jitter or optimize the contour,
 #        the contour gets updated, but not the handles.
@@ -41,6 +44,8 @@ class ContourFinderPanel(wx.Panel):
         self.edge_sample_distance = 100.0
         self.verbose = False
 
+        self._set_contour_finder_options()
+
         # Build UI
         title = wx.StaticText(self, wx.ID_ANY, "Slices finder")
         title.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD))
@@ -63,25 +68,28 @@ class ContourFinderPanel(wx.Panel):
         # Buttons
         button_size = (125, -1)
 
-        preprocess_button = wx.Button(self, wx.ID_ANY, "Preprocess", size = button_size)
-        load_button = wx.Button(self, wx.ID_ANY, "Load", size = button_size)
-        self._save_button = wx.Button(self, wx.ID_ANY, "Save", size = button_size)
+        preprocess_button = wx.Button(self, wx.ID_ANY, "Preprocess", size=button_size)
+        load_button = wx.Button(self, wx.ID_ANY, "Load", size=button_size)
+        self._save_button = wx.Button(self, wx.ID_ANY, "Save", size=button_size)
         self._save_button.Enable(False)
 
         self._show_button = wx.Button(self, wx.ID_ANY, "Show", size=button_size)
         self._show_button.Enable(False)
 
-        self._improve_button = wx.Button(self, wx.ID_ANY, "Improve Contours", size = button_size)
+        self._improve_button = wx.Button(self, wx.ID_ANY, "Improve Contours", size=button_size)
         self._improve_button.Enable(False)
 
-        self._jitter_button = wx.Button(self, wx.ID_ANY, "Jitter Contours", size = button_size)
+        self._jitter_button = wx.Button(self, wx.ID_ANY, "Jitter Contours", size=button_size)
         self._jitter_button.Enable(False)
 
-        self._build_ribbon_button = wx.Button(self, wx.ID_ANY, "Add Slices", size = button_size)
+        self._build_ribbon_button = wx.Button(self, wx.ID_ANY, "Add Slices", size=button_size)
         self._build_ribbon_button.Enable(False)
 
-        self._score_button = wx.Button(self, wx.ID_ANY, "Contour Score", size = button_size)
-        self._score_button.Enable(False)
+        self._print_score_button = wx.Button(self, wx.ID_ANY, "Print Contour Score", size=button_size)
+        self._print_score_button.Enable(False)
+
+        self._plot_score_button = wx.Button(self, wx.ID_ANY, "Plot Contour Score", size=button_size)
+        self._plot_score_button.Enable(False)
 
         verbose_checkbox = wx.CheckBox(self, wx.ID_ANY, label="Verbose")
         verbose_checkbox.SetValue(self.verbose)
@@ -90,7 +98,8 @@ class ContourFinderPanel(wx.Panel):
 
         self.Bind(wx.EVT_BUTTON, self._on_preprocess_button_click, preprocess_button)
         self.Bind(wx.EVT_BUTTON, self._on_jitter_button_click, self._jitter_button)
-        self.Bind(wx.EVT_BUTTON, self._on_score_button_click, self._score_button)
+        self.Bind(wx.EVT_BUTTON, self._on_print_score_button_click, self._print_score_button)
+        self.Bind(wx.EVT_BUTTON, self._on_plot_score_button_click, self._plot_score_button)
         self.Bind(wx.EVT_BUTTON, self._on_improve_button_click, self._improve_button)
         self.Bind(wx.EVT_BUTTON, self._on_load_button_click, load_button)
         self.Bind(wx.EVT_BUTTON, self._on_save_button_click, self._save_button)
@@ -124,9 +133,10 @@ class ContourFinderPanel(wx.Panel):
 
         debugging_box = wx.StaticBox(self, -1, 'Debugging')
         debugging_sizer = wx.StaticBoxSizer(debugging_box, wx.VERTICAL)
-        debugging_sizer.Add(self._jitter_button, 0, wx.ALL | wx.CENTER, 5)
-        debugging_sizer.Add(self._score_button, 0, wx.ALL | wx.CENTER, 5)
         debugging_sizer.Add(verbose_checkbox, 0, wx.ALL | wx.CENTER, 5)
+        debugging_sizer.Add(self._print_score_button, 0, wx.ALL | wx.CENTER, 5)
+        debugging_sizer.Add(self._plot_score_button, 0, wx.ALL | wx.CENTER, 5)
+        debugging_sizer.Add(self._jitter_button, 0, wx.ALL | wx.CENTER, 5)
 
         self._num_slices_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._num_slices), size=(w, -1))
         self.Bind(wx.EVT_TEXT, self._on_num_slices_change, self._num_slices_edit)
@@ -195,15 +205,29 @@ class ContourFinderPanel(wx.Panel):
         self.vertex_distance_threshold = float(self._vertex_distance_threshold_edit.GetValue())
         print('vertex_distance_threshold={}'.format(self.vertex_distance_threshold))
 
-    def _on_score_button_click(self, event):
+    def _on_print_score_button_click(self, event):
         # Print the contour score for all selected slices. The higher the score the better the contour is supposed to
         # match the actual slice outline.
         selected_slices = self._selector.get_selected_slices()
         for i in selected_slices:
             contour = self._model.slice_polygons[i]
             contour_vector = contour_to_vector(contour)
-            s1, s2, s3, s4 = self._contour_finder.calculate_contour_scores(self._preprocessed_overview_image, contour_vector)
+            score_samples = self._contour_finder.calculate_contour_score_samples(self._preprocessed_overview_image, contour_vector)
+            edge_scores = [np.sum(edge_samples) for edge_samples in score_samples]
+            assert len(edge_scores) == 4
+            s1, s2, s3, s4 = edge_scores[0], edge_scores[1], edge_scores[2], edge_scores[3]
             print('Slice #{} score = {:.1f} = {:.1f} + {:.1f} + {:.1f} + {:.1f}'.format(i+1, s1 + s2 + s3 + s4, s1, s2, s3, s4))
+
+    def _on_plot_score_button_click(self, event):
+        selected_slices = self._selector.get_selected_slices()
+        if len(selected_slices) == 1:  # IMPROVEME? enable/disable the plot score button depending on # contours selected
+            idx = selected_slices[0]
+            contour = self._model.slice_polygons[idx]
+            contour_vector = contour_to_vector(contour)
+            sample_scores = self._contour_finder.calculate_contour_score_samples(self._preprocessed_overview_image, contour_vector)
+            plot_contour_sample_scores(idx + 1, sample_scores)
+        else:
+            print('Please select a single contour whose score samples need to be plotted.')
 
     def _on_load_button_click(self, event):
         # Read preprocessed version of "20x_lens\bisstitched-0.tif" where contrast was enhanced, edges were amplified and then blurred to make gradient descent work better.
@@ -270,7 +294,8 @@ class ContourFinderPanel(wx.Panel):
         self._improve_button.Enable(True)
         self._build_ribbon_button.Enable(True)
         self._jitter_button.Enable(True)
-        self._score_button.Enable(True)
+        self._print_score_button.Enable(True)
+        self._plot_score_button.Enable(True)
 
     def _on_show_button_click(self, event):
         show_preprocessed_image(self._preprocessed_overview_image)
@@ -457,3 +482,26 @@ def show_preprocessed_image(image, window='Preprocessed Overview Image', max_hei
     image = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
     cv2.namedWindow(window)
     cv2.imshow(window, image)
+
+
+def plot_contour_sample_scores(contour_nr, sample_scores):
+    # Edge boundaries
+    edge_boundaries = np.cumsum([len(edge_samples) for edge_samples in sample_scores]) + 0.5   # 0.5 to draw the boundaries between, not on sample points
+
+    # Collect all samples
+    samples = np.sum(sample_scores)  # IMPROVEME: this really only has the effect of just flattening the list of score lists, but sounds as if it does some summation
+
+    # Score per countour edge (information, for title)
+    edge_scores = [np.sum(edge_samples) for edge_samples in sample_scores]
+    assert len(edge_scores) == 4
+    s1, s2, s3, s4 = edge_scores[0], edge_scores[1], edge_scores[2], edge_scores[3]
+    title = 'Slice #{} score = {:.1f} = {:.1f} + {:.1f} + {:.1f} + {:.1f}'.format(contour_nr, s1 + s2 + s3 + s4, s1, s2, s3, s4)
+
+    # Plot it all
+    plt.figure()
+    plt.plot(samples, '+')
+    for b in edge_boundaries:
+        plt.axvline(b, color='b', linestyle=':')
+    plt.title(title)
+    plt.show()
+
