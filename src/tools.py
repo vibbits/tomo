@@ -103,8 +103,8 @@ def sample_image(image, pos):
     # We clip the right and bottom edges by 'eps' to make it easier for the code below to handle the case where pos=(_, image_width-1) or (image_height-1, _).
     eps = 1e-4
     image_height, image_width = image.shape
-    pos[0] = max(0, min(pos[0], image_height-1-eps))
-    pos[1] = max(0, min(pos[1], image_width-1-eps))
+    pos[0] = max(0, min(pos[0], image_width-1-eps))
+    pos[1] = max(0, min(pos[1], image_height-1-eps))
 
     # Find interpolation factors
     x_left = int(pos[0])
