@@ -28,7 +28,7 @@ class ContourFinderPanel(wx.Panel):
         self._selector = selector  # mixin for handling and tracking slice contour selection
         self._contour_finder = ContourFinder()
         self._prev_polygon = None
-        self._preprocessed_image = None
+        self._preprocessed_overview_image = None
 
         self._num_slices = 1  # number of new slices to detect by extending a seed slice contour and using the preprocessed overview image which highlights edges
 
@@ -202,16 +202,15 @@ class ContourFinderPanel(wx.Panel):
         for i in selected_slices:
             contour = self._model.slice_polygons[i]
             contour_vector = contour_to_vector(contour)
-            s1, s2, s3, s4 = self._contour_finder.calculate_contour_scores(self._preprocessed_image, contour_vector)
+            s1, s2, s3, s4 = self._contour_finder.calculate_contour_scores(self._preprocessed_overview_image, contour_vector)
             print('Slice #{} score = {:.1f} = {:.1f} + {:.1f} + {:.1f} + {:.1f}'.format(i+1, s1 + s2 + s3 + s4, s1, s2, s3, s4))
 
     def _on_load_button_click(self, event):
         # Read preprocessed version of "20x_lens\bisstitched-0.tif" where contrast was enhanced, edges were amplified and then blurred to make gradient descent work better.
         # preprocessed_path = 'E:\\git\\bits\\bioimaging\\Secom\\tomo\\data\\20x_lens\\bisstitched-0-contrast-enhanced-mexicanhat_separable_radius40-inverted.tif'  # works
-        preprocessed_path = 'E:\\git\\bits\\bioimaging\\Secom\\tomo\\data\\20x_lens\\bisstitched-0-contrast-enhanced-mexicanhat_separable_radius20-gaussianblur20pix-inverted.tif'  # also works (better?)
-        # IMPROVEME: remember the most recently used preprocessed image path
+        # preprocessed_path = 'E:\\git\\bits\\bioimaging\\Secom\\tomo\\data\\20x_lens\\bisstitched-0-contrast-enhanced-mexicanhat_separable_radius20-gaussianblur20pix-inverted.tif'  # also works (better?)
 
-        path = preprocessed_path
+        path = self._model.preprocessed_overview_image_path
         defaultDir = os.path.dirname(path)
         defaultFile = os.path.basename(path)
         with wx.FileDialog(None, "Select the preprocessed overview image",
@@ -219,9 +218,11 @@ class ContourFinderPanel(wx.Panel):
                            wildcard="TIFF files (*.tif;*.tiff)|*.tif;*.tiff|PNG files (*.png)|*.png|JPEG files (*.jpg;*.jpeg)|*.jpg;*.jpeg",
                            style=wx.FD_OPEN) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
-                path = dlg.GetPath()
-                print('Loading preprocessed overview image {}'.format(path))
-                self._preprocessed_image = tools.read_image_as_grayscale(path)
+                self._model.preprocessed_overview_image_path = dlg.GetPath()
+                self._model.write_parameters()  # remember path as default for later
+                wait = wx.BusyInfo("Loading preprocessed overview image...".format(self._model.preprocessed_overview_image_path))
+                self._preprocessed_overview_image = tools.read_image_as_grayscale(self._model.preprocessed_overview_image_path)
+                del wait
                 self._got_preprocessed_image()
 
     def _on_save_button_click(self, event):
@@ -233,7 +234,7 @@ class ContourFinderPanel(wx.Panel):
                            style=wx.FD_SAVE) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
                 path = dlg.GetPath()
-                success = tools.save_image(self._preprocessed_image, path)
+                success = tools.save_image(self._preprocessed_overview_image, path)
                 assert success  # IMPROVEME: pop up dialog informing the user about success or failure of saving
                 print('Preprocessed overview image saved to {}'.format(path))
 
@@ -254,16 +255,15 @@ class ContourFinderPanel(wx.Panel):
         with PreprocessDialog(img, self._model, None, wx.ID_ANY, "Preprocess Overview Image") as dlg:
             dlg.CenterOnScreen()
             if dlg.ShowModal() == wx.OK:
-                wait = wx.BusyInfo("Preprocessing {}x{} pixel overview image...".format(img.shape[1], img.shape[0]))
+                wait = wx.BusyInfo("Preprocessing {} x {} pixels overview image...".format(img.shape[1], img.shape[0]))
                 dlg.preprocess(img)
-                self._preprocessed_image = dlg.get_preprocessed_image()
+                self._preprocessed_overview_image = dlg.get_preprocessed_image()
                 del wait
-
                 self._got_preprocessed_image()
 
     def _got_preprocessed_image(self):
         # Display the preprocessed image (either loaded or just calculated)
-        show_preprocessed_image(self._preprocessed_image)
+        show_preprocessed_image(self._preprocessed_overview_image)
 
         self._show_button.Enable(True)
         self._save_button.Enable(True)
@@ -273,7 +273,7 @@ class ContourFinderPanel(wx.Panel):
         self._score_button.Enable(True)
 
     def _on_show_button_click(self, event):
-        show_preprocessed_image(self._preprocessed_image)
+        show_preprocessed_image(self._preprocessed_overview_image)
 
     def _duplicate_polygons(self, polygon, displacement_vector, num_copies):
         # displacement_vector = np.array[dx,dy]
@@ -314,7 +314,7 @@ class ContourFinderPanel(wx.Panel):
         selected_slices = self._selector.get_selected_slices()
         for i in selected_slices:
             polygon = self._model.slice_polygons[i]
-            optimized_polygon = self._contour_finder.optimize_contour(self._preprocessed_image, polygon)
+            optimized_polygon = self._contour_finder.optimize_contour(self._preprocessed_overview_image, polygon)
             # self._draw_contour(optimized_polygon, "Red", remove_previous=False)
             self._model.slice_polygons[i] = optimized_polygon  # update model
             self._canvas.set_slice_outline(i, self._flipY(optimized_polygon))  # update canvas
@@ -343,7 +343,7 @@ class ContourFinderPanel(wx.Panel):
 
             # Use gradient descent to find the true location and shape of the next slice,
             # in the neighborhood of our approximation.
-            slice_for_model = self._contour_finder.optimize_contour(self._preprocessed_image, new_slice)
+            slice_for_model = self._contour_finder.optimize_contour(self._preprocessed_overview_image, new_slice)
 
             # TODO: compare score of contour with that of previous contours and if < threshold * previous score or average score,
             #       then discard contour and stop building ribbon (we then presume that either we reached the end of the ribbon,

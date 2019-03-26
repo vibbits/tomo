@@ -24,7 +24,7 @@ class TomoModel:
     _KEY_SIFT_INPUT_FOLDER = 'sift_input_folder'
     _KEY_SIFT_OUTPUT_FOLDER = 'sift_output_folder'
     _KEY_TEMPLATE_SLICE_PATH = 'template_slice_path'
-    # _KEY_PREPROCESSED_OVERVIEW_IMAGE_PATH = 'preprocessed_overview_image_path'
+    _KEY_PREPROCESSED_OVERVIEW_IMAGE_PATH = 'preprocessed_overview_image_path'
 
     def __init__(self):
         # User defined model parameters (will be made persistent)
@@ -46,7 +46,7 @@ class TomoModel:
         self.sift_input_folder = None
         self.sift_output_folder = None
         self.template_slice_path = None
-        # self.preprocessed_overview_image_path = None  # the path of the most recently loaded preprocessed overview image
+        self.preprocessed_overview_image_path = None  # the path of the most recently loaded preprocessed overview image
 
         # Calculated model parameters (not persistent)
         self.slice_polygons = []
@@ -77,7 +77,7 @@ class TomoModel:
         self.sift_output_folder                      = self._config.Read(TomoModel._KEY_SIFT_OUTPUT_FOLDER, r'/home/secom/development/tomo/data/output/LM')
         self.sift_images_pixels_per_mm               = self._config.ReadFloat(TomoModel._KEY_SIFT_IMAGES_PIXELS_PER_MM, 15398.49624)
         self.template_slice_path                     = self._config.Read(TomoModel._KEY_TEMPLATE_SLICE_PATH, r'/home/secom/some/folder/template_slice_contour.json')
-        # self.preprocessed_overview_image_path        = self._config.Read(TomoModel._KEY_PREPROCESSED_OVERVIEW_IMAGE_PATH, r'/home/secom/development/tomo/data/preprocessed_overview_image.tif')
+        self.preprocessed_overview_image_path        = self._config.Read(TomoModel._KEY_PREPROCESSED_OVERVIEW_IMAGE_PATH, r'/home/secom/development/tomo/data/preprocessed_overview_image.tif')
 
     def write_parameters(self):
         self._config.Write(TomoModel._KEY_OVERVIEW_IMAGE_PATH, self.overview_image_path)
@@ -97,7 +97,7 @@ class TomoModel:
         self._config.Write(TomoModel._KEY_SIFT_OUTPUT_FOLDER, self.sift_output_folder)
         self._config.WriteFloat(TomoModel._KEY_SIFT_IMAGES_PIXELS_PER_MM, self.sift_images_pixels_per_mm)
         self._config.Write(TomoModel._KEY_TEMPLATE_SLICE_PATH, self.template_slice_path)
-        # self._config.Write(TomoModel._KEY_PREPROCESSED_OVERVIEW_IMAGE_PATH, self.preprocessed_overview_image_path)
+        self._config.Write(TomoModel._KEY_PREPROCESSED_OVERVIEW_IMAGE_PATH, self.preprocessed_overview_image_path)
         self._config.Flush()
 
     # Note
