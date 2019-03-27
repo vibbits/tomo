@@ -33,7 +33,9 @@ class ContourFinderPanel(wx.Panel):
         self._prev_polygon = None
         self._preprocessed_overview_image = None
 
+        # Ribbon building
         self._num_slices = 1  # number of new slices to detect by extending a seed slice contour and using the preprocessed overview image which highlights edges
+        self._max_score_drop_ratio = 0.75
 
         # Contour energy minimization parameters
         # TODO: combine into a structure, this class already has too many member variables
@@ -82,8 +84,11 @@ class ContourFinderPanel(wx.Panel):
         self._jitter_button = wx.Button(self, wx.ID_ANY, "Jitter Contours", size=button_size)
         self._jitter_button.Enable(False)
 
-        self._build_ribbon_button = wx.Button(self, wx.ID_ANY, "Add Slices", size=button_size)
-        self._build_ribbon_button.Enable(False)
+        self._add_slices_button = wx.Button(self, wx.ID_ANY, "Add Slices", size=button_size)
+        self._add_slices_button.Enable(False)
+
+        self._complete_ribbon_button = wx.Button(self, wx.ID_ANY, "Complete Ribbon", size=button_size)
+        self._complete_ribbon_button.Enable(False)
 
         self._print_score_button = wx.Button(self, wx.ID_ANY, "Print Contour Score", size=button_size)
         self._print_score_button.Enable(False)
@@ -104,7 +109,8 @@ class ContourFinderPanel(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self._on_load_button_click, load_button)
         self.Bind(wx.EVT_BUTTON, self._on_save_button_click, self._save_button)
         self.Bind(wx.EVT_BUTTON, self._on_show_button_click, self._show_button)
-        self.Bind(wx.EVT_BUTTON, self._on_build_ribbon_button_click, self._build_ribbon_button)
+        self.Bind(wx.EVT_BUTTON, self._on_add_slices_button_click, self._add_slices_button)
+        self.Bind(wx.EVT_BUTTON, self._on_complete_ribbon_button_click, self._complete_ribbon_button)
         self.Bind(wx.EVT_CHECKBOX, self._on_verbose_checkbox, verbose_checkbox)
 
         parameters_sizer = wx.FlexGridSizer(cols=2, vgap=4, hgap=14)
@@ -141,14 +147,24 @@ class ContourFinderPanel(wx.Panel):
         self._num_slices_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._num_slices), size=(w, -1))
         self.Bind(wx.EVT_TEXT, self._on_num_slices_change, self._num_slices_edit)
 
-        ribbon_params_sizer = wx.FlexGridSizer(cols=2, vgap=4, hgap=14)
-        ribbon_params_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Number of new slices:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
-        ribbon_params_sizer.Add(self._num_slices_edit, flag=wx.RIGHT)
+        add_slices_params_sizer = wx.FlexGridSizer(cols=2, vgap=4, hgap=14)
+        add_slices_params_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Number of new slices:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
+        add_slices_params_sizer.Add(self._num_slices_edit, flag=wx.RIGHT)
+
+        self._max_score_drop_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._max_score_drop_ratio), size=(w, -1))
+        self.Bind(wx.EVT_TEXT, self._on_max_score_drop_change, self._max_score_drop_edit)
+
+        complete_ribbon_params_sizer = wx.FlexGridSizer(cols=2, vgap=4, hgap=14)
+        complete_ribbon_params_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Max score drop (ratio):"), flag=wx.LEFT | wx.ALIGN_RIGHT)
+        complete_ribbon_params_sizer.Add(self._max_score_drop_edit, flag=wx.RIGHT)
 
         ribbon_box = wx.StaticBox(self, -1, 'Ribbon')
         ribbon_sizer = wx.StaticBoxSizer(ribbon_box, wx.VERTICAL)
-        ribbon_sizer.Add(ribbon_params_sizer, 0, wx.ALL | wx.CENTER, 5)
-        ribbon_sizer.Add(self._build_ribbon_button, 0, wx.ALL | wx.CENTER, 5)
+        ribbon_sizer.Add(complete_ribbon_params_sizer, 0, wx.ALL | wx.CENTER, 5)
+        ribbon_sizer.Add(self._complete_ribbon_button, 0, wx.ALL | wx.CENTER, 5)
+        ribbon_sizer.Add(wx.StaticLine(self, wx.ID_ANY))
+        ribbon_sizer.Add(add_slices_params_sizer, 0, wx.ALL | wx.CENTER, 5)
+        ribbon_sizer.Add(self._add_slices_button, 0, wx.ALL | wx.CENTER, 5)
 
         b = 2  # border size
         contents = wx.BoxSizer(wx.VERTICAL)
@@ -184,6 +200,11 @@ class ContourFinderPanel(wx.Panel):
     def _on_num_slices_change(self, event):
         self._num_slices = int(self._num_slices_edit.GetValue())
         print('_num_slices={}'.format(self._num_slices))
+
+    def _on_max_score_drop_change(self, event):
+        val = float(self._max_score_drop_edit.GetValue())
+        self._max_score_drop_ratio = min(max(0.0, val), 1.0)  # the score drop is a ratio, clamp to 0,1 TODO: use a validator instead?
+        print('_max_score_drop_ratio={}'.format(self._max_score_drop_ratio))
 
     def _on_h_for_gradient_approximation_change(self, event):
         self.h_for_gradient_approximation = float(self._h_for_gradient_approximation_edit.GetValue())
@@ -287,18 +308,19 @@ class ContourFinderPanel(wx.Panel):
 
     def _got_preprocessed_image(self):
         # Display the preprocessed image (either loaded or just calculated)
-        show_preprocessed_image(self._preprocessed_overview_image)
+        display_image(self._preprocessed_overview_image)
 
         self._show_button.Enable(True)
         self._save_button.Enable(True)
         self._improve_button.Enable(True)
-        self._build_ribbon_button.Enable(True)
+        self._add_slices_button.Enable(True)
+        self._complete_ribbon_button.Enable(True)
         self._jitter_button.Enable(True)
         self._print_score_button.Enable(True)
         self._plot_score_button.Enable(True)
 
     def _on_show_button_click(self, event):
-        show_preprocessed_image(self._preprocessed_overview_image)
+        display_image(self._preprocessed_overview_image)
 
     def _duplicate_polygons(self, polygon, displacement_vector, num_copies):
         # displacement_vector = np.array[dx,dy]
@@ -313,21 +335,24 @@ class ContourFinderPanel(wx.Panel):
             jittered_polygon = self._add_jitter(polygon, MAX_JITTER_DISTANCE)
             self._model.slice_polygons[i] = jittered_polygon  # update model
             self._canvas.set_slice_outline(i, self._flipY(jittered_polygon))  # update canvas
-            # self._draw_contour(polygon, "Blue", False)  # Draw original polygon
             self._canvas.redraw(True)
 
     def _flipY(self, contour):
         """
-        :param contour: a list of coordinate pairs: [(x, y), ...]
-        :return: a new list with the y coordinated inverted (to transform between canvas and image coordinates)
+        Transform the contour from canvas coordinates (y-axis pointing up) to image coordinates (y-axis pointing down).
+
+        :param contour: a list of vertex coordinates [(x, y)] representing the contour in canvas coordinates
+        :return: the contour in image coordinates: [(x, -y)]
         """
         return [(x, -y) for (x, y) in contour]
 
     def _add_jitter(self, contour, max_delta):
         """
+        Randomly perturb a contour.
+
         :param contour: a list of coordinate pairs: [(x, y), ...] representing the slice contour vertices in ccw order
-        :param max_delta:
-        :return:
+        :param max_delta: maximum vertical or horizontal random displacement of the contour vertices
+        :return: the perturbed contour, as a list of vertex coordinates [(x,y)]
         """
         return [(x + random.randint(-max_delta, max_delta),
                  y + random.randint(-max_delta, max_delta))
@@ -340,17 +365,29 @@ class ContourFinderPanel(wx.Panel):
         for i in selected_slices:
             polygon = self._model.slice_polygons[i]
             optimized_polygon = self._contour_finder.optimize_contour(self._preprocessed_overview_image, polygon)
-            # self._draw_contour(optimized_polygon, "Red", remove_previous=False)
             self._model.slice_polygons[i] = optimized_polygon  # update model
             self._canvas.set_slice_outline(i, self._flipY(optimized_polygon))  # update canvas
             self._canvas.redraw(True)
 
-    def _on_build_ribbon_button_click(self, event):
+    def _on_complete_ribbon_button_click(self, event):
+        self._grow_ribbon(complete_ribbon=True)
+
+    def _on_add_slices_button_click(self, event):
+        self._grow_ribbon(complete_ribbon=False)
+
+    def _grow_ribbon(self, complete_ribbon):
+        """
+        Grow one or two selected "seed" slices into a ribbon of slices.
+        
+        :param complete_ribbon: boolean, if True then we will keep on adding new slices until its scores becomes too low,
+        if False then we will add at most self._num_slices (and also stop if the score of a new slice is too low)
+        """
 
         self._set_contour_finder_options()
 
         selected_slice_indices = self._selector.get_selected_slices()
-        selected_slice_indices = selected_slice_indices[-2:]   # normally only one or two slices should be selected, if more are selected, then we take the last two.
+        selected_slice_indices = selected_slice_indices[
+                                 -2:]  # normally only one or two slices should be selected, if more are selected, then we take the last two.
 
         # IMPROVEME: make sure to disable the 'build ribbon' button if there are more than 2 selected slices (for that we will need the pubsub mechanism to listen to selection changes)
 
@@ -358,31 +395,62 @@ class ContourFinderPanel(wx.Panel):
         slices = [self._model.slice_polygons[i] for i in selected_slice_indices]
 
         # convert from [(x,y)] to [np.array] for easier calculations on point vectors
-        slices = [[np.array(vertex) for vertex in slic] for slic in slices]
+        slices = [[np.array(vertex) for vertex in s] for s in slices]
 
-        slic, mat = _ribbon_building_bootstrap(slices)
-        for i in range(self._num_slices):
+        old_slice, mat = _ribbon_building_bootstrap(slices)
+        i = 0
+        while True:
+            if not complete_ribbon:
+                if i >= self._num_slices:
+                    break
+
             # Predict an approximate next slice (approximate shape and approximate position)
-            new_slice = _transform_slice(slic, mat)
+            new_slice = _transform_slice(old_slice, mat)
             self._draw_contour(new_slice, "Blue")
 
             # Use gradient descent to find the true location and shape of the next slice,
             # in the neighborhood of our approximation.
-            slice_for_model = self._contour_finder.optimize_contour(self._preprocessed_overview_image, new_slice)
+            new_slice_for_model = self._contour_finder.optimize_contour(self._preprocessed_overview_image, new_slice)
 
-            # TODO: compare score of contour with that of previous contours and if < threshold * previous score or average score,
-            #       then discard contour and stop building ribbon (we then presume that either we reached the end of the ribbon,
-            #       or there was a kink in the ribbon which contour optimization could not deal with).
+            # Assess if tentative new slice stands a chance of being correct. If not, then terminate ribbon building.
+            template_slice = old_slice  # use the previously slice (which turned out to be good) as the template to judge the quality of the new slice
+            if self._terminate_ribbon_building(template_slice, new_slice_for_model, self._max_score_drop_ratio):
+                print('Tentative new contour of low quality; terminating ribbon building')
+                self._draw_contour(new_slice_for_model, "Red")
+                # TODO: add debugging option to make ghost drawing optional, and, add ability to delete the ghosts.
+                break
 
             # Add to model and update canvas.
-            self._model.slice_polygons.extend([slice_for_model])
+            self._model.slice_polygons.extend([new_slice_for_model])
             self._canvas.set_slice_polygons(self._model.slice_polygons)
             self._canvas.redraw(True)
 
             # Prepare for estimating the next slice
-            new_slice = [np.array(vertex) for vertex in slice_for_model]  # convert from [(x,y)] to [np.array([x,y])] for easier calculations on point vectors
-            mat = _estimate_transformation(slic, new_slice)
-            slic = new_slice
+            new_slice = [np.array(vertex) for vertex in
+                         new_slice_for_model]  # convert from [(x,y)] to [np.array([x,y])] for easier calculations on point vectors
+            mat = _estimate_transformation(old_slice, new_slice)
+            old_slice = new_slice
+            i = i + 1
+
+    def _terminate_ribbon_building(self, template_contour, new_contour, max_score_drop_ratio):
+        """
+        Returns whether to terminate automatic ribbon building because. This may happen because we reached the end of a
+        ribbon, or because we failed to track the ribbon correctly (typically because of a sudden break or kink in the ribbon)
+
+        :param template_contour: xxx
+        :param new_contour: xxx
+        :param max_score_drop_ratio:
+        :return: true if the tentative new contour is likely to be an incorrect or spurious slice contour;
+                 false if there is a good chance that the new contour matches a real slice outline
+        """
+        template_scores = np.array(self._edge_scores(template_contour))
+        new_scores = np.array(self._edge_scores(new_contour))
+        poor_quality = np.any(new_scores < template_scores * max_score_drop_ratio)
+        return poor_quality
+
+    def _edge_scores(self, contour):
+        sample_scores = self._contour_finder.calculate_contour_score_samples(self._preprocessed_overview_image, contour_to_vector(contour))
+        return [np.sum(edge_samples) for edge_samples in sample_scores]
 
     def _draw_contour(self, contour, color="Green", remove_previous=False):
         pts = [(p[0], -p[1]) for p in contour]
@@ -423,12 +491,13 @@ def _estimate_initial_transformation(slice):
 
 def _estimate_transformation(slice1, slice2):
     """
-    XXX
-    :param slice1:
-    :param slice2:
+    Estimate a rigid coordinate transformation that approximately maps one slice onto another.
+
+    :param slice1: the source slice, as a list of np.array([x,y]) vertex coordinates
+    :param slice2: the target slice (cfr slice1)
     :return: a 3x3 numpy transformation matrix that transforms the coordinates of slice1 into the coordinates of the
              approximate position of slice2, assuming that slice2 is attached at the bottom edge of slice1,
-             forming a ribbon.
+             forming a ribbon. For now the transformation is always a simple translation.
     """
 
     # Estimate translation
@@ -474,7 +543,16 @@ def _transform_slice(slice, mat):
     return [vertex[0:2] for vertex in slice]
 
 
-def show_preprocessed_image(image, window='Preprocessed Overview Image', max_height=1080-100, max_width=1920-100):
+def display_image(image, window='Preprocessed Overview Image', max_height=1080 - 100, max_width=1920 - 100):
+    """
+    Show an image in a window with a given maximum size on screen. The image will be scaled uniformly to fit the
+    desired maximum window dimensions.
+
+    :param image: the image to display
+    :param window: the window name, can be used to refer to it later, or to update its contents
+    :param max_height: maximum height of the image window, in pixels
+    :param max_width: maximum width of the image window, in pixels
+    """
     height, width = image.shape
     scalew = float(max_width) / width
     scaleh = float(max_height) / height
@@ -501,7 +579,7 @@ def plot_contour_sample_scores(contour_nr, sample_scores):
     plt.figure()
     plt.plot(samples, '+')
     for b in edge_boundaries:
-        plt.axvline(b, color='b', linestyle=':')
+        plt.axvline(b, color='k', linestyle=':')
     plt.title(title)
     plt.show()
 

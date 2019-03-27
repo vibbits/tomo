@@ -35,7 +35,7 @@ class ContourFinder:
         """
         :param image: preprocessed overview image with the ribbons of slices
         :param initial_contour: list of (x,y) vertex coordinates
-        :return: optimized contour
+        :return: optimized contour, as list of (x,y) vertex coordinates
         """
 
         # We are trying to maximize the score. The score is measured in the preprocessed overview image,
