@@ -365,8 +365,8 @@ class ContourFinderPanel(wx.Panel):
         for i in selected_slices:
             polygon = self._model.slice_polygons[i]
             optimized_polygon = self._contour_finder.optimize_contour(self._preprocessed_overview_image, polygon)
-            self._model.slice_polygons[i] = optimized_polygon  # update model
-            self._canvas.set_slice_outline(i, self._flipY(optimized_polygon))  # update canvas
+            self._model.set_slice_polygon(i, optimized_polygon)  # update model
+            self._canvas.set_slice_outline(i, self._flipY(optimized_polygon))  # update canvas  # TODO? listen to model changes instead?
             self._canvas.redraw(True)
 
     def _on_complete_ribbon_button_click(self, event):

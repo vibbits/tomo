@@ -3,6 +3,9 @@
 # 2018-2019
 
 import wx
+from pubsub import pub
+
+MSG_SLICE_POLYGON_CHANGED = 'msg_slice_polygon_changed'
 
 class TomoModel:
     _KEY_OVERVIEW_IMAGE_PATH = 'overview_image_path'
@@ -58,6 +61,10 @@ class TomoModel:
         # Persistent storage
         self._config = wx.Config('be.vib.bits.tomo')
         self.read_parameters()
+
+    def set_slice_polygon(self, i, polygon):
+        self.slice_polygons[i] = polygon
+        pub.sendMessage(MSG_SLICE_POLYGON_CHANGED, index=i, polygon=polygon)
 
     def read_parameters(self):
         self.overview_image_path                     = self._config.Read(TomoModel._KEY_OVERVIEW_IMAGE_PATH, r'/home/secom/development/tomo/data/bisstitched-0.tif')
