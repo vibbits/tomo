@@ -35,7 +35,7 @@ class ContourFinderPanel(wx.Panel):
 
         # Ribbon building
         self._num_slices = 1  # number of new slices to detect by extending a seed slice contour and using the preprocessed overview image which highlights edges
-        self._max_score_drop_ratio = 0.75
+        self._max_score_drop_ratio = 0.65
 
         # Contour energy minimization parameters
         # TODO: combine into a structure, this class already has too many member variables
