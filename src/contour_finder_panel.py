@@ -11,12 +11,6 @@ import matplotlib
 matplotlib.use('wxagg')
 from matplotlib import pyplot as plt
 
-# FIXME: if we are in the contour editing tool, the currently selected contours will have handles; if we then jitter or optimize the contour,
-#        the contour gets updated, but not the handles.
-# TODO: experiment with some form of sanity checking to see if automatically discovered sections are really correct. This would allow us to stop adding sections to a growing ribbon
-#       when the ribbon ends, or is interrupted or has a kink. One way to check this might be by comparing the shape of the tentative section with previous shapes, or by checking statistics on the pixel intensities,
-#       either of the overview image itself, or of the pixels in the preprocessed image. Or maybe we can just assume that the scores of true sections are all similar, and the score of a random of incorrect section contour
-#       wil be noticably different?
 # IMPROVEME: The model should publish changes and the canvas and some tools should listen to changes to the model and update itself when needed
 # TODO: a very interesting feature that is missing is the ability to switch between showing the true overview image and showing the preprocessed image, with contours on top.
 #       This may let us better understand the behavior of the gradient descent contourizer. What keeps us from adding this feature is that it seems to be hard to add an object
@@ -333,7 +327,7 @@ class ContourFinderPanel(wx.Panel):
         for i in selected_slices:
             polygon = self._model.slice_polygons[i]
             jittered_polygon = self._add_jitter(polygon, MAX_JITTER_DISTANCE)
-            self._model.slice_polygons[i] = jittered_polygon  # update model
+            self._model.set_slice_polygon(i, jittered_polygon)  # update model
             self._canvas.set_slice_outline(i, self._flipY(jittered_polygon))  # update canvas
             self._canvas.redraw(True)
 
