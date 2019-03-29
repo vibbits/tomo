@@ -65,6 +65,12 @@ class SegmentationPanel(wx.Panel):
         self.SetSizer(contents)
         contents.Fit(self)
 
+    def activate(self):
+        pass
+
+    def deactivate(self):
+        pass
+
     def _on_load_button_click(self, event):
         print('_on_load_button_click')
 

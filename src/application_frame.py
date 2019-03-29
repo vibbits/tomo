@@ -296,10 +296,8 @@ class ApplicationFrame(wx.Frame):
 
     def _on_find_contours(self, event):
         self._show_side_panel(self._contour_finder_panel, True)
-        self._contour_finder_panel.activate()
 
     def _on_find_contours_done_button_click(self, event):
-        self._contour_finder_panel.deactivate()
         self._show_side_panel(self._contour_finder_panel, False)
 
     def _on_segment_ribbons(self, event):
@@ -310,18 +308,14 @@ class ApplicationFrame(wx.Frame):
 
     def _on_set_focus(self, event):
         self._show_side_panel(self._focus_panel, True)
-        self._focus_panel.activate()
 
     def _on_focus_done_button_click(self, event):
-        self._focus_panel.deactivate()
         self._show_side_panel(self._focus_panel, False)
 
     def _on_align_stage(self, event):
         self._show_side_panel(self._stage_alignment_panel, True)
-        self._stage_alignment_panel.activate()
 
     def _on_stage_alignment_done_button_click(self, event):
-        self._stage_alignment_panel.deactivate()
         self._show_side_panel(self._stage_alignment_panel, False)
 
         # Enable/disable menu entries
@@ -331,10 +325,8 @@ class ApplicationFrame(wx.Frame):
 
     def _on_set_point_of_interest(self, event):
         self._show_side_panel(self._point_of_interest_panel, True)
-        self._point_of_interest_panel.activate()
 
     def _on_point_of_interest_done_button_click(self, event):
-        self._point_of_interest_panel.deactivate()
         self._show_side_panel(self._point_of_interest_panel, False)
 
         # Enable/disable menu entries
@@ -347,16 +339,20 @@ class ApplicationFrame(wx.Frame):
         return stage_is_aligned and have_point_of_interest
 
     def _show_side_panel(self, side_panel, show):
+        # Note: while the side panel is shown, the application behaves more or less like modal
+        # and most of the menus will be disabled.
+
+        if not show:
+            side_panel.deactivate()
+            self._enable_menu(self._menu_state)
+
         side_panel.Show(show)
         self.GetTopLevelParent().Layout()
         self._overview_canvas.redraw()
 
-        # Disable/Re-enable the menu depending on whether the side panel is active or not.
-        # While the side panel is shown, the application behaves more or less like modal.
         if show:
             self._menu_state = self._disable_menu()
-        else:
-            self._enable_menu(self._menu_state)
+            side_panel.activate()
 
     def _on_about(self, event):
         dlg = AboutDialog()
