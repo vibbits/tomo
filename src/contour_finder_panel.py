@@ -1,12 +1,14 @@
 import wx
-import tools
-from contour_finder import ContourFinder
-from contour_finder import contour_to_vector
 import numpy as np
 import random
 import cv2
 import os
+import tools
+from contour_finder import ContourFinder
+from contour_finder import contour_to_vector
 from preprocess_dialog import PreprocessDialog
+from polygon_selector_mixin import MSG_SLICE_SELECTION_CHANGED
+from pubsub import pub
 import matplotlib
 matplotlib.use('wxagg')
 from matplotlib import pyplot as plt
@@ -174,10 +176,11 @@ class ContourFinderPanel(wx.Panel):
         contents.Fit(self)
 
     def activate(self):
-        pass
+        self._update_buttons()
+        pub.subscribe(self._on_slice_selection_change, MSG_SLICE_SELECTION_CHANGED)
 
     def deactivate(self):
-        pass
+        pub.unsubscribe(self._on_slice_selection_change, MSG_SLICE_SELECTION_CHANGED)
 
     def _set_contour_finder_options(self):
         self._contour_finder.set_optimization_parameters(self.h_for_gradient_approximation,
@@ -186,6 +189,24 @@ class ContourFinderPanel(wx.Panel):
                                                          self.gradient_step_size,
                                                          self.edge_sample_distance,
                                                          self.verbose)
+
+    def _on_slice_selection_change(self, old_selected_slices, new_selected_slices):
+        self._update_buttons()
+
+    def _update_buttons(self):
+        preprocessed = self._preprocessed_overview_image is not None
+        num_selected_slices = len(self._selector.get_selected_slices())
+        slices_selected = num_selected_slices > 0
+        one_or_two_slices_selected = (num_selected_slices == 1) or (num_selected_slices == 2)
+        one_slice_selected = num_selected_slices == 1
+        self._show_button.Enable(preprocessed)
+        self._save_button.Enable(preprocessed)
+        self._jitter_button.Enable(slices_selected)
+        self._improve_button.Enable(preprocessed and slices_selected)
+        self._print_score_button.Enable(preprocessed and slices_selected)
+        self._add_slices_button.Enable(preprocessed and one_or_two_slices_selected)
+        self._complete_ribbon_button.Enable(preprocessed and one_or_two_slices_selected)
+        self._plot_score_button.Enable(preprocessed and one_slice_selected)
 
     def _on_verbose_checkbox(self, event):
         self.verbose = event.GetEventObject().GetValue()
@@ -235,14 +256,12 @@ class ContourFinderPanel(wx.Panel):
 
     def _on_plot_score_button_click(self, event):
         selected_slices = self._selector.get_selected_slices()
-        if len(selected_slices) == 1:  # IMPROVEME? enable/disable the plot score button depending on # contours selected
-            idx = selected_slices[0]
-            contour = self._model.slice_polygons[idx]
-            contour_vector = contour_to_vector(contour)
-            sample_scores = self._contour_finder.calculate_contour_score_samples(self._preprocessed_overview_image, contour_vector)
-            plot_contour_sample_scores(idx + 1, sample_scores)
-        else:
-            print('Please select a single contour whose score samples need to be plotted.')
+        assert len(selected_slices) == 1
+        idx = selected_slices[0]
+        contour = self._model.slice_polygons[idx]
+        contour_vector = contour_to_vector(contour)
+        sample_scores = self._contour_finder.calculate_contour_score_samples(self._preprocessed_overview_image, contour_vector)
+        plot_contour_sample_scores(idx + 1, sample_scores)
 
     def _on_load_button_click(self, event):
         # Read preprocessed version of "20x_lens\bisstitched-0.tif" where contrast was enhanced, edges were amplified and then blurred to make gradient descent work better.
@@ -301,17 +320,7 @@ class ContourFinderPanel(wx.Panel):
                 self._got_preprocessed_image()
 
     def _got_preprocessed_image(self):
-        # Display the preprocessed image (either loaded or just calculated)
-        display_image(self._preprocessed_overview_image)
-
-        self._show_button.Enable(True)
-        self._save_button.Enable(True)
-        self._improve_button.Enable(True)
-        self._add_slices_button.Enable(True)
-        self._complete_ribbon_button.Enable(True)
-        self._jitter_button.Enable(True)
-        self._print_score_button.Enable(True)
-        self._plot_score_button.Enable(True)
+        self._update_buttons()
 
     def _on_show_button_click(self, event):
         display_image(self._preprocessed_overview_image)
@@ -380,10 +389,9 @@ class ContourFinderPanel(wx.Panel):
         self._set_contour_finder_options()
 
         selected_slice_indices = self._selector.get_selected_slices()
-        selected_slice_indices = selected_slice_indices[
-                                 -2:]  # normally only one or two slices should be selected, if more are selected, then we take the last two.
 
-        # IMPROVEME: make sure to disable the 'build ribbon' button if there are more than 2 selected slices (for that we will need the pubsub mechanism to listen to selection changes)
+        assert len(selected_slice_indices) == 1 or len(selected_slice_indices) == 2
+        selected_slice_indices = selected_slice_indices[0:2]
 
         # Collect the actual slice contours of the slices with the given indices.
         slices = [self._model.slice_polygons[i] for i in selected_slice_indices]

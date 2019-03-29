@@ -30,7 +30,6 @@ class PolygonEditorMixin:
         self._dragging = None
         self._handles = []  # List of tuples (FloatCanvas object for the handle, slice index of the handle, vertex index of the handle)
 
-
     def start(self):
         self._dragging = None
         self._active_handle = None

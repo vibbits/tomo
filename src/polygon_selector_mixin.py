@@ -1,14 +1,17 @@
 import wx
+import numpy as np
+from pubsub import pub
 import tools
 from polygon_selection_mode import PolygonSelectionMode
 from constants import REGULAR_LINE_WIDTH, HIGHLIGHTED_LINE_WIDTH
-import numpy as np
 
 # IMPROVEME: add ability to interactively extend the selection with additional slices
 # IMPROVEME: add ability to interactively de-select specific slices
 # IMPROVEME: add ability to move slices (whether selected or not). If the mouse hovers over an edge, change to cursor to indicate a possible move. Then when left button goes down, switch that 1 polygon to selected and update its position during the mouse move until the mouse button is released.
 # IMPROVEME: add Edit>Delete (Del) and Edit>Select All (ctrl-a) to the menu bar
 # IMPROVEME: add ability to duplicate a slice (to build ribbons interactively we can use a copy of the last slice on the previous ribbon to start a new ribbon)
+
+MSG_SLICE_SELECTION_CHANGED = 'msg_slice_selection_changed'
 
 class PolygonSelectorMixin:
     def __init__(self, model, canvas):
@@ -153,7 +156,9 @@ class PolygonSelectorMixin:
         for i in new_selected_slices:
             self._canvas.set_slice_outline_linewidth(i, HIGHLIGHTED_LINE_WIDTH)
 
+        old_selected_slices = self._selected_slices
         self._selected_slices = new_selected_slices
+        pub.sendMessage(MSG_SLICE_SELECTION_CHANGED, old_selected_slices=old_selected_slices, new_selected_slices=new_selected_slices)
 
     def _find_slices_inside_rect(self, rect):
         slices = self._model.slice_polygons
