@@ -13,14 +13,22 @@ from constants import NORMAL_COLOR, REGULAR_LINE_WIDTH, POINT_OF_INTEREST_COLOR,
 # IMPROVEME: I think the API should return the handles to the objects that it created, and have the caller keep track of it.
 # (Otherwise this class will need many different functions to keep semantically different "lines" or "squares" or ... apart
 # since they may have to be removed separately.)
+#
 # THOUGHT: I think this class *can* keep track of objects, but maybe only those that need to be rendered independent of which side panel is active, and
 # even if no side panel is activate. Some objects are tied tightly to a specific panel (e.g. polygon editing handles) and those should probably
 # be left out of the OverviewCanvas.
+#
+# THOUGHT: the floatcanvas does not seem to support inserting new objects in between other objects. This is a major shortcoming, for example
+# when we would like to "switch" between showing the overview image and the preprocessed overview image, where this image is underneath slice contours.
+# One way to work around this limitation might be to add our own "model" on top of floatcanvas, where object *can* be reordered, and to rebuild
+# the floatcanvas from scratch (from our own model) when needed. But this is also tricky, because we may have to hand out handles to the floatcanvas objects
+# so that the client can selectively delete some, for example, but after rebuilding the canvas these handles will have changed. To avoid this we will then
+# need to return our own handles instead of the floatcanvas object handles.
 
 class OverviewCanvas(TomoCanvas):
     _wximage = None  # the original wx.Image
     _show_slice_numbers = True  # flag indicating if slice numbers need to be drawn on the slice outlines
-    _slice_polygons = []  # list with the slice polygo the same format as TomoModel.slice_polygons
+    _slice_polygons = []  # list with the slice polygons in the same format as TomoModel.slice_polygons
 
     # FloatCanvas objects
     _image = None  # the canvas image object handle
