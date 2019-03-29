@@ -87,8 +87,8 @@ class PolygonSelectorMixin:
             return
 
         # Cancel the selection. This is necessary because if the mouse is outside the canvas, we also
-        # do not receive mouse events anymore. So the mouse button may become up without us knowing. This then breaks
-        # our mouse handling logic.
+        # do not receive mouse events anymore. So the mouse button might be released (go up) without us knowing.
+        # This then breaks our mouse handling logic.
 
         # Remove selection rectangle
         self._remove_selection_rectangle()

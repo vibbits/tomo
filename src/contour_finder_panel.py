@@ -26,7 +26,7 @@ class ContourFinderPanel(wx.Panel):
         self._model = model
         self._selector = selector  # mixin for handling and tracking slice contour selection
         self._contour_finder = ContourFinder()
-        self._ghost_polygons = []
+        self._ghost_polygons = []  # floatcanvas handles for the ghost slice polygons
         self._preprocessed_overview_image = None
 
         # Ribbon building
@@ -237,7 +237,7 @@ class ContourFinderPanel(wx.Panel):
         print('h_for_gradient_approximation={}'.format(self.h_for_gradient_approximation))
 
     def _on_max_iterations_change(self, event):
-        self.max_iterations = float(self._max_iterations_edit.GetValue())
+        self.max_iterations = int(self._max_iterations_edit.GetValue())
         print('max_iterations={}'.format(self.max_iterations))
 
     def _on_gradient_step_size_change(self, event):
