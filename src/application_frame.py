@@ -299,7 +299,7 @@ class ApplicationFrame(wx.Frame):
         self._contour_finder_panel.activate()
 
     def _on_find_contours_done_button_click(self, event):
-        self._contour_finder_panel.activate()
+        self._contour_finder_panel.deactivate()
         self._show_side_panel(self._contour_finder_panel, False)
 
     def _on_segment_ribbons(self, event):

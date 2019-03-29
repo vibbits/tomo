@@ -26,12 +26,13 @@ class ContourFinderPanel(wx.Panel):
         self._model = model
         self._selector = selector  # mixin for handling and tracking slice contour selection
         self._contour_finder = ContourFinder()
-        self._prev_polygon = None
+        self._ghost_polygons = []
         self._preprocessed_overview_image = None
 
         # Ribbon building
         self._num_slices = 1  # number of new slices to detect by extending a seed slice contour and using the preprocessed overview image which highlights edges
         self._max_score_drop_ratio = 0.65
+        self._draw_ghosts = False  # for debugging: draw tentative slice polygons during ribbon building
 
         # Contour energy minimization parameters
         # TODO: combine into a structure, this class already has too many member variables
@@ -95,6 +96,9 @@ class ContourFinderPanel(wx.Panel):
         verbose_checkbox = wx.CheckBox(self, wx.ID_ANY, label="Verbose")
         verbose_checkbox.SetValue(self.verbose)
 
+        draw_ghosts_checkbox = wx.CheckBox(self, wx.ID_ANY, label="Draw ghosts")
+        draw_ghosts_checkbox.SetValue(self._draw_ghosts)
+
         self.done_button = wx.Button(self, wx.ID_ANY, "Done", size=button_size)  # Not this panel but the ApplicationFame will listen to clicks on this button.
 
         self.Bind(wx.EVT_BUTTON, self._on_preprocess_button_click, preprocess_button)
@@ -108,6 +112,7 @@ class ContourFinderPanel(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self._on_add_slices_button_click, self._add_slices_button)
         self.Bind(wx.EVT_BUTTON, self._on_complete_ribbon_button_click, self._complete_ribbon_button)
         self.Bind(wx.EVT_CHECKBOX, self._on_verbose_checkbox, verbose_checkbox)
+        self.Bind(wx.EVT_CHECKBOX, self._on_draw_ghosts_checkbox, draw_ghosts_checkbox)
 
         parameters_sizer = wx.FlexGridSizer(cols=2, vgap=4, hgap=14)
         parameters_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Gradient estimation h:"), flag=wx.LEFT | wx.ALIGN_RIGHT)
@@ -136,6 +141,7 @@ class ContourFinderPanel(wx.Panel):
         debugging_box = wx.StaticBox(self, -1, 'Debugging')
         debugging_sizer = wx.StaticBoxSizer(debugging_box, wx.VERTICAL)
         debugging_sizer.Add(verbose_checkbox, 0, wx.ALL | wx.CENTER, 5)
+        debugging_sizer.Add(draw_ghosts_checkbox, 0, wx.ALL | wx.CENTER, 5)
         debugging_sizer.Add(self._print_score_button, 0, wx.ALL | wx.CENTER, 5)
         debugging_sizer.Add(self._plot_score_button, 0, wx.ALL | wx.CENTER, 5)
         debugging_sizer.Add(self._jitter_button, 0, wx.ALL | wx.CENTER, 5)
@@ -181,6 +187,7 @@ class ContourFinderPanel(wx.Panel):
 
     def deactivate(self):
         pub.unsubscribe(self._on_slice_selection_change, MSG_SLICE_SELECTION_CHANGED)
+        self._remove_ghosts()
 
     def _set_contour_finder_options(self):
         self._contour_finder.set_optimization_parameters(self.h_for_gradient_approximation,
@@ -211,6 +218,10 @@ class ContourFinderPanel(wx.Panel):
     def _on_verbose_checkbox(self, event):
         self.verbose = event.GetEventObject().GetValue()
         print('verbose={}'.format(self.verbose))
+
+    def _on_draw_ghosts_checkbox(self, event):
+        self._draw_ghosts = event.GetEventObject().GetValue()
+        print('_draw_ghosts={}'.format(self._draw_ghosts))
 
     def _on_num_slices_change(self, event):
         self._num_slices = int(self._num_slices_edit.GetValue())
@@ -408,7 +419,7 @@ class ContourFinderPanel(wx.Panel):
 
             # Predict an approximate next slice (approximate shape and approximate position)
             new_slice = _transform_slice(old_slice, mat)
-            self._draw_contour(new_slice, "Blue")
+            self._draw_ghost(new_slice, "Blue")
 
             # Use gradient descent to find the true location and shape of the next slice,
             # in the neighborhood of our approximation.
@@ -418,8 +429,7 @@ class ContourFinderPanel(wx.Panel):
             template_slice = old_slice  # use the previously slice (which turned out to be good) as the template to judge the quality of the new slice
             if self._terminate_ribbon_building(template_slice, new_slice_for_model, self._max_score_drop_ratio):
                 print('Tentative new contour of low quality; terminating ribbon building')
-                self._draw_contour(new_slice_for_model, "Red")
-                # TODO: add debugging option to make ghost drawing optional, and, add ability to delete the ghosts.
+                self._draw_ghost(new_slice_for_model, "Red")
                 break
 
             # Add to model and update canvas.
@@ -454,11 +464,16 @@ class ContourFinderPanel(wx.Panel):
         sample_scores = self._contour_finder.calculate_contour_score_samples(self._preprocessed_overview_image, contour_to_vector(contour))
         return [np.sum(edge_samples) for edge_samples in sample_scores]
 
-    def _draw_contour(self, contour, color="Green", remove_previous=False):
-        pts = [(p[0], -p[1]) for p in contour]
-        if remove_previous and (self._prev_polygon is not None):
-            self._canvas.remove_objects([self._prev_polygon])
-        self._prev_polygon = self._canvas.Canvas.AddPolygon(pts, LineColor=color)
+    def _draw_ghost(self, contour, color="Green"):
+        if self._draw_ghosts:
+            pts = [(p[0], -p[1]) for p in contour]
+            polygon = self._canvas.Canvas.AddPolygon(pts, LineColor=color)
+            self._canvas.Canvas.Draw()
+            self._ghost_polygons.append(polygon)
+
+    def _remove_ghosts(self):
+        self._canvas.remove_objects(self._ghost_polygons)
+        self._ghost_polygons = []
         self._canvas.Canvas.Draw()
 
 
