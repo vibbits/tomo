@@ -2,6 +2,7 @@ import re
 import sys
 import cv2
 import json
+import wx
 import numpy as np
 import subprocess
 
@@ -48,6 +49,48 @@ def list_to_opencv_contour(coords_list):
     :return: a numpy array of shape (numvertices, 1, 2); a list of such contours can be drawn using cv2.drawContours()
     """
     return np.expand_dims(np.asarray(coords_list), axis = 1)
+
+
+def grayscale_image_16bit_to_8bit(image):
+    # Convert a 16-bit OpenCV grayscale image to 8-bit.
+    # The full 16-bit range is mapped onto 0 to 255.
+    assert image.dtype == np.uint16
+    return (image / 257).astype(np.uint8)  # Note: 65535 = 255 * 257 (exactly)
+
+
+def grayscale_image_float_to_8bit(image):
+    # Convert a floating point OpenCV grayscale image to 8-bit.
+    # The range between the lowest and the highest floating point pixel intensity
+    # is mapped linearly onto 0 to 255.
+    assert image.dtype == np.float
+    min_val = np.min(image)
+    max_val = np.max(image)
+    # linearly map min to max -> 0 to 255
+    image = ((image - min_val) / (max_val - min_val) * 255).astype(np.uint8)
+    return image
+
+
+def wx_bitmap_from_OpenCV_image(image):
+    """
+    :param image: an grayscale OpenCV image (i.e a 2D numpy array)
+    :return: a wxPython bitmap
+    """
+    assert len(image.shape) == 2  # image must be a single channel, so shape is only (rows, cols)
+    if image.dtype == np.uint16:
+        image = grayscale_image_16bit_to_8bit(image)
+    elif image.dtype == np.float:
+        image = grayscale_image_float_to_8bit(image)
+    else:
+        assert image.dtype == np.uint8
+
+    conversion = cv2.COLOR_GRAY2RGB
+    image = cv2.cvtColor(image, conversion)
+    height, width = image.shape[:2]
+    bitmap = wx.BitmapFromBuffer(width, height, image)
+    # wx.BitmapFromBuffer() is deprecated but needed for wxPython Classic on the SECOM computer:
+    # bitmap = wx.Bitmap.FromBuffer(width, height, image)
+    # does not work there.
+    return bitmap
 
 
 def read_image_as_color_image(filename):

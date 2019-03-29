@@ -6,6 +6,7 @@ import numpy as np
 import cv2
 import wx
 import matplotlib
+import tools
 matplotlib.use('wxagg')
 from matplotlib import pyplot as plt
 
@@ -133,7 +134,7 @@ class PreprocessDialog(wx.Dialog):
         # print('Gaussian of Laplacian of Gaussian: shape={} dtype={} min={} max={}'.format(self.abs_laplacian.shape, self.abs_laplacian.dtype, np.min(self.abs_laplacian), np.max(self.abs_laplacian)))
 
         # Convert images to 8-bit so they can be more easily turned into wxPython bitmaps for viewing
-        self.result = grayscale_image_16bit_to_8bit(self.result)
+        self.result = tools.grayscale_image_16bit_to_8bit(self.result)
         return self.result
 
     def get_preprocessed_image(self):
@@ -162,7 +163,7 @@ class PreprocessDialog(wx.Dialog):
         # FIXME: this hack is far from ideal, the user can't see that this (black) padding is artifical and does not belong to the image.
         img = pad_image(img, TILE_SIZE, TILE_SIZE)
 
-        bitmap = wx_bitmap_from_OpenCV_image(img)
+        bitmap = tools.wx_bitmap_from_OpenCV_image(img)
         self.image_ctrl.SetBitmap(bitmap)
 
     def _on_left_down(self, event):
@@ -212,25 +213,6 @@ class PreprocessDialog(wx.Dialog):
 # To speedup previewing the result of image processing,
 # we only show a chunk (a "tile") of the complete image.
 TILE_SIZE = 768
-
-def grayscale_image_16bit_to_8bit(image):
-    # Convert a 16-bit OpenCV grayscale image to 8-bit.
-    # The full 16-bit range is mapped onto 0 to 255.
-    assert image.dtype == np.uint16
-    return (image / 257).astype(np.uint8)  # Note: 65535 = 255 * 257 (exactly)
-
-
-def grayscale_image_float_to_8bit(image):
-    # Convert a floating point OpenCV grayscale image to 8-bit.
-    # The range between the lowest and the highest floating point pixel intensity
-    # is mapped linearly onto 0 to 255.
-    assert image.dtype == np.float
-    min_val = np.min(image)
-    max_val = np.max(image)
-    # linearly map min to max -> 0 to 255
-    image = ((image - min_val) / (max_val - min_val) * 255).astype(np.uint8)
-    return image
-
 
 def empty_bitmap():
     # wx.EmptyBitmap() is deprecated but needed for wxPython Classic on the SECOM computer:
@@ -336,29 +318,6 @@ def get_histogram_percentile(histogram, percentile):
         if running_total >= needed:
             break
     return i
-
-
-def wx_bitmap_from_OpenCV_image(image):
-    """
-    :param image: an grayscale OpenCV image (i.e a 2D numpy array)
-    :return: a wxPython bitmap
-    """
-    assert len(image.shape) == 2  # image must be a single channel, so shape is only (rows, cols)
-    if image.dtype == np.uint16:
-        image = grayscale_image_16bit_to_8bit(image)
-    elif image.dtype == np.float:
-        image = grayscale_image_float_to_8bit(image)
-    else:
-        assert image.dtype == np.uint8
-
-    conversion = cv2.COLOR_GRAY2RGB
-    image = cv2.cvtColor(image, conversion)
-    height, width = image.shape[:2]
-    bitmap = wx.BitmapFromBuffer(width, height, image)
-    # wx.BitmapFromBuffer() is deprecated but needed for wxPython Classic on the SECOM computer:
-    # bitmap = wx.Bitmap.FromBuffer(width, height, image)
-    # does not work there.
-    return bitmap
 
 
 def pad_image(image, min_height, min_width):
