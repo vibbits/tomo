@@ -331,8 +331,7 @@ def plot_intensity_histogram(image, histogram, lo_val, hi_val):
     plt.axvline(lo_val, color='r', linestyle=':')
     plt.axvline(hi_val, color='r', linestyle=':')
     plt.legend(['histogram', 'min', 'max', 'lo percentile', 'hi percentile'])
-    margin = 5  # expand x limits a bit so extreme values do not overlap with plot outline box.
-    # FIXME: margin should depend on xlim, so percentage; 5 not enough for 16 bit images
+    margin = max_intensity / 100  # expand x limits a bit so extreme values do not overlap with plot outline box.
     plt.xlim([-margin, max_intensity + margin])
     plt.show()
 
