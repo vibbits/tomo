@@ -91,19 +91,7 @@ class PreprocessDialog(wx.Dialog):
 
     def preprocess(self, img):
         # Imporant note: for the iterative contour finding to work well, the preprocessed image should have an intensity profile around the edges
-        # that varies smoothly, from relatively "far" from the edge, and with no local minima/maxima in the neighborhood. I suspect that local minima are the cause
-        # for the behaviour where the contour seems to get stuck in the neighborhood of the true contour. These local minima are probably caused by intensity variations in background or lighting.
-        # Ideally preprocessing would turn the overview image first into a binary image with edges/no edges, which we then gaussian blur.
-        # Applying an edge detector which does not binarize the image, and no thresholding, followed by gaussian blur preserves these local intensity variations and results
-        # in an iterative contour finding which seems to get stuck sometimes. (At least these local minima are my theory of what happens...)
-
-        # Example:
-        # bisstitched-0.tif (=16 bit, a few black 0 pixels at the border, rest is a peak around 35000 to 41000)
-        # - Fiji > shift-ctrl c: contrast enhance (min=35779, max=42819, set, apply => histogram now more or less a bump between 0 and 65535)
-        # - Fiji > Plugins > Mexican Hat Filter > Separable, r=20 (=> image is now a binary image, with background=white=65535 and edges=black=0; edges are about 17 black pixels wide)
-        # . Optional, probably interesting: remove small specks (Fiji: particle analysis etc.)
-        # - Fiji > Process > Filters > Gaussian Blur, Sigma (Radius)=20  (=image is now a 16-bit image where near edges the intensity drop from 65000 to 46386 and back up over a distance of about 110 px)
-        # bisstitched-0-contrast-enhanced-mexicanhat_separable_radius20-gaussianblur20pix.tif
+        # that varies smoothly, from relatively "far" from the edge, and with no local minima/maxima in the neighborhood.
 
         # Contrast enhancement
         lo_val, hi_val = self.lo_percentile_val, self.hi_percentile_val
@@ -136,6 +124,52 @@ class PreprocessDialog(wx.Dialog):
         # Convert images to 8-bit so they can be more easily turned into wxPython bitmaps for viewing
         self.result = tools.grayscale_image_16bit_to_8bit(self.result)
         return self.result
+
+    #
+    #  Due to difference in lighting, we've seen overview images where a left-to-right cross section through a section
+    #  has an intensity profile that looks like this:
+    #  (e.g. tomo/data/20x_lens/bisstitched-0.tif)
+    #
+    #         _________
+    #        |  white |
+    #        |        |______                           ________
+    #        |          light                            light |
+    #  -------          grey                             grey  |        _______ dark grey
+    #   dark                                                   |       |
+    #   grey                                                   |_______|
+    #                                                            black
+    #
+    #        left edge of       . . rest of section . .      right edge of
+    #          section                                          section
+    #
+    #  So, the background of the overview image is dark grey, inside the section is light grey,
+    #  but on the left we have bright (white) section edges, and on the left dark (black) section edges.
+    #  If we then apply the Laplacian, we get an intensity profile like the drawing below.
+    #  If we threshold this image to detect the edge centers (dotted line=threshold) we see
+    #  that the center of the right edge is detect correctly, but for the left edge, we localize
+    #  the edge inaccurately: too much to the left.
+    #
+    #       __                                                 ________
+    #      | |                                                |       |
+    # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   intensity threshold
+    #      | |       __                                       |       |                to localize the edges
+    #      | |      | |                                       |       |
+    #      | |      | |                                       |       |
+    #      | |      | |                                       |       |
+    #  ____| |      | |_____                             ____ |       |  _________
+    #        |      |                                       | |       | |
+    #        |      |                                       | |       | |
+    #        |      |                                       | |       |_|
+    #        |      |                                       | |
+    #        |______|                                       |_|
+    #
+    #      ^                                                      ^
+    #      |                                                      |
+    #    detected edge                                       detected edge
+    #    position (=inaccurate!)                         position (=accurate)
+    #
+    # I doubt that there is a simple algorithmic solution to this. Probably we need to adjust the image acquisition
+    # setup such that the edge color is uniform around the sections.
 
     def get_preprocessed_image(self):
         """
@@ -313,6 +347,7 @@ def get_histogram_percentile(histogram, percentile):
     total = np.sum(histogram)
     needed = total * (percentile / 100.0)
     running_total = 0
+    i = 0
     for i, val in enumerate(histogram):
         running_total += val[0]
         if running_total >= needed:
