@@ -16,7 +16,6 @@ class ContourFinder:
         """
         XXX
         :param h_for_gradient_approximation: step size h used for numeric gradient approximation: gradient = (f(x+h)-f(x)) / h
-               IMPROVEME? (f(x+h/2)-f(x-h/2))/h is probably a better estimate
         :param max_iterations: the maximum number of iterations of gradient descent that will be performed to improve the slice contour
         :param vertex_distance_threshold: if during an iteration of the iterative process of improving the slice polygon shape,
                all vertices moved less than this threshold distance, then we assume we're close to the optimum contour shape and stop iterating.
@@ -39,14 +38,8 @@ class ContourFinder:
         """
 
         # We are trying to maximize the score. The score is measured in the preprocessed overview image,
-        # where edges are white (high intensity) and background black (low intensity).
-        # So edge pixels in the preprocessed image score many points, background pixels few point.
-        # The problem is that this seems to make the gradient descent algorithm incorrectly make the short edge of a slice
-        # too long because this way it can score more points by picking up more edge pixels of the long edge of the slice that
-        # it is attached too... (At least that is the theory - TODO needs to be checked.)
-        # We could inhibit this behavior by adding another term to the score function which punishes differences in shape between
-        # a template slice (or the previous slice) and the optimized one.
-        # Or maybe we should normalize the score by distance. So the score might increase by picking up more edge pixels, but the contour becomes longer too.
+        # where edges are white (high intensity value = high score) and background black (low intensity value = low score).
+        # So edge pixels in the preprocessed image score many points, background pixels few points.
 
         iteration = 0
         vertex_distance_change = 10 * self.vertex_distance_threshold  # 10 just to initialize to something larger than the initial threshold
@@ -76,11 +69,17 @@ class ContourFinder:
 
     def _calculate_gradient(self, image, contour_vector):
         """
-        XXXX
-        :param image: XXX
+        Returns an estimate of the gradient of the contour score function.
+        The gradient is approximated as (f(x+h) - f(x)) / h
+        IMPROVEME? (f(x+h/2)-f(x-h/2))/h is a more accurate estimate
+
+        :param image: a preprocessed overview image; ideally this image should have (i) high pixel intensity at slice
+        contour edges and low intensity for background and inside the sections,
+        (ii) little noise and debris, (iii) an intensity profile that starts relatively "far" from edges and
+        increases smoothly towards the edge center.
         :param contour_vector: a numpy row vector representation [x1, y1, x2, y2, ..., xn, yn] of a contour
-        :return: a numpy row vector representation of the gradient of the contour's score
-                 # XXXX for a quadrilateral slice contour this is (dscore/dx1, dscore/dy1, dscore/dx2, dscore/dy2,...,dscore/dx4, dscore/dy4)
+        :return: a numpy row vector representation of the gradient of the contour's score;
+                 for a quadrilateral slice contour this is [dscore/dx1, dscore/dy1, dscore/dx2, dscore/dy2,...,dscore/dx4, dscore/dy4]
         """
         n = len(contour_vector)
         assert(n % 2 == 0)
@@ -138,24 +137,9 @@ class ContourFinder:
         :param p2: a pair (x2, y2), coordinates of the end point of the segment
         :return: a list with score samples along the line segment p1-p2
         """
-        # IMPROVEME?
-        # This definition of score is not perfect: the algorithm tends to make the edges a bit too long:
-        # the fact that this way less 'blackness' per pixel is collected, is compensated by the longer edges.
-        # Maybe we ought to use some space-scale concept: the original edges get blurred relatively heavily to be able
-        # to attract far away contour approximations. Then maybe after a couple of optimization iterations, when the contour is likely much closer
-        # to its correct location, we switch to a less heavily blurred image. Due to the Gaussian intensity profile of the blurred edges,
-        # a new equilibrium (closer to the true edge center) exists where the contour does not gain so much anymore from being longer
-        # but passing through less dark pixels, and instead will move closer to the edge center again?
-        # Or can we define a different score that does not have this undesirable effect of preferring too long edges?
         # TODO?
         # Perhaps experiment with a score function that is a weighed version of the current score and a scalar value that measures how
         # much the shape of the slice contour resembles the shape of a template slice contour.
-        # TODO?
-        # A common failure of the active contour seems to be that the slice edge gets stuck parallel to, but not on, the actual slice edge.
-        # Perhaps, after the optimization stops, we could sample the neigbourhood of the slice for better slice shapes. For example by trying
-        # to move each slice edge parallel to itself and checking the score to see if it better (maybe after running a couple of extra gradient descent steps).
-        # Or, after optimization, we could jitter the solution's vertices a bit and run the optimization again. Then compare the scores of a couple of final
-        # slice contours obtained that way.
 
         v1 = np.array(p1)
         v2 = np.array(p2)
@@ -183,13 +167,15 @@ class ContourFinder:
             pos = v1 + i * exact_distance_between_samples * direction
             scores[i] = tools.sample_image(image, pos) * sample_weight
         return scores
-        # Important CHECKME: Is the score normalized by contour length? If not, change this, I think it should be.
+        # FIXME / CHECKME: Is the score normalized by contour length? If not, change this, I think it should be.
+        # (If we don't normalize, then perhaps the optimization will prefer slightly bigger contours
+        # that collect less score per sample, over smaller but more accurate contours that collect more score per sample, but less overall?)
 
 def contour_to_vector(contour):
     """
     Turn a list of vertex coordinates of a contour into a numpy row vector. Useful for optimization algorithms such as gradient descent.
     :param contour: a list of vertex coordinates [(x1, y1), (x2, y2), ..., (xn, yn)] or [np.array([x1,y 1]), ..., np.array([xn, yn])] representing a contour
-    :return: a numpy row vector [x1, y1, x2, y2, ..., xn, yn]
+    :return: an equivalent numpy row vector [x1, y1, x2, y2, ..., xn, yn]
     """
     num_vertices = len(contour)
     vec = np.zeros(2 * num_vertices)
@@ -203,7 +189,7 @@ def contour_to_vector(contour):
 def vector_to_contour(vec):
     """
     :param vec: a numpy row vector representation [x1, y1, x2, y2, ..., xn, yn] of a contour
-    :return: a list of vertex coordinates [(x1, y2), (x2, y2), ..., (xn, yn)]
+    :return: an equivalent list of vertex coordinate pairs [(x1, y2), (x2, y2), ..., (xn, yn)]
     """
     dim = len(vec)
     assert(dim % 2 == 0)
