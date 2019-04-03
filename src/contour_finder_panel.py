@@ -31,7 +31,7 @@ class ContourFinderPanel(wx.Panel):
 
         # Ribbon building
         self._num_slices = 1  # number of new slices to detect by extending a seed slice contour and using the preprocessed overview image which highlights edges
-        self._max_score_drop_ratio = 0.65
+        self._max_score_drop_ratio = 0.3
         self._draw_ghosts = False  # for debugging: draw tentative slice polygons during ribbon building
 
         # Contour energy minimization parameters
