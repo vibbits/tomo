@@ -42,4 +42,4 @@ class NaturalNeighborInterpolator(Interpolator):
         xindex = int((x - self._xmin) / self._step)
         yindex = int((y - self._ymin) / self._step)
         # TODO: maybe use bilinear interpolation instead?
-        return self._grid[xindex, yindex]
+        return self._grid[yindex, xindex]

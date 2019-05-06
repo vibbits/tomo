@@ -54,7 +54,7 @@ class FocusMap:
         else:
             self._interpolator = InverseDistanceWeighingInterpolator(known_points, known_values, k=1.0)
 
-        print('Building focus sample grid using {}'.format(self._interpolator))
+        # print('Building focus sample grid using {}'.format(self._interpolator))
         self._interpolator.prepare(self._xmin, self._xmax, self._ymin, self._ymax, self._step)
 
     def __str__(self):
