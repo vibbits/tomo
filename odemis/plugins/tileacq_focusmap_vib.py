@@ -55,9 +55,16 @@ import sys
 import argparse
 
 #################
-# https://stackoverflow.com/questions/67631/how-to-import-a-module-given-the-full-path
-sys.path.append("/home/secom/development/tomo/src")  # VIB
+# VIB
+
+sys.path.append("/home/secom/development/tomo/src")  # https://stackoverflow.com/questions/67631/how-to-import-a-module-given-the-full-path
 from focus_map import FocusMap
+
+import numpy as np
+
+import matplotlib
+# matplotlib.use('wxagg')   # CRASHES Odemis?? (on SECOM computer)
+import matplotlib.pyplot as plt
 #################
 
 class TileAcqPlugin(Plugin):
@@ -705,65 +712,123 @@ class TileAcqPlugin(Plugin):
                    (mem_est / 1024 ** 3,))
             self._dlg.setAcquisitionInfo(txt, lvl=logging.ERROR)
 
-#    def autofocus_prototype(self):
-#        options_detector = 'ccd'
-#        options_focuser = 'focus'
-#        options_spectrograph = None
-#        try:
-#            # find components by their role
-#            try:
-#                det = model.getComponent(role=options_detector)
-#            except LookupError:
-#                raise ValueError("Failed to find detector '%s'" % (options_detector,))
-#            try:
-#                focuser = model.getComponent(role=options_focuser)
-#            except LookupError:
-#                raise ValueError("Failed to find focuser '%s'" % (options_focuser,))
-#
-#            emt = None
-#            if det.role in ("se-detector", "bs-detector", "cl-detector"):
-#                # For EM images, the emitter is not necessary, but helps to get a
-#                # better step size in the search (and time estimation)
-#                try:
-#                    emt = model.getComponent(role="e-beam")
-#                except LookupError:
-#                    logging.info("Failed to find e-beam emitter")
-#                    pass
-#
-#            if options_spectrograph:
-#                try:
-#                    spgr = model.getComponent(role=options_spectrograph)
-#                    # TODO: allow multiple detectors
-#                except LookupError:
-#                    raise ValueError("Failed to find spectrograph '%s'" % (options_spectrograph,))
-#            else:
-#                spgr = None
-#
-#            logging.info("Original focus position: %f m", focuser.position.value["z"])
-#
-#            # Apply autofocus
-#            try:
-#                if spgr:
-#                    future_focus = align.AutoFocusSpectrometer(spgr, focuser, det)
-#                    foc = future_focus.result(1000)  # putting a timeout allows to get KeyboardInterrupts
-#                    logging.info("Focus levels after applying autofocus: %s",
-#                                 "".join("\n\tgrating %d on %s @ %f m" % (g, d.name, f) for (g, d), f in foc.items()))
-#                else:
-#                    future_focus = align.AutoFocus(det, emt, focuser)
-#                    foc_pos, fm_final = future_focus.result(1000)  # putting a timeout allows to get KeyboardInterrupts
-#                    logging.info("Focus level after applying autofocus: %f @ %f m", fm_final, foc_pos)
-#            except KeyboardInterrupt:
-#                future_focus.cancel()
-#                raise
-#
-#        except KeyboardInterrupt:
-#            logging.info("Interrupted before the end of the execution")
-#
-#        except ValueError as exp:
-#            logging.error("%s", exp)
-#
-#        except Exception:
-#            logging.exception("Unexpected error while performing action.")
+    def _read_focus_samples_file(self, filename):  # VIB
+        # Load focus samples from the text file with the given filename.
+        # The file's contents look like this:
+        #
+        #    x1 y1 z1
+        #    ...
+        #    xn yn zn
+        #
+        # Lines starting with (optional) whitespace followed by a hash sign are ignored (useful for comments).
+        # Lines with only whitespace are ignored as well.
+
+        # Read the focus map text file
+        with open(filename) as f:
+            lines = f.readlines()
+
+        # Discard empty lines and comment lines. Comment lines start with a hash sign.
+        lines = [line for line in lines if not (line.lstrip().startswith('#') or len(line.strip()) == 0)]
+
+        # Parse focus values
+        focus_data = []
+        for line in lines:
+            x, y, z = [float(val) for val in line.split()]
+            focus_data.append((x, y, z))
+
+        return focus_data
+
+    def _build_focus_map(self, filename):  # VIB
+        logging.debug("> > > Building focus map from %s", filename)
+
+        # Read the (x, y, z) focus values from a text file
+        focus_data = self._read_focus_samples_file(filename)
+
+        # Calculate the extent (in xy) of the tile centers
+        main_data = self.main_app.main_data
+        orig_pos = main_data.stage.position.value
+        tile_size = self._guess_smallest_fov()
+        overlap = 1 - self.overlap.value / 100
+        xmin_tiles = orig_pos["x"]
+        xmax_tiles = orig_pos["x"] + tile_size[0] * (self.nx.value * overlap)
+        ymax_tiles = orig_pos["y"]
+        ymin_tiles = orig_pos["y"] - tile_size[1] * (self.ny.value * overlap)
+
+        logging.info("tile centers: xmin=%.8f  xmax=%.8f", xmin_tiles, xmax_tiles)
+        logging.info("tile centers: ymin=%.8f  ymax=%.8f", ymin_tiles, ymax_tiles)
+
+        # Calculate the extent (in xy) of the user selected focus sample positions
+        xvals = [x for (x, _, _) in focus_data]
+        yvals = [y for (_, y, _) in focus_data]
+        xmin_samples = min(xvals)
+        xmax_samples = max(xvals)
+        ymin_samples = min(yvals)
+        ymax_samples = max(yvals)
+
+        logging.info("user samples: xmin=%.8f  xmax=%.8f", xmin_samples, xmax_samples)
+        logging.info("user samples: ymin=%.8f  ymax=%.8f", ymin_samples, ymax_samples)
+
+        xmin = min(xmin_tiles, xmin_samples)
+        xmax = max(xmax_tiles, xmax_samples)
+        ymin = min(ymin_tiles, ymin_samples)
+        ymax = max(ymax_tiles, ymax_samples)
+
+        # Extend by half a tile
+        xmin = xmin - tile_size[0] * 0.5
+        xmax = xmax + tile_size[0] * 0.5
+        ymax = ymax + tile_size[1] * 0.5
+        ymin = ymin - tile_size[1] * 0.5
+
+        logging.info("overall: xmin=%.8f  xmax=%.8f", xmin_tiles, xmax_tiles)
+        logging.info("overall: ymin=%.8f  ymax=%.8f", ymin_tiles, ymax_tiles)
+
+        #
+        oversampling = 10  # overage number of interpolated focus samples per tile (along an axis)
+        stepx = (xmax - xmin) / self.nx.value / oversampling
+        stepy = (ymax - ymin) / self.ny.value / oversampling
+        step = min(stepx, stepy)
+
+        logging.info("tile_size[0]=%.8f  tile_size[1]=%.8f", tile_size[0], tile_size[1])
+        logging.info("xmin=%.8f  xmax=%.8f", xmin, xmax)
+        logging.info("ymin=%.8f  ymax=%.8f", ymin, ymax)
+        logging.info("stepx=%.8f stepy=%.8f step=%.8f", stepx, stepy, step)
+
+        # Construct the actual focus map
+        focus_map = FocusMap(xmin, xmax, ymin, ymax, step)
+        for focus in focus_data:
+            focus_map.add_user_defined_focus_position((focus[0], focus[1]), focus[2])
+
+        return focus_map
+
+    def _draw_focus_map(self, focus_map, tile_centers):  # IMPROVEME: can be a free function
+        focus_samples = focus_map.get_focus_grid()
+        xmin, xmax, ymin, ymax = focus_map.get_extent()
+
+        fig, ax = plt.subplots()
+
+        # Show an image grid with interpolated focus z-values
+        im = ax.imshow(focus_samples, cmap=plt.cm.Reds, origin='lower', interpolation='none', extent=[xmin, xmax, ymin, ymax])
+
+        # Add a color bar
+        cbar = fig.colorbar(im)
+        cbar.ax.set_ylabel('Focus z')
+
+        # Indicate positions where user acquired focus z-value
+        positions = np.array(focus_map.get_user_defined_focus_positions())
+        for p in positions[:, 0:2]:
+            logging.info("Focus position x=%f y=%f", p[0], p[1])
+            plt.scatter(p[0], p[1], s=100, c='r', marker='x')
+
+        # Indicate tile centers
+        for p in tile_centers:
+            logging.info("Tile center x=%f y=%f", p[0], p[1])
+            plt.scatter(p[0], p[1], s=100, c='k', marker='+')
+
+        # Show the plot (non-blocking)
+        plt.xlabel('Stage x')
+        plt.ylabel('Stage y')
+        plt.title('Interpolated focus z-values')
+        plt.show()   # TEST TEST plt.show(block=False)
 
     def acquire(self, dlg):
         main_data = self.main_app.main_data
@@ -774,10 +839,12 @@ class TileAcqPlugin(Plugin):
 
         ##################################################################
         # VIB: focus interpolation
-        focus_map_filename = self.focusmap_filename.value  # e.g. '/home/secom/focusmap.txt'
-        logging.debug("> > > Loading focus map from %s", focus_map_filename)
-        focus_map = FocusMap.load(focus_map_filename)
-        logging.debug(focus_map)
+        focus_map = self._build_focus_map(self.focusmap_filename.value)
+        logging.debug("%s", focus_map)
+        logging.debug("About to draw focus map")
+        self._draw_focus_map(focus_map, [])
+        logging.debug("Done drawing focus map")
+        tile_centers = []  # will be filled in during tile acquisition below
         ##################################################################
 
         orig_pos = main_data.stage.position.value
@@ -825,6 +892,8 @@ class TileAcqPlugin(Plugin):
                 focus.moveAbsSync({"z": focusz})  # CHECKME: is focus really set after we return from this call?
 
                 logging.debug("Set focus at x=%.9f y=%.9f to z=%.9f (interpolated)", x, y, focusz)
+
+                tile_centers.append((x, y))
                 ##################################################################
 
                 ft.running_subf = acq.acquire(ss)
@@ -855,6 +924,12 @@ class TileAcqPlugin(Plugin):
 
             # Move stage to original position
             main_data.stage.moveAbs(orig_pos)
+
+            ##################################################################
+            # VIB: for debugging only
+            logging.debug("%s", focus_map)
+            self._draw_focus_map(focus_map, tile_centers)
+            ##################################################################
 
             # Stitch SEM and CL streams
             st_data = []
