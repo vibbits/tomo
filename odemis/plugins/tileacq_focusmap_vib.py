@@ -2,7 +2,7 @@
 '''
 Created on 22 Mar 2017
 
-@author: Éric Piel
+@author: Éric Piel -- modifications by Frank Vernaillen, VIB
 
 Gives ability to acquire the streams over a large area by separating it into
 tiles with some overlap. In other words, it acquires the streams at multiple
@@ -63,7 +63,7 @@ from focus_map import FocusMap
 import numpy as np
 
 import matplotlib
-# matplotlib.use('wxagg')   # CRASHES Odemis?? (on SECOM computer)
+# matplotlib.use('wxagg')   # wxagg crashes Odemis (on SECOM computer) as soon as something is plotted
 import matplotlib.pyplot as plt
 #################
 
@@ -749,13 +749,13 @@ class TileAcqPlugin(Plugin):
         orig_pos = main_data.stage.position.value
         tile_size = self._guess_smallest_fov()
         overlap = 1 - self.overlap.value / 100
-        xmin_tiles = orig_pos["x"]
-        xmax_tiles = orig_pos["x"] + tile_size[0] * (self.nx.value * overlap)
-        ymax_tiles = orig_pos["y"]
-        ymin_tiles = orig_pos["y"] - tile_size[1] * (self.ny.value * overlap)
+        xmin_tile_centers = orig_pos["x"]
+        xmax_tile_centers = orig_pos["x"] + tile_size[0] * ((self.nx.value - 1) * overlap)
+        ymax_tile_centers = orig_pos["y"]
+        ymin_tile_centers = orig_pos["y"] - tile_size[1] * ((self.ny.value - 1) * overlap)
 
-        logging.info("tile centers: xmin=%.8f  xmax=%.8f", xmin_tiles, xmax_tiles)
-        logging.info("tile centers: ymin=%.8f  ymax=%.8f", ymin_tiles, ymax_tiles)
+        logging.debug("tile centers: xmin=%.8f  xmax=%.8f", xmin_tile_centers, xmax_tile_centers)
+        logging.debug("tile centers: ymin=%.8f  ymax=%.8f", ymin_tile_centers, ymax_tile_centers)
 
         # Calculate the extent (in xy) of the user selected focus sample positions
         xvals = [x for (x, _, _) in focus_data]
@@ -765,13 +765,13 @@ class TileAcqPlugin(Plugin):
         ymin_samples = min(yvals)
         ymax_samples = max(yvals)
 
-        logging.info("user samples: xmin=%.8f  xmax=%.8f", xmin_samples, xmax_samples)
-        logging.info("user samples: ymin=%.8f  ymax=%.8f", ymin_samples, ymax_samples)
+        logging.debug("user samples: xmin=%.8f  xmax=%.8f", xmin_samples, xmax_samples)
+        logging.debug("user samples: ymin=%.8f  ymax=%.8f", ymin_samples, ymax_samples)
 
-        xmin = min(xmin_tiles, xmin_samples)
-        xmax = max(xmax_tiles, xmax_samples)
-        ymin = min(ymin_tiles, ymin_samples)
-        ymax = max(ymax_tiles, ymax_samples)
+        xmin = min(xmin_tile_centers, xmin_samples)
+        xmax = max(xmax_tile_centers, xmax_samples)
+        ymin = min(ymin_tile_centers, ymin_samples)
+        ymax = max(ymax_tile_centers, ymax_samples)
 
         # Extend by half a tile
         xmin = xmin - tile_size[0] * 0.5
@@ -779,19 +779,16 @@ class TileAcqPlugin(Plugin):
         ymax = ymax + tile_size[1] * 0.5
         ymin = ymin - tile_size[1] * 0.5
 
-        logging.info("overall: xmin=%.8f  xmax=%.8f", xmin_tiles, xmax_tiles)
-        logging.info("overall: ymin=%.8f  ymax=%.8f", ymin_tiles, ymax_tiles)
-
         #
-        oversampling = 10  # overage number of interpolated focus samples per tile (along an axis)
+        oversampling = 50  # overage number of interpolated focus samples per tile (along an axis)
         stepx = (xmax - xmin) / self.nx.value / oversampling
         stepy = (ymax - ymin) / self.ny.value / oversampling
         step = min(stepx, stepy)
 
-        logging.info("tile_size[0]=%.8f  tile_size[1]=%.8f", tile_size[0], tile_size[1])
-        logging.info("xmin=%.8f  xmax=%.8f", xmin, xmax)
-        logging.info("ymin=%.8f  ymax=%.8f", ymin, ymax)
-        logging.info("stepx=%.8f stepy=%.8f step=%.8f", stepx, stepy, step)
+        logging.debug("tile_size[0]=%.8f  tile_size[1]=%.8f", tile_size[0], tile_size[1])
+        logging.debug("xmin=%.8f  xmax=%.8f", xmin, xmax)
+        logging.debug("ymin=%.8f  ymax=%.8f", ymin, ymax)
+        logging.debug("stepx=%.8f stepy=%.8f step=%.8f", stepx, stepy, step)
 
         # Construct the actual focus map
         focus_map = FocusMap(xmin, xmax, ymin, ymax, step)
@@ -816,19 +813,17 @@ class TileAcqPlugin(Plugin):
         # Indicate positions where user acquired focus z-value
         positions = np.array(focus_map.get_user_defined_focus_positions())
         for p in positions[:, 0:2]:
-            logging.info("Focus position x=%f y=%f", p[0], p[1])
             plt.scatter(p[0], p[1], s=100, c='r', marker='x')
 
         # Indicate tile centers
         for p in tile_centers:
-            logging.info("Tile center x=%f y=%f", p[0], p[1])
             plt.scatter(p[0], p[1], s=100, c='k', marker='+')
 
         # Show the plot (non-blocking)
         plt.xlabel('Stage x')
         plt.ylabel('Stage y')
         plt.title('Interpolated focus z-values')
-        plt.show()   # TEST TEST plt.show(block=False)
+        plt.show()   # TODO this blocks Odemis until the window is closed. Try instead: plt.show(block=False)
 
     def acquire(self, dlg):
         main_data = self.main_app.main_data
