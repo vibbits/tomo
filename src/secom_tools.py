@@ -67,7 +67,7 @@ def move_stage_relative(odemis_cli, offset_microns):   # move the stage a certai
     # Better alternative - TO BE TESTED/CHECKED
     # stage = model.getComponent(role = "stage")
     # stage.moveRel({"x": dx_microns, "y": dy_microns})   # in what units is x and y?? Possibly meters instead of microns
-    # CHECKME: moveRelSync or moveRel ?
+    # CHECKME: moveRelSync or moveRel? Answer: most likely MoveRelSync to ensure the move is completed before we continue and acquire and image, for example
     # CHECKME: moveRel() returns a future?? Do we need to apply
 
 def set_absolute_stage_position(pos):  # move the stage to the specified absolute position (in meters)
@@ -79,13 +79,10 @@ def set_absolute_stage_position(pos):  # move the stage to the specified absolut
     # dlg = wx.MessageDialog(None, msg + " ?", "Move stage?", style=wx.YES | wx.NO)
     # if dlg.ShowModal() == wx.ID_YES:
     print(msg)
-    stage.moveAbs({"x": x, "y": y})
+    stage.moveAbsSync({"x": x, "y": y})
     # else:
     #     print(msg + " -- CANCELLED")
     # dlg.Destroy()
-
-    # CHECKME: moveAbs() actually returns a future, need to do something special?
-    # <ClientFuture at 0x7f5d91218c50 for Proxy of Component 'Sample Stage'>
 
     # IMPROVEME: is there a way to protect against stage movements that are too large (and will jam the stage)?
     #            this could happen if for example the user clicks outside the overview image (FIXME: need to protect against that)
@@ -107,7 +104,7 @@ def get_absolute_focus_z_position():    # returns the focus z value (CHECKME: in
 
 
 def set_absolute_focus_z_position(z):      # z is the absolute focus value  (use the same units as get_absolute_focus_z_position...)
-                                           # (CHECKME: in what units ???)
+                                           # (CHECKME: what are those units?)
     focus = model.getComponent(role="focus")
     msg = "Set absolute focus position to z={}".format(z)
 
@@ -115,14 +112,10 @@ def set_absolute_focus_z_position(z):      # z is the absolute focus value  (use
     # dlg = wx.MessageDialog(None, msg + " ?", "Set focus?", style=wx.YES | wx.NO)
     # if dlg.ShowModal() == wx.ID_YES:
     print(msg)
-    focus.moveAbs({"z": z})
+    focus.moveAbsSync({"z": z})
     # else:
     #     print(msg + " -- CANCELLED")
     # dlg.Destroy()
-
-    # CHECKME: should we use moveAbsSync() instead of moveAbs() ?
-    # CHECKME: moveAbs() actually returns a future, need to do something special?
-    # <ClientFuture at 0x7f5d91c6c410 for Proxy of Component 'Optical Focus'>
 
 
 ######################################################################################################################
