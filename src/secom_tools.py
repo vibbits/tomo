@@ -28,7 +28,7 @@ except ImportError:
 # The 'mode' must be 'EM' or 'LM' to acquire electron resp. light microscope images.
 # If the user manually acquired focus z-values in a couple of positions these values will be interpolated
 # and used as focus-z for each image.
-def acquire_microscope_images(mode, physical_offsets_microns, delay_between_image_acquisition_secs,
+def acquire_microscope_images(mode, physical_offsets_microns, stabilization_time, delay_between_image_acquisition_secs,
                               odemis_cli, images_output_folder, images_prefix, focus_map = None):
 
     # Ensure that the output folder for the images exists
@@ -46,6 +46,10 @@ def acquire_microscope_images(mode, physical_offsets_microns, delay_between_imag
             z = focus_map.get_focus_value(pos)
             if z != None:
                 set_absolute_focus_z_position(z)
+
+        # Wait for everything to settle (e.g. we suspect the viscous (vicious ;-) immersion oil droplet to be deformed
+        # a bit after moving the stage, resulting in out of focus images. So wait a little while before imaging.
+        time.sleep(stabilization_time)
 
         # Acquire an LM/EM image and save it to the output folder
         image_path = os.path.join(images_output_folder, '{}{}.ome.tiff'.format(images_prefix, i))

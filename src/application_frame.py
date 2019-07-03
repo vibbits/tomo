@@ -441,7 +441,7 @@ class ApplicationFrame(wx.Frame):
         # Now acquire an LM image at the point of interest location in each slice.
         wait = wx.BusyInfo("Acquiring LM images...")
         secom_tools.acquire_microscope_images('LM',
-                                              self._model.slice_offsets_microns, self._model.delay_between_LM_image_acquisition_secs,
+                                              self._model.slice_offsets_microns, self._model.lm_stabilization_time_secs, self._model.delay_between_LM_image_acquisition_secs,
                                               self._model.odemis_cli, self._model.lm_images_output_folder, self._model.lm_images_prefix,
                                               self._focus_panel.get_focus_map())
         del wait
@@ -509,7 +509,7 @@ class ApplicationFrame(wx.Frame):
         # but use the more accurate stage offsets (obtained from slice mapping + SIFT registration).
         wait = wx.BusyInfo("Acquiring EM images...")
         secom_tools.acquire_microscope_images('EM',
-                                              self._model.combined_offsets_microns, self._model.delay_between_EM_image_acquisition_secs,
+                                              self._model.combined_offsets_microns, 0.0, self._model.delay_between_EM_image_acquisition_secs,
                                               self._model.odemis_cli, self._model.em_images_output_folder, self._model.em_images_prefix)
         del wait
 

@@ -13,6 +13,7 @@ class TomoModel:
     _KEY_RIBBONS_MASK_PATH = 'ribbons_mask_path'
     _KEY_LM_IMAGES_OUTPUT_FOLDER = 'lm_images_output_folder'
     _KEY_EM_IMAGES_OUTPUT_FOLDER = 'em_images_output_folder'
+    _KEY_LM_STABILIZATION_TIME_SECS = 'lm_stabilization_time_secs'
     _KEY_LM_ACQUISITION_DELAY = 'lm_acquisition_delay'
     _KEY_EM_ACQUISITION_DELAY = 'em_acquisition_delay'
     _KEY_LM_DO_AUTOFOCUS = 'lm_do_autofocus'
@@ -37,6 +38,7 @@ class TomoModel:
         self.lm_images_output_folder = None
         self.em_images_output_folder = None
         self.original_point_of_interest = None
+        self.lm_stabilization_time_secs = 0.0  # time in seconds that we wait for the immersion oil droplet and stage etc. to stabilize before acquiring 100x LM images
         self.delay_between_LM_image_acquisition_secs = 0.0  # time in seconds to pause between successive microscope commands to acquire an LM image (maybe 1 or 2 secs in reality)
         self.delay_between_EM_image_acquisition_secs = 0.0  # time in seconds to pause between successive microscope commands to acquire an EM image (maybe 1 or 2 secs in reality)
         self.overview_image_pixels_per_mm = 0.0  # of the e.g. x20 lens overview image
@@ -72,6 +74,7 @@ class TomoModel:
         self.ribbons_mask_path                       = self._config.Read(TomoModel._KEY_RIBBONS_MASK_PATH, r'/home/secom/development/tomo/data/bisstitched-0-ribbonsmask.tif')
         self.lm_images_output_folder                 = self._config.Read(TomoModel._KEY_LM_IMAGES_OUTPUT_FOLDER, r'/home/secom/development/tomo/data/output/LM')
         self.em_images_output_folder                 = self._config.Read(TomoModel._KEY_EM_IMAGES_OUTPUT_FOLDER, r'/home/secom/development/tomo/data/output/EM')
+        self.lm_stabilization_time_secs              = self._config.ReadFloat(TomoModel._KEY_LM_STABILIZATION_TIME_SECS, 5.0)
         self.delay_between_LM_image_acquisition_secs = self._config.ReadFloat(TomoModel._KEY_LM_ACQUISITION_DELAY, 2.0)
         self.delay_between_EM_image_acquisition_secs = self._config.ReadFloat(TomoModel._KEY_EM_ACQUISITION_DELAY, 2.0)
         self.overview_image_pixels_per_mm            = self._config.ReadFloat(TomoModel._KEY_OVERVIEW_IMAGE_PIXELS_PER_MM, 3077.38542)
@@ -92,6 +95,7 @@ class TomoModel:
         self._config.Write(TomoModel._KEY_RIBBONS_MASK_PATH, self.ribbons_mask_path)
         self._config.Write(TomoModel._KEY_LM_IMAGES_OUTPUT_FOLDER, self.lm_images_output_folder)
         self._config.Write(TomoModel._KEY_EM_IMAGES_OUTPUT_FOLDER, self.em_images_output_folder)
+        self._config.WriteFloat(TomoModel._KEY_LM_STABILIZATION_TIME_SECS, self.lm_stabilization_time_secs)
         self._config.WriteFloat(TomoModel._KEY_LM_ACQUISITION_DELAY, self.delay_between_LM_image_acquisition_secs)
         self._config.WriteFloat(TomoModel._KEY_EM_ACQUISITION_DELAY, self.delay_between_EM_image_acquisition_secs)
         self._config.WriteFloat(TomoModel._KEY_OVERVIEW_IMAGE_PIXELS_PER_MM, self.overview_image_pixels_per_mm)
@@ -114,6 +118,6 @@ class TomoModel:
     # | lens | pixels/mm   |
     # +------+-------------+
     # |  10x |  1538.46154 |
-    # |  20x |  3077.38542 |
+    # |  20x |  3077.38542 |  WARNING: NOT VERY ACCURATE!
     # | 100x | 15398.49624 |
     # +------+-------------+
