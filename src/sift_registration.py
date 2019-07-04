@@ -83,7 +83,8 @@ def registration():
     # - https://github.com/axtimwalde/mpicbg/blob/2f411b380cffb580e35410b6517ffeb2c72489e2/mpicbg_/src/main/java/SIFT_Align.java)
     # - https://github.com/axtimwalde/mpicbg/blob/2f411b380cffb580e35410b6517ffeb2c72489e2/mpicbg/src/main/java/mpicbg/ij/SIFT.java
 #   IJ.run("Linear Stack Alignment with SIFT", "initial_gaussian_blur=1.60 steps_per_scale_octave=3 minimum_image_size=64 maximum_image_size=1024 feature_descriptor_size=4 feature_descriptor_orientation_bins=8 closest/next_closest_ratio=0.92 maximal_alignment_error=25 inlier_ratio=0.05 expected_transformation=Rigid interpolate");
-    IJ.run("Linear Stack Alignment with SIFT", "initial_gaussian_blur=1.8 steps_per_scale_octave=3 minimum_image_size=128 maximum_image_size=1024 feature_descriptor_size=8 feature_descriptor_orientation_bins=8 closest/next_closest_ratio=0.92 maximal_alignment_error=25 inlier_ratio=0.05 expected_transformation=Translation interpolate");
+#   IJ.run("Linear Stack Alignment with SIFT", "initial_gaussian_blur=1.8 steps_per_scale_octave=3 minimum_image_size=128 maximum_image_size=1024 feature_descriptor_size=8 feature_descriptor_orientation_bins=8 closest/next_closest_ratio=0.92 maximal_alignment_error=25 inlier_ratio=0.05 expected_transformation=Translation interpolate");
+    IJ.run("Linear Stack Alignment with SIFT", "initial_gaussian_blur=1.6 steps_per_scale_octave=3 minimum_image_size=128 maximum_image_size=1024 feature_descriptor_size=8 feature_descriptor_orientation_bins=8 closest/next_closest_ratio=0.92 maximal_alignment_error=50 inlier_ratio=0.05 expected_transformation=Rigid interpolate");
 
     # Save the aligned stack
     aligned_stack = IJ.getImage()  # The SIFT plugin only created one new image, the aligned stack, it is now active
