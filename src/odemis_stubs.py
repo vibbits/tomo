@@ -33,6 +33,8 @@ class focus_component(component):
     def moveAbs(self, z):
         self.position.value["z"] = z
 
+    def moveAbsSync(self, z):
+        self.moveAbs(z)
 
 class stage_component(component):
     position = stage_position()
@@ -45,6 +47,8 @@ class stage_component(component):
         self.position.value["x"] = pos["x"]
         self.position.value["y"] = pos["y"]
 
+    def moveAbsSync(self, pos):
+        self.moveAbs(pos)
 
 class model:
     @staticmethod
