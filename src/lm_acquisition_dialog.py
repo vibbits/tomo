@@ -86,6 +86,10 @@ class LMAcquisitionDialog(wx.Dialog):
         sift_pixel_size_label = wx.StaticText(self, wx.ID_ANY, "Pixel size (pixels/mm):")
         self._sift_pixel_size_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.sift_images_pixels_per_mm), size=(100, -1))
 
+        # The image size is just information to the user, a reminder that we rely on the acquired images to be of a certain size.
+        image_size_label = wx.StaticText(self, wx.ID_ANY, "Image size (width x height):")
+        image_size_pixels = wx.StaticText(self, wx.ID_ANY, "{} x {} pixels".format(self._model.image_size[0], self._model.image_size[1]))
+
         # LM Image Acquisition
         lm_fgs = wx.FlexGridSizer(cols=2, vgap=4, hgap=8)
         lm_fgs.Add(lm_images_output_folder_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
@@ -97,10 +101,12 @@ class LMAcquisitionDialog(wx.Dialog):
         lm_fgs.Add(lm_acquisition_delay_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         lm_fgs.Add(self._lm_acquisition_delay_edit, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
         lm_fgs.Add(empty_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        lm_fgs.Add(self._lm_use_focusmap_checkbox, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        # lm_fgs.Add(self._lm_do_autofocus_checkbox, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        # lm_fgs.Add(self._lm_max_autofocus_change_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        # lm_fgs.Add(self._lm_max_autofocus_change_edit, flag =wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        lm_fgs.Add(self._lm_use_focusmap_checkbox, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        # lm_fgs.Add(self._lm_do_autofocus_checkbox, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        # lm_fgs.Add(self._lm_max_autofocus_change_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        # lm_fgs.Add(self._lm_max_autofocus_change_edit, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        lm_fgs.Add(image_size_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        lm_fgs.Add(image_size_pixels, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
         lm_box = wx.StaticBox(self, -1, 'LM Image Acquisition')
         lm_sizer = wx.StaticBoxSizer(lm_box, wx.VERTICAL)

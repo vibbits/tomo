@@ -470,13 +470,21 @@ class ApplicationFrame(wx.Frame):
         sift_matrices = tools.extract_sift_alignment_matrices(out)
         print(sift_matrices)
 
-        # In sift_registration.py we asked for translation only transformations.
-        # So our matrices should be pure translations. Extract the last column (=the offset) and convert from pixel
-        # coordinates to physical distances on the sample.
-        # (We also add a (0,0) offset for the first slice.)
+        # Calculate a fine stage position correction (in pixels) from the transformation
+        # that is needed to register successive images of the same ROI in successive sample sections.
+        center = np.array([self._model.image_size[0] / 2.0, self._model.image_size[1] / 2.0])  # image center, in pixels
+        sift_offsets = [np.array([0, 0])]  # stage position correction (in pixels)
+
+        for mat in sift_matrices:
+            # mat is a 2x3 numpy array; 3rd column is the translation vector
+            new_center = np.dot(mat, np.array([center[0], center[1], 1.0]))
+            offset = new_center - center  # displacement in pixels
+            sift_offsets.append(offset)
+            print('matrix={} center={} newcenter={} offset={} (in pixels)'.format(mat, center, new_center, offset))
+            center = new_center
+
         sift_images_pixelsize_in_microns = 1000.0 / self._model.sift_images_pixels_per_mm
-        sift_offsets_microns = [np.array([0, 0])] + [mat[:, 2] * sift_images_pixelsize_in_microns for mat in
-                                                     sift_matrices]
+        sift_offsets_microns = [sift_offset * sift_images_pixelsize_in_microns for sift_offset in sift_offsets]
         print('Fine SIFT offset (in microns): ' + repr(sift_offsets_microns))
 
         # Invert y of the SIFT offsets
