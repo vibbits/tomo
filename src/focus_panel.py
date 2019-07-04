@@ -30,11 +30,10 @@ class FocusPanel(wx.Panel):
         wx.Panel.__init__(self, parent, size=(350, -1))
         self._canvas = canvas
         self._model = model
-        self._focus_map = None  # we need an overview image aligned with the stage before we can build a focus map (because we need to know the extent of the sample grid)
         self._table = self._make_table()  # table with user-defined focus (x, y, z)
         self._stage_position_object = None
 
-        title = wx.StaticText(self, wx.ID_ANY, "Focus")
+        title = wx.StaticText(self, wx.ID_ANY, "Focus Map")
         title.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD))
         separator = wx.StaticLine(self, wx.ID_ANY)
 
@@ -74,8 +73,8 @@ class FocusPanel(wx.Panel):
         contents.Fit(self)
 
     def activate(self):
-        if self._focus_map is None:
-            self._focus_map = self._make_focus_map()
+        if self._model.focus_map is None:
+            self._model.focus_map = self._make_focus_map()
 
         self._canvas.Activate(MoveStageMode.NAME)
 
@@ -106,7 +105,7 @@ class FocusPanel(wx.Panel):
         return table
 
     def reset(self):
-        self._focus_map.reset()
+        self._model.focus_map.reset()
         self._canvas.remove_focus_positions()
         self._canvas.redraw()
         self._clear_table()
@@ -120,16 +119,13 @@ class FocusPanel(wx.Panel):
         self.GetTopLevelParent().Layout()
 
     def _add_to_table(self, x, y, z):
-        row = len(self._focus_map.get_user_defined_focus_positions()) - 1
+        row = len(self._model.focus_map.get_user_defined_focus_positions()) - 1
         self._table.InsertRows(row)
         self._table.SetCellValue(row, 0, '{:.9f}'.format(x))  # x and y are expressed in meters, display position with nanometer precision
         self._table.SetCellValue(row, 1, '{:.9f}'.format(y))
         self._table.SetCellValue(row, 2, '{:.9f}'.format(z))
         self._save_button.Enable(True)
         self._show_button.Enable(True)
-
-    def get_focus_map(self):
-        return self._focus_map
 
     def _make_focus_map(self):
         # Find the extent of rectangle in stage coordinates that covers the overview image.
@@ -177,7 +173,7 @@ class FocusPanel(wx.Panel):
             z = secom_tools.get_absolute_focus_z_position()
 
         # Remember focus
-        self._focus_map.add_user_defined_focus_position(stage_pos, z)
+        self._model.focus_map.add_user_defined_focus_position(stage_pos, z)
 
         # Update table
         self._add_to_table(stage_pos[0], stage_pos[1], z)
@@ -212,7 +208,7 @@ class FocusPanel(wx.Panel):
                            style=wx.FD_SAVE) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
                 path = dlg.GetPath()
-                focus_samples = self._focus_map.get_focus_grid()
+                focus_samples = self._model.focus_map.get_focus_grid()
                 np.savetxt(path, focus_samples, delimiter = '\t')
                 print('Sampled focus map saved to {}'.format(path))
 
@@ -286,8 +282,10 @@ class FocusPanel(wx.Panel):
         return xmin, xmax, ymin, ymax
 
     def _draw_focus_map(self):
-        focus_samples = self._focus_map.get_focus_grid()
-        xmin, xmax, ymin, ymax = self._focus_map.get_extent()
+        focus_map = self._model.focus_map
+
+        focus_samples = focus_map.get_focus_grid()
+        xmin, xmax, ymin, ymax = focus_map.get_extent()
 
         fig, ax = plt.subplots()
 
@@ -299,7 +297,7 @@ class FocusPanel(wx.Panel):
         cbar.ax.set_ylabel('Focus z')
 
         # Indicate positions where user acquired focus z-value
-        positions = np.array(self._focus_map.get_user_defined_focus_positions())
+        positions = np.array(focus_map.get_user_defined_focus_positions())
         for p in positions[:, 0:2]:
             plt.scatter(p[0], p[1], s=100, c='k', marker='+')
 

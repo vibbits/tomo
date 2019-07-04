@@ -54,7 +54,7 @@ class ApplicationFrame(wx.Frame):
     _em_image_acquisition_item = None
     _segment_ribbons_item = None
     _set_point_of_interest_item = None
-    _set_focus_item = None
+    _build_focus_map_item = None
     _about_item = None
 
     _menu_state = None  # a tuple with enabled/disabled flags for various menu items; used when a side panel is visible and we want to behave in a modal fashion
@@ -134,7 +134,7 @@ class ApplicationFrame(wx.Frame):
         # Focus side panel
         self._focus_panel = FocusPanel(self, self._overview_canvas, self._model)
         self._focus_panel.Show(False)
-        self.Bind(wx.EVT_BUTTON, self._on_focus_done_button_click, self._focus_panel.done_button)
+        self.Bind(wx.EVT_BUTTON, self._on_build_focus_map_done_button_click, self._focus_panel.done_button)
 
         # Contour finder side panel
         self._contour_finder_panel = ContourFinderPanel(self, self._model, self._overview_canvas, self._selector)
@@ -192,8 +192,8 @@ class ApplicationFrame(wx.Frame):
         self._align_stage_item.Enable(False)
         self._set_point_of_interest_item = microscope_menu.Append(wx.NewId(), "Set point of interest...")
         self._set_point_of_interest_item.Enable(False) # the point of interest is specified in overview image coordinates (so we need an overview image) and will predict analogous points of interest in the other slices (so we need to have slice outlines)
-        self._set_focus_item = microscope_menu.Append(wx.NewId(), "Set focus...")
-        self._set_focus_item.Enable(False)  # focus setup is only possible after we've aligned stage with overview image (because in the focus mode we can click on the overview image to move the stage to our target point where we want to manually set the focus)
+        self._build_focus_map_item = microscope_menu.Append(wx.NewId(), "Build Focus Map...")
+        self._build_focus_map_item.Enable(False)  # focus setup is only possible after we've aligned stage with overview image (because in the focus mode we can click on the overview image to move the stage to our target point where we want to manually set the focus)
         self._lm_image_acquisition_item = microscope_menu.Append(wx.NewId(), "Acquire LM Images...")
         self._lm_image_acquisition_item.Enable(False)
         self._em_image_acquisition_item = microscope_menu.Append(wx.NewId(), "Acquire EM Images...")
@@ -229,7 +229,7 @@ class ApplicationFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_em_image_acquisition, self._em_image_acquisition_item)
         self.Bind(wx.EVT_MENU, self._on_segment_ribbons, self._segment_ribbons_item)
         self.Bind(wx.EVT_MENU, self._on_find_contours, self._contour_finder_item)
-        self.Bind(wx.EVT_MENU, self._on_set_focus, self._set_focus_item)
+        self.Bind(wx.EVT_MENU, self._on_build_focus_map, self._build_focus_map_item)
         self.Bind(wx.EVT_MENU, self._on_show_slice_numbers, self._show_slice_numbers_item)
         self.Bind(wx.EVT_MENU, self._on_about, self._about_item)
 
@@ -306,10 +306,10 @@ class ApplicationFrame(wx.Frame):
     def _on_segmentation_done_button_click(self, event):
         self._show_side_panel(self._segmentation_panel, False)
 
-    def _on_set_focus(self, event):
+    def _on_build_focus_map(self, event):
         self._show_side_panel(self._focus_panel, True)
 
-    def _on_focus_done_button_click(self, event):
+    def _on_build_focus_map_done_button_click(self, event):
         self._show_side_panel(self._focus_panel, False)
 
     def _on_align_stage(self, event):
@@ -320,7 +320,7 @@ class ApplicationFrame(wx.Frame):
 
         # Enable/disable menu entries
         stage_is_aligned = (self._model.overview_image_to_stage_coord_trf is not None)
-        self._set_focus_item.Enable(stage_is_aligned)  # during focus acquisition we will move the stage, so it needs to be aligned
+        self._build_focus_map_item.Enable(stage_is_aligned)  # during focus acquisition we will move the stage, so it needs to be aligned
         self._lm_image_acquisition_item.Enable(self._can_acquire_lm_images())
 
     def _on_set_point_of_interest(self, event):
@@ -368,7 +368,7 @@ class ApplicationFrame(wx.Frame):
         e3 = self._em_image_acquisition_item.IsEnabled(); self._em_image_acquisition_item.Enable(False)
         e4 = self._segment_ribbons_item.IsEnabled(); self._segment_ribbons_item.Enable(False)
         e5 = self._load_slice_polygons_item.IsEnabled(); self._load_slice_polygons_item.Enable(False)
-        e6 = self._set_focus_item.IsEnabled(); self._set_focus_item.Enable(False)
+        e6 = self._build_focus_map_item.IsEnabled(); self._build_focus_map_item.Enable(False)
         e7 = self._set_point_of_interest_item.IsEnabled(); self._set_point_of_interest_item.Enable(False)
         e8 = self._align_stage_item.IsEnabled(); self._align_stage_item.Enable(False)
         return (e1, e2, e3, e4, e5, e6, e7, e8)
@@ -380,7 +380,7 @@ class ApplicationFrame(wx.Frame):
         self._em_image_acquisition_item.Enable(e3)
         self._segment_ribbons_item.Enable(e4)
         self._load_slice_polygons_item.Enable(e5)
-        self._set_focus_item.Enable(e6)
+        self._build_focus_map_item.Enable(e6)
         self._set_point_of_interest_item.Enable(e7)
         self._align_stage_item.Enable(e8)
 
@@ -443,7 +443,7 @@ class ApplicationFrame(wx.Frame):
         secom_tools.acquire_microscope_images('LM',
                                               self._model.slice_offsets_microns, self._model.lm_stabilization_time_secs, self._model.delay_between_LM_image_acquisition_secs,
                                               self._model.odemis_cli, self._model.lm_images_output_folder, self._model.lm_images_prefix,
-                                              self._focus_panel.get_focus_map())
+                                              self._model.focus_map if self._model.lm_use_focus_map else None)
         del wait
 
         # Now tell Fiji to execute a macro that (i) reads the LM images, (ii) merges them into a stack,

@@ -1,0 +1,30 @@
+
+
+Possible ways to set the focus when acquiring LM images with the 100x lens
+==========================================================================
+
+
+      +-------------->----------------+   +------------>-------------+
+      |                               |   |                          |
+      |     +-------------------+     |   |     +--------------+     |             +-------------+
+  z0  |     |                   |     v   |     |              |     v             |             |
+------+---->| z = focusmap(x,y) |-----+---+---->|   autofocus  |-----+-------+---->|   acquire   |-------> Done
+            |        20x        |               |              |             |     |   1 slice   |
+            +-------------------+               +--------------+             |     +-------------+
+                                                  * fully automatic          |
+                                                        or                   |
+                                                  * from z0, with z range    |
+                                                                             |     +-------------+
+                                                                             |     |             |
+                                                                             +---->|   acquire   |-------> Done
+                                                                                   |   z stack   |
+                                                                                   +-------------+
+                                                                                     * # slices
+                                                                                     * delta z
+- focusmap 20x is the focus map created with the 20x lens
+- we assume that z0 is in focus somewhere on the section,
+  or that it is some average focus z
+- if we do fully automatic autofocus (ignoring current focus z), then using the focus map is useless
+
+
+

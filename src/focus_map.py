@@ -28,7 +28,7 @@ class FocusMap:
         self._focus_positions.append(focus_position)
         self._interpolator = None  # there are new data points, so if we already have an interpolator, discard it
 
-    def get_user_defined_focus_positions(self):
+    def get_user_defined_focus_positions(self):  # returns an unordered list of (x, y, focus z) LM focus positions
         return self._focus_positions
 
     def reset(self):

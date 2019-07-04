@@ -22,6 +22,7 @@ class LMAcquisitionDialog(wx.Dialog):
     # _lm_max_autofocus_change_label = None
     # _lm_max_autofocus_change_edit = None
     # _lm_do_autofocus_checkbox = None
+    _lm_use_focusmap_checkbox = None
 
     def __init__(self, model, parent, ID, title, size=wx.DefaultSize, pos=wx.DefaultPosition, style=wx.DEFAULT_DIALOG_STYLE):
         wx.Dialog.__init__(self, parent, ID, title, pos, size, style)
@@ -43,6 +44,10 @@ class LMAcquisitionDialog(wx.Dialog):
 
         lm_acquisition_delay_label = wx.StaticText(self, wx.ID_ANY, "Delay after imaging (sec):")
         self._lm_acquisition_delay_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.delay_between_LM_image_acquisition_secs), size=(50, -1))
+
+        self._lm_use_focusmap_checkbox = wx.CheckBox(self, wx.ID_ANY, "Use Focus Map from Low Magnification Lens")
+        self._lm_use_focusmap_checkbox.Enable(self._can_use_focus_map())
+        self._lm_use_focusmap_checkbox.SetValue(self._model.lm_use_focus_map)
 
         lm_sizer = wx.BoxSizer(wx.HORIZONTAL)
         lm_sizer.Add(self._lm_images_output_folder_edit, flag=wx.ALIGN_CENTER_VERTICAL)
@@ -92,6 +97,7 @@ class LMAcquisitionDialog(wx.Dialog):
         lm_fgs.Add(lm_acquisition_delay_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         lm_fgs.Add(self._lm_acquisition_delay_edit, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
         lm_fgs.Add(empty_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        lm_fgs.Add(self._lm_use_focusmap_checkbox, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
         # lm_fgs.Add(self._lm_do_autofocus_checkbox, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
         # lm_fgs.Add(self._lm_max_autofocus_change_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         # lm_fgs.Add(self._lm_max_autofocus_change_edit, flag =wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
@@ -130,6 +136,7 @@ class LMAcquisitionDialog(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self._on_sift_input_folder_change, self._sift_input_folder_edit)
         self.Bind(wx.EVT_TEXT, self._on_sift_output_folder_change, self._sift_output_folder_edit)
         self.Bind(wx.EVT_TEXT, self._on_sift_pixel_size_change, self._sift_pixel_size_edit)
+        self.Bind(wx.EVT_CHECKBOX, self._on_use_focusmap_change, self._lm_use_focusmap_checkbox)
         # self.Bind(wx.EVT_CHECKBOX, self._on_lm_do_autofocus_change, self._lm_do_autofocus_checkbox)
         # self.Bind(wx.EVT_TEXT, self._on_lm_max_autofocus_change, self._lm_max_autofocus_change_edit)
         self.Bind(wx.EVT_BUTTON, self._on_lm_output_folder_browse_button_click, self._lm_images_output_folder_button)
@@ -150,6 +157,10 @@ class LMAcquisitionDialog(wx.Dialog):
     # def _enable_autofocus_edit_field(self, enable):
     #     self._lm_max_autofocus_change_label.Enable(enable)
     #     self._lm_max_autofocus_change_edit.Enable(enable)
+
+    def _can_use_focus_map(self):
+        focus_map = self._model.focus_map
+        return (focus_map is not None) and (len(focus_map.get_user_defined_focus_positions()) > 0)
 
     # TODO: try to generalize/unify the 3 functions below (and similar ones in other ui source files)
 
@@ -202,6 +213,10 @@ class LMAcquisitionDialog(wx.Dialog):
     def _on_stabilization_time_change(self, event):
         self._model.lm_stabilization_time_secs = float(self._lm_stabilization_time_edit.GetValue())
         print('lm_stabilization_time_secs={}'.format(self._model.lm_stabilization_time_secs))
+
+    def _on_use_focusmap_change(self, event):
+        self._model.lm_use_focus_map = self._lm_use_focusmap_checkbox.IsChecked()
+        print('lm_use_focus_map={}'.format(self._model.lm_use_focus_map))
 
     # def _on_lm_do_autofocus_change(self, event):
     #     self._model.lm_do_autofocus = self._lm_do_autofocus_checkbox.IsChecked()
