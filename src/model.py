@@ -60,7 +60,7 @@ class TomoModel:
         self.combined_offsets_microns = None  # refined stage movement (combining slice outline mapping + SIFT registration of x100 images)
         self.overview_image_to_stage_coord_trf = None  # a numpy 3 x 3 homogeneous transformation matrix from overview image (pixel) coordinates to stage position coordinates (in mm); the third row of the matrix is [0 0 1], and it transforms a column matrix [xi; yi; 1]
 
-        self.lm_use_focus_map = False  # Flag deciding whether or not to use the focus map (self.focus_map) created with the low magnification lens (e.g. 20x) to set the (rough) focus during LM image acquisition with the 100x lens. The 100x lens has a smaller depth of field than the 20x, so focus set this way may not be very good, but it could be a decent initial focus guess for autofocus.
+        self.lm_use_focus_map = True  # Flag deciding whether or not to use the focus map (self.focus_map) created with the low magnification lens (e.g. 20x) to set the (rough) focus during LM image acquisition with the 100x lens. The 100x lens has a smaller depth of field than the 20x, so focus set this way may not be very good, but it could be a decent initial focus guess for autofocus.
         self.focus_map = None  # The actual focus map. It can be built and saved for use in the tiled overview image acquisition plugin for Odemis, and optionally used lateron during 100x LM image acquisition as well. Note: we need an overview image aligned with the stage before we can build a focus map (because we need to know the extent of the sample grid)
 
         # Persistent storage

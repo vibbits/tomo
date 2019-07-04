@@ -45,7 +45,7 @@ class LMAcquisitionDialog(wx.Dialog):
         lm_acquisition_delay_label = wx.StaticText(self, wx.ID_ANY, "Delay after imaging (sec):")
         self._lm_acquisition_delay_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.delay_between_LM_image_acquisition_secs), size=(50, -1))
 
-        self._lm_use_focusmap_checkbox = wx.CheckBox(self, wx.ID_ANY, "Use Focus Map from Low Magnification Lens")
+        self._lm_use_focusmap_checkbox = wx.CheckBox(self, wx.ID_ANY, "Use Focus Map")
         self._lm_use_focusmap_checkbox.Enable(self._can_use_focus_map())
         self._lm_use_focusmap_checkbox.SetValue(self._model.lm_use_focus_map)
 
