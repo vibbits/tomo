@@ -6,7 +6,7 @@ NOTHING = -1                     # An invalid index indicating no slice or no ha
 REGULAR_LINE_WIDTH = 1           # Normal line width for drawing slice contours
 HIGHLIGHTED_LINE_WIDTH = 3       # Line width for drawing the contours of a highlighted slice
 
-MARKER_SIZE = 25                 # Size of point-of-interest, focus value, etc. markers
+MARKER_SIZE = 25                 # Size of point-of-interest, focus value, etc. markers  # IMPROVEME: the size of these markers are in world space, so they change in size when zooming in/out. Perhaps they should be in screen space? But I'm not sure we can do so easily in wxPython.
 HANDLE_SIZE = 8                  # Size of polygon vertex handle
 
 NORMAL_COLOR = 'GREEN'           # Color for drawing slice contours

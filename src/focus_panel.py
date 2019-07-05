@@ -33,6 +33,9 @@ class FocusPanel(wx.Panel):
         self._table = self._make_table()  # table with user-defined focus (x, y, z)
         self._stage_position_object = None
 
+        # self._table.Bind(wx.EVT_KEY_DOWN, self._on_grid_keypress)
+        self._table.Bind(wx.grid.EVT_GRID_LABEL_RIGHT_CLICK, self._on_grid_label_right_click)
+
         title = wx.StaticText(self, wx.ID_ANY, "Focus Map")
         title.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD))
         separator = wx.StaticLine(self, wx.ID_ANY)
@@ -41,7 +44,7 @@ class FocusPanel(wx.Panel):
         label.Wrap(330)  # force line wrapping
 
         button_size = (125, -1)
-        remember_focus_button = wx.Button(self, wx.ID_ANY, "Remember focus", size=button_size)
+        remember_focus_button = wx.Button(self, wx.ID_ANY, "Remember focus", size=button_size)  # FIXME: only enable if user placed a focus marker already
         self.done_button = wx.Button(self, wx.ID_ANY, "Done", size=button_size)  # Not this panel but the ApplicationFame will listen to clicks on this button.
         discard_all_button = wx.Button(self, wx.ID_ANY, "Discard all", size=button_size)
         self._save_button = wx.Button(self, wx.ID_ANY, "Save Focus Map", size=button_size)
@@ -112,6 +115,13 @@ class FocusPanel(wx.Panel):
         self._show_button.Enable(False)
         self._save_button.Enable(False)
 
+    # def _on_grid_keypress(self, event):
+    #     key = event.GetKeyCode()
+    #     print('table keypress key={} shiftDown={} ctrldown={} cmdDown={} altdown={}'.format(key, event.shiftDown, event.controlDown, event.cmdDown, event.altDown))
+    #     print(event)
+    #     if key == wx.WXK_DELETE or key == wx.WXK_NUMPAD_DELETE:
+    #         print("table detected DEL pressed")
+
     def _clear_table(self):
         num_rows = self._table.GetNumberRows()
         self._table.DeleteRows(0, num_rows)
@@ -135,6 +145,33 @@ class FocusPanel(wx.Panel):
         num_samples_x = 50
         step = (xmax - xmin) / num_samples_x
         return FocusMap(xmin, xmax, ymin, ymax, step)
+
+    def _on_grid_label_right_click(self, event):
+        # IMPROVEME: using right click to directly trigger a delete is surprising for the user
+        #            we expect a right click to pop up a context menu (e.g. with a 'Delete Row' menu entry)
+        row = event.GetRow()
+        if (row >= 0) and (row < self._table.GetNumberRows() - 1):
+            with wx.MessageDialog(self, 'Discard focus position %s?' % (row+1), 'Discard?', wx.OK | wx.CANCEL | wx.ICON_QUESTION) as dlg:
+                dlg.CenterOnScreen()
+                result = dlg.ShowModal()
+                if result == wx.ID_OK:
+                    self._delete_table_row(row)
+                    event.Skip()
+
+    def _delete_table_row(self, row):
+        # Update table
+        self._table.DeleteRows(row, 1, True)
+        self.GetTopLevelParent().Layout()
+
+        # Update focus map
+        positions = self._model.focus_map.get_user_defined_focus_positions()
+        del positions[row]
+        self._model.focus_map.set_user_defined_focus_positions(positions)
+
+        # Update overview image
+        self._canvas.remove_focus_positions()
+        for (x, y, z) in positions:
+            self._add_focus_position_to_canvas((x, y))
 
     def _on_left_mouse_button_down(self, event):
         coords = event.GetCoords()
@@ -162,7 +199,10 @@ class FocusPanel(wx.Panel):
 
     def _on_remember_focus_button_click(self, event):
         # Query stage position and focus height
+        # (The user may have changed the stage position in Odemis,
+        # so we cannot trust the position he/she moved to in Tomo before.)
         stage_pos = secom_tools.get_absolute_stage_position()
+        # IMPROVEME: redraw the stage position in case it was changed in Odemis.
 
         # When running Tomo on a development computer without the Odemis software,
         # we generate fake z-focus values for testing purposes.
@@ -179,6 +219,10 @@ class FocusPanel(wx.Panel):
         self._add_to_table(stage_pos[0], stage_pos[1], z)
         self.GetTopLevelParent().Layout()
 
+        # Draw the position where focus was acquired on the overview image
+        self._add_focus_position_to_canvas(stage_pos)
+
+    def _add_focus_position_to_canvas(self, stage_pos):
         # Convert the stage position 'stage_pos' to overview image pixel coordinates to draw on the canvas!
         mat = np.linalg.inv(self._model.overview_image_to_stage_coord_trf)
         image_space_stage_pos = self._transform_coord(mat, stage_pos)

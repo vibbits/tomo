@@ -11,7 +11,7 @@ except:
 class FocusMap:
 
     def __init__(self, xmin, xmax, ymin, ymax, step):
-        self._focus_positions = []  # an unordered list of (x, y, focus z) LM focus positions; each of these was set by the user
+        self._focus_positions = []  # a list of (x, y, focus z) LM focus positions; each of these was set by the user
         self._interpolator = None
         self._xmin = xmin
         self._ymin = ymin
@@ -28,8 +28,12 @@ class FocusMap:
         self._focus_positions.append(focus_position)
         self._interpolator = None  # there are new data points, so if we already have an interpolator, discard it
 
-    def get_user_defined_focus_positions(self):  # returns an unordered list of (x, y, focus z) LM focus positions
+    def get_user_defined_focus_positions(self):  # returns the list of (x, y, focus z) user defined LM focus positions
         return self._focus_positions
+
+    def set_user_defined_focus_positions(self, positions):  # positions is the list of (x, y, focus z) user defined LM focus positions
+        self._focus_positions = positions
+        self._interpolator = None
 
     def reset(self):
         self._focus_positions = []
