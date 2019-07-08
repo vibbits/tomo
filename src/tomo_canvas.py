@@ -45,7 +45,7 @@ class TomoCanvas(NavCanvas.NavCanvas):
 
     def EnableTool(self, tool_name, enable):
         tool = self.FindToolByName(tool_name)
-        print('EnableTool name={} id={}'.format(tool_name, tool.GetId()))
+        # print('EnableTool name={} id={}'.format(tool_name, tool.GetId()))
         self.ToolBar.EnableTool(tool.GetId(), enable)  # enable/disable the tool (=make the tool button clickable/not clickable and make sure it is grayed out/not grayed out)
 
     def Activate(self, tool):
@@ -80,5 +80,5 @@ class TomoCanvas(NavCanvas.NavCanvas):
         for pos in range(num_tools):
             tool = tb.GetToolByPos(pos)
             print("tool {}: id={} label='{}' shortHelp='{}' id={} active={}".format(pos, tool.GetId(), tool.GetLabel(), tool.GetShortHelp(),
-                                                                    tool.GetId(), tb.GetToolState(tool.GetId())))
+                                                                                    tool.GetId(), tb.GetToolState(tool.GetId())))
 
