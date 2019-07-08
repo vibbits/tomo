@@ -19,7 +19,7 @@ import numpy as np
 import secom_tools
 from focus_map import FocusMap
 from move_stage_mode import MoveStageMode
-from constants import POINTER_MODE_NAME
+from constants import POINTER_MODE_NAME, FOCUS_POSITION_COLOR, MARKER_SIZE
 
 import matplotlib
 matplotlib.use('wxagg')
@@ -170,8 +170,9 @@ class FocusPanel(wx.Panel):
 
         # Update overview image
         self._canvas.remove_focus_positions()
-        for (x, y, z) in positions:
-            self._add_focus_position_to_canvas((x, y))
+        for i, (x, y, z) in enumerate(positions):
+            label = str(i + 1)
+            self._add_focus_position_to_canvas((x, y), label)
 
     def _on_left_mouse_button_down(self, event):
         coords = event.GetCoords()
@@ -185,7 +186,7 @@ class FocusPanel(wx.Panel):
 
         # Draw current stage position on canvas
         canvas_coords = (image_coords[0], -image_coords[1])  # Note: we need to pass canvas coordinates to add_cross (so y < 0 means over the image)
-        self._stage_position_object = self._canvas.add_cross(canvas_coords, "Blue")  # TODO: define color in constants.py instead
+        self._stage_position_object = self._canvas.add_cross(canvas_coords, FOCUS_POSITION_COLOR)
         self._canvas.redraw()
 
         # Convert image coords to stage coords
@@ -220,17 +221,17 @@ class FocusPanel(wx.Panel):
         self.GetTopLevelParent().Layout()
 
         # Draw the position where focus was acquired on the overview image
-        self._add_focus_position_to_canvas(stage_pos)
+        label = str(len(self._model.focus_map.get_user_defined_focus_positions()))
+        self._add_focus_position_to_canvas(stage_pos, label)
 
-    def _add_focus_position_to_canvas(self, stage_pos):
+    def _add_focus_position_to_canvas(self, stage_pos, label):
         # Convert the stage position 'stage_pos' to overview image pixel coordinates to draw on the canvas!
         mat = np.linalg.inv(self._model.overview_image_to_stage_coord_trf)
         image_space_stage_pos = self._transform_coord(mat, stage_pos)
 
         # Draw the position where focus was acquired on the overview image
-        self._canvas.add_focus_position(image_space_stage_pos)
+        self._canvas.add_focus_position(image_space_stage_pos, label, FOCUS_POSITION_COLOR, MARKER_SIZE)
         self._canvas.redraw()
-        # IMPROVEME draw the _number_ of focus position on canvas too
 
     def _on_discard_all_button_click(self, event):
         dlg = wx.MessageDialog(self, "Discard all user defined focus positions?", "Discard all", style=wx.YES | wx.NO)

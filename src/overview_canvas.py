@@ -34,6 +34,7 @@ class OverviewCanvas(TomoCanvas):
     _image = None  # the canvas image object handle
     _poi_lines = []
     _focus_lines = []
+    _focus_labels = []
     _slice_outlines = []  # FloatCanvas polygon objects representing the quadrilateral slice polygons specified in _slice_polygons
     _slice_numbers = []  # FloatCanvas objects of the text objects for the slice numbers
 
@@ -165,15 +166,22 @@ class OverviewCanvas(TomoCanvas):
         for pt in pts:
             self._add_point_of_interest(pt, line_color=POINT_OF_INTEREST_COLOR)
 
-    def add_focus_position(self, position, color=FOCUS_POSITION_COLOR):   # note: 'position' is in image space (with the origin in the top-left corner and y-axis pointing upward), so DIFFERENT from raw stage (x,y) position coordinates
+    def add_focus_position(self, position, label, color=FOCUS_POSITION_COLOR, size=MARKER_SIZE):   # note: 'position' is in image space (with the origin in the top-left corner and y-axis pointing upward), so DIFFERENT from raw stage (x,y) position coordinates
         # print('draw focus: {}'.format(position))
         position = (position[0], -position[1])  # note: flip y to convert from image coordinates (with y >= 0) back to canvas coords
-        objs = self.add_cross(position, color)
+        objs = self.add_cross(position, color, size)
         self._focus_lines.extend(objs)
+
+        position = (position[0] + size, position[1] + size)
+        obj = self.Canvas.AddText(label, position, Size=12, BackgroundColor=None, Color=color, Position="cc")  # Note: text size seems to be in screen space (?)
+        self._focus_labels.append(obj)
 
     def remove_focus_positions(self):
         self.remove_objects(self._focus_lines)
         self._focus_lines = []
+
+        self.remove_objects(self._focus_labels)
+        self._focus_labels = []
 
     def _add_point_of_interest(self, pt, line_color, size=MARKER_SIZE):
         # print('draw poi: {}'.format(pt))
