@@ -30,10 +30,9 @@ class FocusPanel(wx.Panel):
         wx.Panel.__init__(self, parent, size=(350, -1))
         self._canvas = canvas
         self._model = model
-        self._table = self._make_table()  # table with user-defined focus (x, y, z)
         self._stage_position_object = None
-
-        # self._table.Bind(wx.EVT_KEY_DOWN, self._on_grid_keypress)
+        self._table = self._make_table()  # table with user-defined focus (x, y, z)
+        self._table.Bind(wx.EVT_KEY_DOWN, self._on_grid_keypress)
         self._table.Bind(wx.grid.EVT_GRID_LABEL_RIGHT_CLICK, self._on_grid_label_right_click)
 
         title = wx.StaticText(self, wx.ID_ANY, "Focus Map")
@@ -96,7 +95,7 @@ class FocusPanel(wx.Panel):
         # and https://wxpython.org/Phoenix/docs/html/wx.grid.Grid.html
         num_rows = 1  # empty initial row, for cosmetic reason
         num_cols = 3
-        table = wx.grid.Grid(self, wx.ID_ANY)
+        table = wx.grid.Grid(self, wx.ID_ANY) # , size=(340, 300))
         table.SetDefaultCellAlignment(wx. ALIGN_CENTRE, wx. ALIGN_CENTRE)
         table.CreateGrid(num_rows, num_cols)
         table.SetColLabelValue(0, "stage x (m)")
@@ -115,12 +114,73 @@ class FocusPanel(wx.Panel):
         self._show_button.Enable(False)
         self._save_button.Enable(False)
 
-    # def _on_grid_keypress(self, event):
-    #     key = event.GetKeyCode()
-    #     print('table keypress key={} shiftDown={} ctrldown={} cmdDown={} altdown={}'.format(key, event.shiftDown, event.controlDown, event.cmdDown, event.altDown))
-    #     print(event)
-    #     if key == wx.WXK_DELETE or key == wx.WXK_NUMPAD_DELETE:
-    #         print("table detected DEL pressed")
+    def _on_grid_keypress(self, event):
+        # print('Focus table keypress key={} shiftDown={} ctrldown={} cmdDown={} altdown={}'.format(event.GetKeyCode(), event.shiftDown, event.controlDown, event.cmdDown, event.altDown))
+        if event.controlDown and (not event.shiftDown) and (not event.altDown) and event.GetKeyCode() == ord('C'):
+            # CTRL-C pressed (for copy-paste)
+            num_selections = self._get_number_of_selections_in_table()
+            if num_selections == 0:
+                return
+
+            if num_selections == 1:
+                text = self._get_selected_text_in_table()
+                data = wx.TextDataObject()
+                data.SetText(text)
+                if wx.TheClipboard.Open():
+                    wx.TheClipboard.SetData(data)
+                    wx.TheClipboard.Close()
+            else:
+                print('Focus table has multiple selections. Cannot copy this to the clipboard (it would be confusing).')
+
+    def _get_number_of_selections_in_table(self):
+        # Cells can be selected in different ways (complete row, complete column, individual cells, block of cells).
+        # This function returns how many of these different selection ways are currently active on the table.
+        return (len(self._table.GetSelectedRows()) > 0) + \
+               (len(self._table.GetSelectedCols()) > 0) + \
+                len(self._table.GetSelectedCells()) + \
+                len(self._table.GetSelectionBlockTopLeft())
+
+    def _get_selected_text_in_table(self):
+        # Cells can be selected in different ways:
+        # 1. by selecting a block (click one corner, then shift-click the other corner)
+        # 2. by selecting individual cells (combining them via ctrl click)
+        # 3. by selecting a complete row/column (by clicking on the row/column header)
+        # Each of these possible selections needs to be checked for with different function calls:
+        # via GetSelectedCells (for 2), GetSelectionBlockTopLeft/BottomRight (for 1), GetSelectedRows/Cols (for 3).
+        # Note for example that GetSelectedCells() does not return any cells if we did a block selection.
+        if self._table.GetSelectedRows():
+            rows = sorted(self._table.GetSelectedRows())
+            cols = range(self._table.GetNumberCols())
+        elif self._table.GetSelectedCols():
+            cols = sorted(self._table.GetSelectedCols())
+            rows = range(self._table.GetNumberRows() - 1)  # -1 because we always have a last empty row in the table
+        elif self._table.GetSelectedCells():
+            cells = self._table.GetSelectedCells()
+            assert len(cells) == 1
+            cell = cells[0]
+            cols = [cell.Col]
+            rows = [cell.Row]
+        elif self._table.GetSelectionBlockTopLeft():
+            topleft = self._table.GetSelectionBlockTopLeft()
+            bottomright = self._table.GetSelectionBlockBottomRight()
+            assert len(topleft) == 1
+            assert len(topleft) == len(bottomright)
+            cols = range(topleft[0].Col, bottomright[0].Col + 1)
+            rows = range(topleft[0].Row, bottomright[0].Row + 1)
+        else:
+            rows = []
+            cols = []
+
+        return self._get_cells_as_text(rows, cols)
+
+    def _get_cells_as_text(self, rows, cols):
+        text = ""
+        for r in rows:
+            vals = [str(self._table.GetCellValue(r, c)) for c in cols]
+            text += ' '.join(vals)
+            text += "\n"
+        print(text)
+        return text
 
     def _clear_table(self):
         num_rows = self._table.GetNumberRows()
