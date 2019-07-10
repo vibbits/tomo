@@ -19,7 +19,7 @@ import numpy as np
 import secom_tools
 from focus_map import FocusMap
 from move_stage_mode import MoveStageMode
-from constants import POINTER_MODE_NAME, FOCUS_POSITION_COLOR, MARKER_SIZE
+from constants import POINTER_MODE_NAME, PRELIMINARY_FOCUS_POSITION_COLOR, FOCUS_POSITION_COLOR, MARKER_SIZE
 
 import matplotlib
 matplotlib.use('wxagg')
@@ -30,7 +30,7 @@ class FocusPanel(wx.Panel):
         wx.Panel.__init__(self, parent, size=(350, -1))
         self._canvas = canvas
         self._model = model
-        self._stage_position_object = None
+        self._stage_position_object = None  # FloatCanvas object for drawing the requested focus position
         self._table = self._make_table()  # table with user-defined focus (x, y, z)
         self._table.Bind(wx.EVT_KEY_DOWN, self._on_grid_keypress)
         self._table.Bind(wx.grid.EVT_GRID_LABEL_RIGHT_CLICK, self._on_grid_label_right_click)
@@ -234,20 +234,25 @@ class FocusPanel(wx.Panel):
             label = str(i + 1)
             self._add_focus_position_to_canvas((x, y), label)
 
+    def _add_user_requested_stage_position_mark(self, image_coords):
+        canvas_coords = (image_coords[0], -image_coords[1])  # Note: we need to pass canvas coordinates to add_cross (so y < 0 means over the image)
+        self._stage_position_object = self._canvas.add_cross(canvas_coords, PRELIMINARY_FOCUS_POSITION_COLOR)  # mark position where user asked to move the stage to, before he/she will set the focus in Odemis
+        self._canvas.redraw()
+
+    def _remove_user_requested_stage_position_mark(self):
+        if self._stage_position_object is not None:
+            self._canvas.remove_objects(self._stage_position_object)
+            self._stage_position_object = None
+
     def _on_left_mouse_button_down(self, event):
         coords = event.GetCoords()
-
         image_coords = (coords[0], -coords[1])
-        print("Left mouse button clicked: %i, %i" % image_coords)
 
         # Remove previous stage position mark from canvas (if any)
-        if self._stage_position_object != None:
-            self._canvas.remove_objects(self._stage_position_object)
+        self._remove_user_requested_stage_position_mark()
 
-        # Draw current stage position on canvas
-        canvas_coords = (image_coords[0], -image_coords[1])  # Note: we need to pass canvas coordinates to add_cross (so y < 0 means over the image)
-        self._stage_position_object = self._canvas.add_cross(canvas_coords, FOCUS_POSITION_COLOR)
-        self._canvas.redraw()
+        # Draw user requested target stage position on canvas
+        self._add_user_requested_stage_position_mark(image_coords)
 
         # Convert image coords to stage coords
         mat = self._model.overview_image_to_stage_coord_trf
@@ -263,7 +268,6 @@ class FocusPanel(wx.Panel):
         # (The user may have changed the stage position in Odemis,
         # so we cannot trust the position he/she moved to in Tomo before.)
         stage_pos = secom_tools.get_absolute_stage_position()
-        # IMPROVEME: redraw the stage position in case it was changed in Odemis.
 
         # When running Tomo on a development computer without the Odemis software,
         # we generate fake z-focus values for testing purposes.
@@ -280,7 +284,10 @@ class FocusPanel(wx.Panel):
         self._add_to_table(stage_pos[0], stage_pos[1], z)
         self.GetTopLevelParent().Layout()
 
-        # Draw the position where focus was acquired on the overview image
+        # Remove preliminary (= where user clicked) stage position mark from canvas
+        self._remove_user_requested_stage_position_mark()
+
+        # Draw the position where focus was actually acquired on the overview image
         label = str(len(self._model.focus_map.get_user_defined_focus_positions()))
         self._add_focus_position_to_canvas(stage_pos, label)
 

@@ -15,6 +15,7 @@ NORMAL_COLOR = 'GREEN'           # Color for drawing slice contours
 ACTIVE_COLOR = 'RED'             # Color for drawing an 'active' slice polygon handle
 POINT_OF_INTEREST_COLOR = 'RED'  # Color for drawing the point-of-interest markers
 FOCUS_POSITION_COLOR = 'RED'     # Color for drawing the markers showing where z-focus values were measured
+PRELIMINARY_FOCUS_POSITION_COLOR = 'YELLOW'  # Color for drawing the (temporary) marker showing where the user asked Tomo to move the stage to before tweaking the focus z in Odemis.
 
 # Names of the default modes, as defined in NavCanvas.
 POINTER_MODE_NAME = 'Pointer'
