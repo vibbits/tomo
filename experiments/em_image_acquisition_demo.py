@@ -8,14 +8,16 @@ from pubsub import pub
 # and stopped early as well.
 
 # High prio:
-# TODO: implement Stop
-# TODO: add confirmation dialog when user presses Stop
+# TODO: implement Stop; allow user to Stop while paused as well as when running
 
 # Low prio:
 # TODO: add auto-pause functionality (?)
-# TODO: allow user to press Stop while paused as well (we currently avoid that because the worker thread
-# is a bit more complicated to implement in that case)
 # TODO: add remaining imaging time estimate
+
+
+# Messages that will be sent via pubsub
+MSG_DONE = "done"
+MSG_ACQUIRING = "acquiring"
 
 
 class AcquisitionThread(threading.Thread):
@@ -24,41 +26,48 @@ class AcquisitionThread(threading.Thread):
     def __init__(self, num_images):
         threading.Thread.__init__(self)
         self.num_images = num_images
-        self.paused = False
         self.stopped = False
+
+        # The pause_cond contition variable is used to synchronize between the even processing thread of wxpython and
+        # this worker thread that does the image acquisition.
+        self.paused = False
         self.pause_cond = threading.Condition(threading.Lock())
 
     def run(self):
         i = 1
-        while i <= self.num_images and not self.stopped:
-            with self.pause_cond:
+        with self.pause_cond:
+            while i <= self.num_images:
                 while self.paused:
-                    self.pause_cond.wait()
+                    self.pause_cond.wait()  # release lock, and block until notify(), then re-acquire the lock
 
-                wx.CallAfter(pub.sendMessage, "acquiring", nr=i)
-                print 'Start acquiring image {}'.format(i)
-                time.sleep(3)
-                print 'Done acquiring image {}'.format(i)
+                wx.CallAfter(pub.sendMessage, MSG_ACQUIRING, nr=i)
+                self.acquire_image(i)
 
                 i += 1
 
-        wx.CallAfter(pub.sendMessage, "done", stopped=self.stopped)
+        wx.CallAfter(pub.sendMessage, MSG_DONE, stopped=self.stopped)
+
+    def acquire_image(self, i):
+        print 'Start acquiring image {}'.format(i)
+        time.sleep(3)
+        print 'Done acquiring image {}'.format(i)
 
     def pause(self):
         print('Thread: pause')
         self.paused = True
-        self.pause_cond.acquire()
+        self.pause_cond.acquire()  # If lock is locked then block until it is released. Afterwards lock and return.
 
     def resume(self):
         print('Thread: resume')
         self.paused = False
         self.pause_cond.notify()  # notify, so thread will wake after lock is released
-        self.pause_cond.release()  # release the lock
+        self.pause_cond.release()  # release the lock and return (if lock is not locked: runtimeerror!)
 
     def stop(self):
         print('Thread: stop')
-        assert not self.paused
-        self.stopped = True
+        assert self.paused
+        # self.stopped = True
+        # XXXXX
 
     def is_paused(self):
         return self.paused  # CHECKME: is this safe? or do we need pause_cond?
@@ -103,9 +112,9 @@ class AcquisitionDialog(wx.Frame):
 
         self.CentreOnScreen()
 
-        # subscribe to messages from the worker thread
-        pub.subscribe(self.handle_acquiring_msg, "acquiring")
-        pub.subscribe(self.handle_done_msg, "done")
+        # Subscribe to messages from the worker thread
+        pub.subscribe(self.handle_acquiring_msg, MSG_ACQUIRING)
+        pub.subscribe(self.handle_done_msg, MSG_DONE)
 
     def on_pause_resume_button_pressed(self, event):
         if self.pause_resume_button.GetLabel() == "Pause":
@@ -115,16 +124,18 @@ class AcquisitionDialog(wx.Frame):
 
     def on_stop_button_pressed(self, event):
         print("Stop button clicked")
-        # # FIXME: at this point, the worker thread will still happily continue imaging, while the user
-        # # is reading the confirmation dialog. But we cannot totally stop the thread because the user might
-        # # change his mind. So we probably need to pause it (unless it is paused already!)
-        # with wx.MessageDialog(None, "Stop EM image acquisition immediately?", style=wx.YES | wx.NO) as dlg:
-        #     if not self.worker.is_paused():
-        #         self.worker.do_
-        #     if dlg.ShowModal() == wx.ID_YES:
-        #         pass # FIXME: implement! How precisely? resume and immediately stop (unless we can stop while being paused...)
-        #     else:
-        #         pass # resume
+
+        # Start by pausing the imaging task
+        assert not self.worker.is_paused()
+        self.do_pause()
+
+        # Ask for user confirmation to really abort imaging.
+        # If the user changes her mind, we can resume imaging.
+        with wx.MessageDialog(None, "Stop EM image acquisition immediately?", style=wx.YES | wx.NO) as dlg:
+            if dlg.ShowModal() == wx.ID_YES:
+                self.do_stop()
+            else:
+                self.do_resume()
 
     def do_pause(self):
         # When we ask the worker thread to pause, it will still finish acquiring the image it is working on.
@@ -146,6 +157,9 @@ class AcquisitionDialog(wx.Frame):
         self.worker.resume()
         self.pause_resume_button.SetLabel("Pause")
         self.stop_button.Enable(True)
+
+    def do_stop(self):
+        self.worker.stop()
 
     def handle_acquiring_msg(self, nr):
         self.set_status('Acquiring image {} / {}'.format(nr, self.num_images))
