@@ -7,10 +7,8 @@ from pubsub import pub
 # while the UI remains responsive and provides user feedback. The worker thread can be paused/resumed,
 # and stopped early as well.
 
-# High prio:
-# TODO: implement Stop; allow user to Stop while paused as well as when running
-
-# Low prio:
+# Possible improvements:
+# TODO: allow user to Stop while imaging is paused
 # TODO: add auto-pause functionality (?)
 # TODO: add remaining imaging time estimate
 
@@ -27,18 +25,21 @@ class AcquisitionThread(threading.Thread):
         threading.Thread.__init__(self)
         self.num_images = num_images
         self.stopped = False
-
-        # The pause_cond contition variable is used to synchronize between the even processing thread of wxpython and
-        # this worker thread that does the image acquisition.
         self.paused = False
-        self.pause_cond = threading.Condition(threading.Lock())
+        self.paused_condition = threading.Condition(threading.Lock())
 
     def run(self):
         i = 1
-        with self.pause_cond:
+        with self.paused_condition:
             while i <= self.num_images:
                 while self.paused:
-                    self.pause_cond.wait()  # release lock, and block until notify(), then re-acquire the lock
+                    # User wants to pause imaging,
+                    # wait until notify is called (which is when user does resume).
+                    self.paused_condition.wait()
+
+                if self.stopped:
+                    # user wants to abort imaging
+                    break
 
                 wx.CallAfter(pub.sendMessage, MSG_ACQUIRING, nr=i)
                 self.acquire_image(i)
@@ -55,22 +56,25 @@ class AcquisitionThread(threading.Thread):
     def pause(self):
         print('Thread: pause')
         self.paused = True
-        self.pause_cond.acquire()  # If lock is locked then block until it is released. Afterwards lock and return.
+        self.paused_condition.acquire()
 
     def resume(self):
         print('Thread: resume')
         self.paused = False
-        self.pause_cond.notify()  # notify, so thread will wake after lock is released
-        self.pause_cond.release()  # release the lock and return (if lock is not locked: runtimeerror!)
+        self.paused_condition.notify()
+        self.paused_condition.release()
 
     def stop(self):
         print('Thread: stop')
-        assert self.paused
-        # self.stopped = True
-        # XXXXX
+        assert self.is_paused()
+        # Imaging is currently paused. Have it continue again but with the 'stopped' flag set,
+        # so it will then terminate the imaging cycle as soon as possible.
+        # TODO: This is a bit odd. It would be nicer if we could also stop when imaging is still ongoing.
+        self.stopped = True
+        self.resume()
 
     def is_paused(self):
-        return self.paused  # CHECKME: is this safe? or do we need pause_cond?
+        return self.paused
 
 
 class AcquisitionDialog(wx.Frame):
@@ -81,7 +85,7 @@ class AcquisitionDialog(wx.Frame):
         # Add a panel so it looks the correct on all platforms (not sure if required, copied from example code)
         panel = wx.Panel(self, wx.ID_ANY)
 
-        self.num_images = 3
+        self.num_images = 7
 
         self.worker = AcquisitionThread(self.num_images)
 
