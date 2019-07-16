@@ -8,16 +8,14 @@ from pubsub import pub
 # and stopped early as well.
 
 # High prio:
-# IMPROVEME: ensure that the status text is always nicely centered horizontally
-# IMPROVEME: add confirmation dialog when user presses Stop
-# IMPROVEME: close window when user pressed Stop?
-# IMPROVEME: what to do when image acquisition ends normally?
+# TODO: implement Stop
+# TODO: add confirmation dialog when user presses Stop
 
 # Low prio:
-# IMPROVEME: add auto-pause functionality (?)
-# IMPROVEME: allow user to press Stop while paused as well (we currently avoid that because the worker thread
+# TODO: add auto-pause functionality (?)
+# TODO: allow user to press Stop while paused as well (we currently avoid that because the worker thread
 # is a bit more complicated to implement in that case)
-# IMPROVEME: add remaining imaging time estimate
+# TODO: add remaining imaging time estimate
 
 
 class AcquisitionThread(threading.Thread):
@@ -38,9 +36,9 @@ class AcquisitionThread(threading.Thread):
                     self.pause_cond.wait()
 
                 wx.CallAfter(pub.sendMessage, "acquiring", nr=i)
-                print 'Start acquiring EM image {}'.format(i)
+                print 'Start acquiring image {}'.format(i)
                 time.sleep(3)
-                print 'Done'
+                print 'Done acquiring image {}'.format(i)
 
                 i += 1
 
@@ -62,20 +60,25 @@ class AcquisitionThread(threading.Thread):
         assert not self.paused
         self.stopped = True
 
+    def is_paused(self):
+        return self.paused  # CHECKME: is this safe? or do we need pause_cond?
+
+
 class AcquisitionDialog(wx.Frame):
     def __init__(self):
-        wx.Frame.__init__(self, None, wx.ID_ANY, "EM Image Acquisition", style=wx.DEFAULT_FRAME_STYLE & (~wx.CLOSE_BOX))
+        wx.Frame.__init__(self, None, wx.ID_ANY, "EM Image Acquisition", size=(400,-1), style=wx.DEFAULT_FRAME_STYLE & (~wx.CLOSE_BOX))
+        # note: we suppress the dialog close button, to avoid closing the dialog with the worker thread still running.
 
-        # Add a panel so it looks the correct on all platforms
+        # Add a panel so it looks the correct on all platforms (not sure if required, copied from example code)
         panel = wx.Panel(self, wx.ID_ANY)
 
-        self.num_images = 7
+        self.num_images = 3
 
         self.worker = AcquisitionThread(self.num_images)
 
-        self.progress_bar = wx.Gauge(parent=panel, size=(200,-1), range=self.num_images)
+        self.progress_bar = wx.Gauge(parent=panel, size=(350,-1), range=self.num_images)
 
-        self.status = wx.StaticText(panel, label="", size=(200,-1), style=wx.ALIGN_CENTER_HORIZONTAL)
+        self.status = wx.StaticText(panel, style=wx.ALIGN_CENTER_HORIZONTAL)
 
         self.stop_button = wx.Button(panel, label="Stop")
         self.stop_button.Bind(wx.EVT_BUTTON, self.on_stop_button_pressed)
@@ -96,6 +99,10 @@ class AcquisitionDialog(wx.Frame):
         sizer.Add(bs, 0, wx.ALL | wx.CENTER, 5)
         panel.SetSizer(sizer)
 
+        sizer.Fit(self)
+
+        self.CentreOnScreen()
+
         # subscribe to messages from the worker thread
         pub.subscribe(self.handle_acquiring_msg, "acquiring")
         pub.subscribe(self.handle_done_msg, "done")
@@ -108,41 +115,55 @@ class AcquisitionDialog(wx.Frame):
 
     def on_stop_button_pressed(self, event):
         print("Stop button clicked")
-        self.status.SetLabel("Finishing current image acquisition")
-        self.worker.stop()
+        # # FIXME: at this point, the worker thread will still happily continue imaging, while the user
+        # # is reading the confirmation dialog. But we cannot totally stop the thread because the user might
+        # # change his mind. So we probably need to pause it (unless it is paused already!)
+        # with wx.MessageDialog(None, "Stop EM image acquisition immediately?", style=wx.YES | wx.NO) as dlg:
+        #     if not self.worker.is_paused():
+        #         self.worker.do_
+        #     if dlg.ShowModal() == wx.ID_YES:
+        #         pass # FIXME: implement! How precisely? resume and immediately stop (unless we can stop while being paused...)
+        #     else:
+        #         pass # resume
 
     def do_pause(self):
         # When we ask the worker thread to pause, it will still finish acquiring the image it is working on.
         # To avoid user confusion, we provide feedback that we received his/her request to pause, and temporarily
         # disable the pause/resume button (to avoid receiving repeated clicks from impatient users).
-        self.status.SetLabel("Finishing current image acquisition")
+        self.set_status("Finishing current image acquisition")
+
         self.pause_resume_button.Enable(False)
         self.stop_button.Enable(False)
         wx.Yield()  # have wxPython update the GUI *immediately*
 
         self.worker.pause()
-        self.status.SetLabel("Paused")
+        self.set_status("Paused")
+
         self.pause_resume_button.SetLabel("Resume")
         self.pause_resume_button.Enable(True)
 
     def do_resume(self):
         self.worker.resume()
-        self.status.SetLabel("Acquiring images")
         self.pause_resume_button.SetLabel("Pause")
         self.stop_button.Enable(True)
 
     def handle_acquiring_msg(self, nr):
-        self.status.SetLabel('Acquiring image {} / {}'.format(nr, self.num_images))
+        self.set_status('Acquiring image {} / {}'.format(nr, self.num_images))
         self.progress_bar.SetValue(nr)
 
     def handle_done_msg(self, stopped):
-        self.status.SetLabel("Image acquisition stopped by user." if stopped else "All images acquired.")
-        self.pause_resume_button.Enable(False)
-        self.stop_button.Enable(False)
+        message = "Image acquisition stopped by user." if stopped else "Done! All images were acquired."
+        wx.MessageBox(message, "", wx.OK | wx.CENTRE, self)
+        self.Close()
+
+    def set_status(self, text):
+        self.status.SetLabel(text)
+        self.status.GetParent().Layout()  # Since the size of the StaticText changed, the layout needs to be updated
 
     def start_acquiring(self):
-        print("Starting acquisition")
+        print("Starting EM image acquisition")
         self.worker.start()
+
 
 if __name__ == "__main__":
     app = wx.App(False)
