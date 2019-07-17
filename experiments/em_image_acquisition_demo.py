@@ -77,6 +77,40 @@ class AcquisitionThread(threading.Thread):
         return self.paused
 
 
+class StopWatch:
+    def __init__(self):
+        """Create a stopwatch. It does not automatically start."""
+        self.running = False
+        self.elapsed = 0
+        self.time_last_start = 0
+
+    def start(self):
+        """Start the stopwatch (or resume after a stop). Has no effect if already running."""
+        if not self.running:
+            self.running = True
+            self.time_last_start = time.time()
+
+    def stop(self):
+        """Stop the stopwatch. Has no effect if not running."""
+        if self.running:
+            self.running = False
+            self.elapsed += (time.time() - self.time_last_start)
+
+    def reset(self):
+        """Reset the stopwatch to not running and no time passed."""
+        self.running = False
+        self.elapsed = 0
+        self.time_last_start = 0
+
+    def elapsed_time(self):
+        """Return the time elapsed (in seconds) while the StopWatch was actually running,
+        so not including the time when it was stopped."""
+        if self.running:
+            return self.elapsed + (time.time() - self.time_last_start)
+        else:
+            return self.elapsed
+
+
 class AcquisitionDialog(wx.Frame):
     def __init__(self):
         wx.Frame.__init__(self, None, wx.ID_ANY, "EM Image Acquisition", size=(400,-1), style=wx.DEFAULT_FRAME_STYLE & (~wx.CLOSE_BOX))
@@ -86,6 +120,7 @@ class AcquisitionDialog(wx.Frame):
         panel = wx.Panel(self, wx.ID_ANY)
 
         self.num_images = 7
+        self.stopwatch = StopWatch()
 
         self.worker = AcquisitionThread(self.num_images)
 
@@ -116,7 +151,7 @@ class AcquisitionDialog(wx.Frame):
 
         self.CentreOnScreen()
 
-        # Subscribe to messages from the worker thread
+        # Subscribe to messages from the worker thread that does the imaging.
         pub.subscribe(self.handle_acquiring_msg, MSG_ACQUIRING)
         pub.subscribe(self.handle_done_msg, MSG_DONE)
 
@@ -141,6 +176,14 @@ class AcquisitionDialog(wx.Frame):
             else:
                 self.do_resume()
 
+    def do_start(self):
+        self.stopwatch.start()
+        self.worker.start()
+
+    def do_stop(self):
+        self.worker.stop()
+        self.stopwatch.stop()
+
     def do_pause(self):
         # When we ask the worker thread to pause, it will still finish acquiring the image it is working on.
         # To avoid user confusion, we provide feedback that we received his/her request to pause, and temporarily
@@ -157,13 +200,13 @@ class AcquisitionDialog(wx.Frame):
         self.pause_resume_button.SetLabel("Resume")
         self.pause_resume_button.Enable(True)
 
+        self.stopwatch.stop()
+
     def do_resume(self):
+        self.stopwatch.start()
         self.worker.resume()
         self.pause_resume_button.SetLabel("Pause")
         self.stop_button.Enable(True)
-
-    def do_stop(self):
-        self.worker.stop()
 
     def handle_acquiring_msg(self, nr):
         self.set_status('Acquiring image {} / {}'.format(nr, self.num_images))
@@ -180,7 +223,7 @@ class AcquisitionDialog(wx.Frame):
 
     def start_acquiring(self):
         print("Starting EM image acquisition")
-        self.worker.start()
+        self.do_start()
 
 
 if __name__ == "__main__":
