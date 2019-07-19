@@ -10,7 +10,6 @@ from pubsub import pub
 # Possible improvements:
 # TODO: allow user to Stop while imaging is paused
 # TODO: add auto-pause functionality (?)
-# TODO: add remaining imaging time estimate
 
 
 # Messages that will be sent via pubsub
@@ -38,15 +37,15 @@ class AcquisitionThread(threading.Thread):
                     self.paused_condition.wait()
 
                 if self.stopped:
-                    # user wants to abort imaging
+                    # User wants to abort imaging
                     break
 
-                wx.CallAfter(pub.sendMessage, MSG_ACQUIRING, nr=i)
+                wx.CallAfter(pub.sendMessage, MSG_ACQUIRING, nr=i, num_images=self.num_images)
                 self.acquire_image(i)
 
                 i += 1
 
-        wx.CallAfter(pub.sendMessage, MSG_DONE, stopped=self.stopped)
+        wx.CallAfter(pub.sendMessage, MSG_DONE, stopped=self.stopped, num_images_acquired=i-1)
 
     def acquire_image(self, i):
         print 'Start acquiring image {}'.format(i)
@@ -54,18 +53,18 @@ class AcquisitionThread(threading.Thread):
         print 'Done acquiring image {}'.format(i)
 
     def pause(self):
-        print('Thread: pause')
+        # print('Thread: pause')
         self.paused = True
         self.paused_condition.acquire()
 
     def resume(self):
-        print('Thread: resume')
+        # print('Thread: resume')
         self.paused = False
         self.paused_condition.notify()
         self.paused_condition.release()
 
     def stop(self):
-        print('Thread: stop')
+        # print('Thread: stop')
         assert self.is_paused()
         # Imaging is currently paused. Have it continue again but with the 'stopped' flag set,
         # so it will then terminate the imaging cycle as soon as possible.
@@ -126,7 +125,7 @@ class AcquisitionDialog(wx.Frame):
 
         self.progress_bar = wx.Gauge(parent=panel, size=(350,-1), range=self.num_images)
 
-        self.status = wx.StaticText(panel, style=wx.ALIGN_CENTER_HORIZONTAL)
+        self.status = wx.StaticText(panel, label='\n\n', style=wx.ALIGN_CENTER_HORIZONTAL)
 
         self.stop_button = wx.Button(panel, label="Stop")
         self.stop_button.Bind(wx.EVT_BUTTON, self.on_stop_button_pressed)
@@ -136,15 +135,15 @@ class AcquisitionDialog(wx.Frame):
 
         self.pause_resume_button.SetFocus()
 
-        bs = wx.BoxSizer(wx.HORIZONTAL)
-        bs.Add(self.stop_button, 0, wx.ALL | wx.CENTER, 5)
-        bs.AddSpacer(40)
-        bs.Add(self.pause_resume_button, 0, wx.ALL | wx.CENTER, 5)
+        buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        buttons_sizer.Add(self.stop_button, 0, wx.ALL | wx.CENTER, 5)
+        buttons_sizer.AddSpacer(40)
+        buttons_sizer.Add(self.pause_resume_button, 0, wx.ALL | wx.CENTER, 5)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.status, 0, wx.ALL | wx.CENTER, 5)
         sizer.Add(self.progress_bar, 0, wx.ALL | wx.CENTER, 5)
-        sizer.Add(bs, 0, wx.ALL | wx.CENTER, 5)
+        sizer.Add(buttons_sizer, 0, wx.ALL | wx.CENTER, 0)
         panel.SetSizer(sizer)
 
         sizer.Fit(self)
@@ -162,8 +161,6 @@ class AcquisitionDialog(wx.Frame):
             self.do_resume()
 
     def on_stop_button_pressed(self, event):
-        print("Stop button clicked")
-
         # Start by pausing the imaging task
         assert not self.worker.is_paused()
         self.do_pause()
@@ -188,14 +185,14 @@ class AcquisitionDialog(wx.Frame):
         # When we ask the worker thread to pause, it will still finish acquiring the image it is working on.
         # To avoid user confusion, we provide feedback that we received his/her request to pause, and temporarily
         # disable the pause/resume button (to avoid receiving repeated clicks from impatient users).
-        self.set_status("Finishing current image acquisition")
+        self.set_status("Finishing current image acquisition\n")
 
         self.pause_resume_button.Enable(False)
         self.stop_button.Enable(False)
         wx.Yield()  # have wxPython update the GUI *immediately*
 
         self.worker.pause()
-        self.set_status("Paused")
+        self.set_status("Paused\n")
 
         self.pause_resume_button.SetLabel("Resume")
         self.pause_resume_button.Enable(True)
@@ -208,12 +205,27 @@ class AcquisitionDialog(wx.Frame):
         self.pause_resume_button.SetLabel("Pause")
         self.stop_button.Enable(True)
 
-    def handle_acquiring_msg(self, nr):
-        self.set_status('Acquiring image {} / {}'.format(nr, self.num_images))
+    def handle_acquiring_msg(self, nr, num_images):
+        # nr: the number of the image that is about to be acquired (starting at 1);
+        # num_images: the total number of images scheduled for acquisition
+        status_msg = 'Acquiring image {} / {}.\n'.format(nr, num_images)
+
+        num_images_acquired = nr - 1
+        if num_images_acquired > 0:
+            estimated_time_per_image = self.stopwatch.elapsed_time() / num_images_acquired
+            images_remaining = num_images - num_images_acquired
+            time_remaining = estimated_time_per_image * images_remaining
+            status_msg += 'Estimated time remaining: {:.0f} seconds.'.format(time_remaining)
+
+        self.set_status(status_msg)
+
         self.progress_bar.SetValue(nr)
 
-    def handle_done_msg(self, stopped):
-        message = "Image acquisition stopped by user." if stopped else "Done! All images were acquired."
+    def handle_done_msg(self, stopped, num_images_acquired):
+        if stopped:
+            message = "Image acquisition stopped by user after {} images.".format(num_images_acquired)
+        else:
+            message = "Done!\nAll {} images were acquired.\nImaging took {:.0f} seconds.".format(num_images_acquired, self.stopwatch.elapsed_time())
         wx.MessageBox(message, "", wx.OK | wx.CENTRE, self)
         self.Close()
 
