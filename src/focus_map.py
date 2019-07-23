@@ -11,6 +11,8 @@ except:
 class FocusMap:
 
     def __init__(self, xmin, xmax, ymin, ymax, step):
+        # xmin, xmax, ymin, ymax are in microscope stage coordinates;
+        # step is the step size (expressed in the same units as the stage coordinates)
         self._focus_positions = []  # a list of (x, y, focus z) LM focus positions; each of these was set by the user
         self._interpolator = None
         self._xmin = xmin
@@ -22,20 +24,37 @@ class FocusMap:
     def get_extent(self):
         return self._xmin, self._xmax, self._ymin, self._ymax
 
-    def add_user_defined_focus_position(self, pos, z):  # pos = (x, y) coordinates of the stage; z = focus
-        x, y = pos
+    def add_user_defined_focus_position(self, x, y, z):  # (x, y) = coordinates of the stage; z = focus
         focus_position = (x, y, z)
         self._focus_positions.append(focus_position)
         self._interpolator = None  # there are new data points, so if we already have an interpolator, discard it
 
-    def get_user_defined_focus_positions(self):  # returns the list of (x, y, focus z) user defined LM focus positions
-        return self._focus_positions
-
-    def set_user_defined_focus_positions(self, positions):  # positions is the list of (x, y, focus z) user defined LM focus positions
+    def set_user_defined_focus_positions(self, positions):
+        # Sets the user-defined focus positions to 'positions'.
+        # positions is a list of (x, y, focus z) tuples.
+        # Any previously set focus positions are discarded.
         self._focus_positions = positions
         self._interpolator = None
 
+    def load_from_file(self, filename):
+        # Loads user-defined (x, y, focus z) focus position from file.
+        # Previously defined focus positions are discarded.
+        # The focus map extent (x and y range) is left unmodified
+        # (the extent is not stored in the file).
+        positions = FocusMap.load_focus_positions_from_file(filename)
+        self.set_user_defined_focus_positions(positions)
+
+    def save_to_file(self, filename):  # TODO: deal with failure (IOError)
+        with open(filename, "w") as f:
+            for (x, y, z) in self._focus_positions:
+                f.write('{} {} {}\n'.format(x, y, z))
+
+    def get_user_defined_focus_positions(self):
+        # returns the list of (x, y, focus z) user defined LM focus positions
+        return self._focus_positions
+
     def reset(self):
+        # Removes all user-defined focus positions, but preserves the focus map extent (x and y ranges).
         self._focus_positions = []
         self._interpolator = None
 
@@ -69,11 +88,11 @@ class FocusMap:
         return s
 
     @classmethod
-    def load(cls, filename):
-        # Construct a FocusMap object from the text file with the given filename.
+    def load_focus_positions_from_file(self, filename):    # TODO: deal with failure (IOerror)
+        # Load focus samples from the text file with the given filename, and return them in a list [(x, y, z), ...]
+        #
         # The file's contents look like this:
         #
-        #    xmin xmax ymin ymax stepsize
         #    x1 y1 z1
         #    ...
         #    xn yn zn
@@ -85,22 +104,13 @@ class FocusMap:
         with open(filename) as f:
             lines = f.readlines()
 
-        # Parse the focus map text lines
-
         # Discard empty lines and comment lines. Comment lines start with a hash sign.
         lines = [line for line in lines if not (line.lstrip().startswith('#') or len(line.strip()) == 0)]
 
-        # Read extent and stepsize
-        xmin, xmax, ymin, ymax, step = [float(val) for val in lines[0].split()]
-
-        # Read focus values
-        focus_data = []
-        for line in lines[1:]:
+        # Parse focus positions
+        positions = []
+        for line in lines:
             x, y, z = [float(val) for val in line.split()]
-            focus_data.append((x, y, z))
+            positions.append((x, y, z))
 
-        # Construct the focus map
-        focusmp = cls(xmin, xmax, ymin, ymax, step)
-        for focus in focus_data:
-            focusmp.add_user_defined_focus_position((focus[0], focus[1]), focus[2])
-        return focusmp
+        return positions
