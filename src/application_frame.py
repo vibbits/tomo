@@ -485,11 +485,14 @@ class ApplicationFrame(wx.Frame):
 
         sift_images_pixelsize_in_microns = 1000.0 / self._model.sift_images_pixels_per_mm
         sift_offsets_microns = [sift_offset * sift_images_pixelsize_in_microns for sift_offset in sift_offsets]
-        print('Fine SIFT offset (in microns): ' + repr(sift_offsets_microns))
 
-        # Invert y of the SIFT offsets
-        sift_offsets_microns = [np.array([offset[0], -offset[1]]) for offset in sift_offsets_microns]
-        print('Fine SIFT offset y-inverted (in microns): ' + repr(sift_offsets_microns))
+        # Invert x component of the SIFT offsets.
+        # (I think that we calculated a compensation direction (vector) which is the opposite of what is correct,
+        # requiring us to flip x and y. But on top of that we probably also forgot a y flip somewhere too.
+        # Together this means we need to flip only x.
+        # IMPROVEME: fix the direction so we only need a y-flip here, that is more logical. I think the fix is a bit higher: offset = center - new_center, and here only a y-flip)
+        sift_offsets_microns = [np.array([-offset[0], offset[1]]) for offset in sift_offsets_microns]
+        print('Fine SIFT offset (in microns): ' + repr(sift_offsets_microns))
 
         # Combine (=sum) the rough translations obtained by mapping the slice polygons (of a x10 or x20 overview image)
         # onto one another with the fine corrections obtained by SIFT registration of (x100) light microscopy images.
@@ -520,6 +523,13 @@ class ApplicationFrame(wx.Frame):
                                               self._model.combined_offsets_microns, 0.0, self._model.delay_between_EM_image_acquisition_secs,
                                               self._model.odemis_cli, self._model.em_images_output_folder, self._model.em_images_prefix)
         del wait
+
+        # wait = wx.BusyInfo("Acquiring LM images 2nd time...")
+        # secom_tools.acquire_microscope_images('LM',
+        #                                       self._model.combined_offsets_microns, self._model.lm_stabilization_time_secs, self._model.delay_between_LM_image_acquisition_secs,
+        #                                       self._model.odemis_cli, self._model.em_images_output_folder, self._model.lm_images_prefix,
+        #                                       self._model.focus_map if self._model.lm_use_focus_map else None)
+        # del wait
 
         # Note: since the user needs to manually position the EM microscope over the POI in the first slice,
         # multiple series of EM image acquisition using _do_em_acquire() are perfectly fine.
