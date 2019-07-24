@@ -712,37 +712,11 @@ class TileAcqPlugin(Plugin):
                    (mem_est / 1024 ** 3,))
             self._dlg.setAcquisitionInfo(txt, lvl=logging.ERROR)
 
-    def _read_focus_samples_file(self, filename):  # VIB
-        # Load focus samples from the text file with the given filename.
-        # The file's contents look like this:
-        #
-        #    x1 y1 z1
-        #    ...
-        #    xn yn zn
-        #
-        # Lines starting with (optional) whitespace followed by a hash sign are ignored (useful for comments).
-        # Lines with only whitespace are ignored as well.
-
-        # Read the focus map text file
-        with open(filename) as f:
-            lines = f.readlines()
-
-        # Discard empty lines and comment lines. Comment lines start with a hash sign.
-        lines = [line for line in lines if not (line.lstrip().startswith('#') or len(line.strip()) == 0)]
-
-        # Parse focus values
-        focus_data = []
-        for line in lines:
-            x, y, z = [float(val) for val in line.split()]
-            focus_data.append((x, y, z))
-
-        return focus_data
-
     def _build_focus_map(self, filename):  # VIB
         logging.debug("> > > Building focus map from %s", filename)
 
         # Read the (x, y, z) focus values from a text file
-        focus_data = self._read_focus_samples_file(filename)
+        focus_data = FocusMap.load_focus_positions_from_file(filename)
 
         # Calculate the extent (in xy) of the tile centers
         main_data = self.main_app.main_data
@@ -793,7 +767,7 @@ class TileAcqPlugin(Plugin):
         # Construct the actual focus map
         focus_map = FocusMap(xmin, xmax, ymin, ymax, step)
         for focus in focus_data:
-            focus_map.add_user_defined_focus_position((focus[0], focus[1]), focus[2])
+            focus_map.add_user_defined_focus_position(focus[0], focus[1], focus[2])
 
         return focus_map
 

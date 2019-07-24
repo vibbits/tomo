@@ -49,7 +49,7 @@ from application_frame import ApplicationFrame
 # - conda install networkx
 # - conda install joblib
 # - pip install naturalneighbor    # there is no conda package
-# - TODO: conda or pip install pypubsub==3.3.0
+# - pip install pypubsub==3.3.0
 #
 # And for some experiments also:
 # - conda install scipy

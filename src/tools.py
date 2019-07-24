@@ -438,3 +438,21 @@ def commandline_exec(lst):
 
     encoding = sys.stdout.encoding  # I'm not sure that this is correct on all platforms
     return proc.returncode, out.decode(encoding), err.decode(encoding)
+
+
+# # Small helper class to work around the issue where wx.BusyInfo(message) method pops up a box without the actual message.
+# # Only after calling wx.Yield() does the message text get drawn inside the box. Similarly, 'del' on the wx.BusyInfo object only
+# # removes the dialog from the screen after wx.Yield() is called. (This is for wxPython 3 classic; in wxPython 4 Phoenix wx.Yield()
+# # does not seem to be required.)
+# # NOTE: AFTER ALL THIS DOES NOT SEEM TO WORK IN TOMO,
+# # EVEN THOUGH IT SEEMS TO WORK IN A SMALL TEST (ADMITTEDLY ON THE PYTHON COMMAND LINE).
+# class BusyInfo:
+#     def __init__(self, message):
+#         self.dialog = wx.BusyInfo(message)
+#         wx.Yield()
+#
+#     def close(self):
+#         del self.dialog
+#         wx.Yield()
+
+

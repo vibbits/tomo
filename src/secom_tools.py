@@ -32,7 +32,7 @@ def acquire_microscope_images(mode, physical_offsets_microns, stabilization_time
                               odemis_cli, images_output_folder, images_prefix, focus_map = None):
 
     # Ensure that the output folder for the images exists
-    Path(images_output_folder).mkdir(exist_ok=True)
+    Path(images_output_folder).mkdir(parents=True, exist_ok=True)
 
     print('Acquiring {} images'.format(mode))
     for i, offset_microns in enumerate(physical_offsets_microns):
