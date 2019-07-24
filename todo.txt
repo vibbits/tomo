@@ -1,0 +1,15 @@
+TODOs for Tomo
+==============
+- Add ability to pause/resume/stop image acquisition. See experiments/em_image_acquisition_demo.py
+
+- Add (optional) extra EM "pyramid level" (after EM acquisition at e.g. 5000x maginification, register those images as well,
+  and use registration offset and rotation as additional fine correction of stage position. Then acquire EM images at e.g. 15000x magnification.
+
+- Add ability to acquire *multiple* ROIs in LM, then vent the microscope, and then acquire the corresponding ROIs in EM.
+  This may be implemented perhaps by saving ROI position + SIFT registration transformation info (or only the offsets) to disk,
+  and read it back from disk for EM image acquisition.
+
+- Allow optional specification of ROI that acquired images will be cropped to before running SIFT registration.
+  (To help SIFT focus on relevant portion of the images. This is a hack/workaround for failing SIFT registrations.)
+  Currently that ROI is hard-coded in model.py and sift_registration.py.
+  Additionally also allow contrast enhancement? Does Sergio's attempt work in headless mode?
