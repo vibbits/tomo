@@ -62,6 +62,15 @@ def registration():
     stackImp = ImagePlus("unaligned_stack", stack)
     unaligned_stack_filename = os.path.join(dstdir, "unaligned_stack.tif")
     print('Saving image stack to ' + unaligned_stack_filename)
+
+    IJ.save(stackImp, unaligned_stack_filename)
+    WindowManager.setTempCurrentImage(stackImp)
+    #stackImp.setRoi(520, 460, 1030, 1072)
+    stackImp.setRoi(660, 620, 796, 834)
+    IJ.run(stackImp, "Crop", "")
+    IJ.run("Brightness/Contrast...")
+    IJ.run("Enhance Contrast", "saturated=0.35")
+    IJ.run("Apply LUT","stack")
     IJ.save(stackImp, unaligned_stack_filename)
 
     # Display the unaligned stack (for debugging, not possible in headless mode)
