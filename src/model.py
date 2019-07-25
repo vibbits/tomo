@@ -62,11 +62,17 @@ class TomoModel:
 
         self.lm_use_focus_map = True  # Flag deciding whether or not to use the focus map (self.focus_map) created with the low magnification lens (e.g. 20x) to set the (rough) focus during LM image acquisition with the 100x lens. The 100x lens has a smaller depth of field than the 20x, so focus set this way may not be very good, but it could be a decent initial focus guess for autofocus.
         self.focus_map = None  # The actual focus map. It can be built and saved for use in the tiled overview image acquisition plugin for Odemis, and optionally used lateron during 100x LM image acquisition as well. Note: we need an overview image aligned with the stage before we can build a focus map (because we need to know the extent of the sample grid)
-        self.image_size = (796, 834)
-        # self.image_size = (2048, 2048)  # (width, height) of the LM images in pixels; this is the size of the images that Odemis acquires; it is assumed to be constant.
+
+        # Constant
+        self.image_size = (2048, 2048)  # (width, height) of the LM images in pixels; this is the size of the images that Odemis acquires; it is assumed to be constant.
+
+        # TODO? Make registration parameters persistent too?
+        self.registration_params = { 'crop': False, 'roi': [0, 0, 2048, 2048], 'enhance_contrast': False }  # roi=[top left x, top left y, width, height] in pixels (integer values)
+
         # Persistent storage
         self._config = wx.Config('be.vib.bits.tomo')
         self.read_parameters()
+
     def set_slice_polygon(self, i, polygon):
         self.slice_polygons[i] = polygon
         pub.sendMessage(MSG_SLICE_POLYGON_CHANGED, index=i, polygon=polygon)

@@ -453,7 +453,7 @@ class ApplicationFrame(wx.Frame):
 
         print('Aligning LM images')
         print('Starting a headless Fiji and calling the SIFT image registration plugin. Please be patient...')
-        script_args = "srcdir='{}',dstdir='{}',prefix='{}',numimages='{}'".format(self._model.sift_input_folder, self._model.sift_output_folder, self._model.lm_images_prefix, len(self._model.all_points_of_interest))
+        script_args = "srcdir='{}',dstdir='{}',prefix='{}',numimages='{}',do_enhance_contrast='{}',do_crop='{}',roi_x='{}',roi_y='{}',roi_width='{}',roi_height='{}'".format(self._model.sift_input_folder, self._model.sift_output_folder, self._model.lm_images_prefix, len(self._model.all_points_of_interest), self._model.registration_params["enhance_contrast"], self._model.registration_params["crop"], self._model.registration_params["roi"][0], self._model.registration_params["roi"][1], self._model.registration_params["roi"][2], self._model.registration_params["roi"][3])
 
         # Info about headless ImageJ: https://imagej.net/Headless#Running_macros_in_headless_mode
         wait = wx.BusyInfo("Aligning LM images...")
@@ -472,7 +472,8 @@ class ApplicationFrame(wx.Frame):
 
         # Calculate a fine stage position correction (in pixels) from the transformation
         # that is needed to register successive images of the same ROI in successive sample sections.
-        center = np.array([self._model.image_size[0] / 2.0, self._model.image_size[1] / 2.0])  # image center, in pixels
+        image_size = self._model.registration_params["roi"][2:] if self._model.registration_params["crop"] else self._model.image_size
+        center = np.array([image_size[0] / 2.0, image_size[1] / 2.0])  # image center, in pixels
         sift_offsets = [np.array([0, 0])]  # stage position correction (in pixels)
 
         for mat in sift_matrices:

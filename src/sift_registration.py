@@ -1,14 +1,25 @@
-#@String srcdir
-#@String dstdir
-#@String prefix
-#@Integer numimages
-
-# Prototype script for registering a set of images with ImageJ's SIFT registration plugin.
-# This script is to be executed by a headless Fiji.
+# Script for registering a set of images with ImageJ's "Linear Stack Alignment with SIFT" registration plugin.
+# This script is typically executed by a headless Fiji started by Tomo.
 #
 # Frank Vernaillen
 # September 2018
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
+
+#@String srcdir
+#@String dstdir
+#@String prefix
+#@Integer numimages
+#@Boolean do_enhance_contrast
+#@Boolean do_crop
+#@Integer roi_x
+#@Integer roi_y
+#@Integer roi_width
+#@Integer roi_height
+
+# Note: we have a lot of parameters already, perhaps we should instead pass them via,
+# for example, a JSON file with parameters?
+
+# Note: roi_x, roi_y, roi_width, roi_height are only by the script if do_crop is True.
 
 import os
 import re
@@ -25,14 +36,26 @@ def natural_keys(text):
     return [ atoi(c) for c in re.split('(\d+)', text) ]
 
 def registration():
+    print('Registration parameters:')
+    print('- Source directory: {}'.format(srcdir))
+    print('- Destination directory: {}'.format(dstdir))
+    print('- Input image filename prefix: {}'.format(prefix))
+    print('- Number of input images to register: {}'.format(numimages))
+    print('- Enhance contrast before registration? {}'.format('yes' if do_enhance_contrast else 'no'))
+    print('- Crop images before registration? {}'.format('yes' if do_crop else 'no'))
+    if do_crop:
+        print('- Crop ROI: x={} y={} width={} height={}'.format(roi_x, roi_y, roi_width, roi_height))
+
     # Collect the filenames of the images we will load and save as a single stack
-    print('Scanning source directory {} for images'.format(srcdir))
+    print('Scanning source directory for images')
     images = []
     for filename in os.listdir(srcdir):
         if filename.startswith(prefix):
             full_filename = os.path.join(srcdir, filename)
             if os.path.isfile(full_filename):
                 images.append(filename)
+
+    print('Found {} images starting with desired filename prefix "{}"'.format(len(images), prefix))
 
     # Sort the image filenames in natural order
     # (so with "prefix2.tif" before "prefix11.tif")
@@ -65,12 +88,18 @@ def registration():
 
     IJ.save(stackImp, unaligned_stack_filename)
     WindowManager.setTempCurrentImage(stackImp)
-    #stackImp.setRoi(520, 460, 1030, 1072)
-    stackImp.setRoi(660, 620, 796, 834)
-    IJ.run(stackImp, "Crop", "")
-    IJ.run("Brightness/Contrast...")
-    IJ.run("Enhance Contrast", "saturated=0.35")
-    IJ.run("Apply LUT","stack")
+
+    if do_crop:
+        print('Cropping')
+        stackImp.setRoi(roi_x, roi_y, roi_width, roi_height)
+        IJ.run(stackImp, "Crop", "")
+
+    if do_enhance_contrast:
+        print('Enhancing contrast')
+        # IJ.run("Brightness/Contrast...")  # <--- CHECKME This is not needed, I think (and throws exception when in headless mode)
+        IJ.run("Enhance Contrast", "saturated=0.35")
+        IJ.run("Apply LUT","stack")
+
     IJ.save(stackImp, unaligned_stack_filename)
 
     # Display the unaligned stack (for debugging, not possible in headless mode)
@@ -80,7 +109,8 @@ def registration():
     # use WindowManager.getCurrentImage() as their input image. However, if Fiji is running in headless mode
     # we cannot display images and getCurrentImage() is null. Fortunately, as a workaround, we can use setTempCurrentImage()
     # on the WindowManager which will then return it when getCurrentImage() is called.
-    print('Make the unaligned stack the current image for the SIFT registration plugin')
+
+    # Make the unaligned stack the current image for the SIFT registration plugin
     WindowManager.setTempCurrentImage(stackImp)   # WindowManager.getCurrentImage() will now return stackImp
 
     # Align the stack with SIFT. For now we run the ImageJ SIFT plugin,
@@ -91,14 +121,15 @@ def registration():
     # SIFT plugin source code:
     # - https://github.com/axtimwalde/mpicbg/blob/2f411b380cffb580e35410b6517ffeb2c72489e2/mpicbg_/src/main/java/SIFT_Align.java)
     # - https://github.com/axtimwalde/mpicbg/blob/2f411b380cffb580e35410b6517ffeb2c72489e2/mpicbg/src/main/java/mpicbg/ij/SIFT.java
-#   IJ.run("Linear Stack Alignment with SIFT", "initial_gaussian_blur=1.60 steps_per_scale_octave=3 minimum_image_size=64 maximum_image_size=1024 feature_descriptor_size=4 feature_descriptor_orientation_bins=8 closest/next_closest_ratio=0.92 maximal_alignment_error=25 inlier_ratio=0.05 expected_transformation=Rigid interpolate");
-#   IJ.run("Linear Stack Alignment with SIFT", "initial_gaussian_blur=1.8 steps_per_scale_octave=3 minimum_image_size=128 maximum_image_size=1024 feature_descriptor_size=8 feature_descriptor_orientation_bins=8 closest/next_closest_ratio=0.92 maximal_alignment_error=25 inlier_ratio=0.05 expected_transformation=Translation interpolate");
-    IJ.run("Linear Stack Alignment with SIFT", "initial_gaussian_blur=1.6 steps_per_scale_octave=3 minimum_image_size=128 maximum_image_size=1024 feature_descriptor_size=8 feature_descriptor_orientation_bins=8 closest/next_closest_ratio=0.92 maximal_alignment_error=50 inlier_ratio=0.05 expected_transformation=Rigid interpolate");
+    print('Running the Linear Stack Aligment with SIFT plugin')
+#   IJ.run("Linear Stack Alignment with SIFT", "initial_gaussian_blur=1.60 steps_per_scale_octave=3 minimum_image_size=64 maximum_image_size=1024 feature_descriptor_size=4 feature_descriptor_orientation_bins=8 closest/next_closest_ratio=0.92 maximal_alignment_error=25 inlier_ratio=0.05 expected_transformation=Rigid interpolate")
+#   IJ.run("Linear Stack Alignment with SIFT", "initial_gaussian_blur=1.8 steps_per_scale_octave=3 minimum_image_size=128 maximum_image_size=1024 feature_descriptor_size=8 feature_descriptor_orientation_bins=8 closest/next_closest_ratio=0.92 maximal_alignment_error=25 inlier_ratio=0.05 expected_transformation=Translation interpolate")
+    IJ.run("Linear Stack Alignment with SIFT", "initial_gaussian_blur=1.6 steps_per_scale_octave=3 minimum_image_size=128 maximum_image_size=1024 feature_descriptor_size=8 feature_descriptor_orientation_bins=8 closest/next_closest_ratio=0.92 maximal_alignment_error=50 inlier_ratio=0.05 expected_transformation=Rigid interpolate")
 
     # Save the aligned stack
     aligned_stack = IJ.getImage()  # The SIFT plugin only created one new image, the aligned stack, it is now active
     IJ.save(aligned_stack, os.path.join(dstdir, "sift_aligned_stack.tif"))
 
 # Do the registration
-print('SIFT registration srcdir=' + srcdir + " dstdir=" + dstdir + " prefix=" + prefix)
+print('Performing image registration')
 registration()

@@ -3,6 +3,7 @@
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
 
 import wx
+import wx.lib.intctrl
 
 class LMAcquisitionDialog(wx.Dialog):
     _model = None
@@ -19,9 +20,6 @@ class LMAcquisitionDialog(wx.Dialog):
     _sift_output_folder_button = None
     _lm_images_output_folder_button = None
     _acquire_button = None
-    # _lm_max_autofocus_change_label = None
-    # _lm_max_autofocus_change_edit = None
-    # _lm_do_autofocus_checkbox = None
     _lm_use_focusmap_checkbox = None
 
     def __init__(self, model, parent, ID, title, size=wx.DefaultSize, pos=wx.DefaultPosition, style=wx.DEFAULT_DIALOG_STYLE):
@@ -57,15 +55,9 @@ class LMAcquisitionDialog(wx.Dialog):
         lm_sizer.AddSpacer(8)
         lm_sizer.Add(self._lm_images_output_folder_button, flag=wx.ALIGN_CENTER_VERTICAL)
 
-        empty_label = wx.StaticText(self, wx.ID_ANY, "")
-
-        # self._lm_do_autofocus_checkbox = wx.CheckBox(self, wx.ID_ANY, "Perform Autofocus")
-        # self._lm_do_autofocus_checkbox.SetValue(self._model.lm_do_autofocus)
-        #
-        # self._lm_max_autofocus_change_label = wx.StaticText(self, wx.ID_ANY, "Max. Autofocus Change (nanometer):")
-        # self._lm_max_autofocus_change_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.lm_max_autofocus_change_nanometers), size = (50, -1))
-        #
-        # self._enable_autofocus_edit_field(self._model.lm_do_autofocus)
+        empty_label1 = wx.StaticText(self, wx.ID_ANY, "")  # IMPROVEME: using an empty label as placeholder is probably not the
+        empty_label2 = wx.StaticText(self, wx.ID_ANY, "")
+        empty_label3 = wx.StaticText(self, wx.ID_ANY, "")
 
         #
         sift_input_folder_label = wx.StaticText(self, wx.ID_ANY, "Input Folder:")
@@ -93,6 +85,25 @@ class LMAcquisitionDialog(wx.Dialog):
         image_size_label = wx.StaticText(self, wx.ID_ANY, "Image size (width x height):")
         image_size_pixels = wx.StaticText(self, wx.ID_ANY, "{} x {} pixels".format(self._model.image_size[0], self._model.image_size[1]))
 
+        self._enhance_contrast_checkbox = wx.CheckBox(self, wx.ID_ANY, "Enhance contrast before registration")
+        self._enhance_contrast_checkbox.SetValue(self._model.registration_params["enhance_contrast"])
+
+        self._crop_checkbox = wx.CheckBox(self, wx.ID_ANY, "Crop before registration")
+        self._crop_checkbox.SetValue(self._model.registration_params["crop"])
+
+        self._roi_label = wx.StaticText(self, wx.ID_ANY, "Crop ROI (x, y, width, height):")  # in pixels
+        self._roi_x_edit = wx.lib.intctrl.IntCtrl(self, wx.ID_ANY, 0, min=0, limited=True, allow_none=False, size=(50, -1))
+        self._roi_y_edit = wx.lib.intctrl.IntCtrl(self, wx.ID_ANY, 0, min=0, limited=True, allow_none=False, size=(50, -1))
+        self._roi_width_edit = wx.lib.intctrl.IntCtrl(self, wx.ID_ANY, 0, min=0, limited=True, allow_none=False, size=(50, -1))
+        self._roi_height_edit = wx.lib.intctrl.IntCtrl(self, wx.ID_ANY, 0, min=0, limited=True, allow_none=False, size=(50, -1))
+        self._update_roi()
+
+        roi_values_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        roi_values_sizer.Add(self._roi_x_edit, flag=wx.ALIGN_CENTER_VERTICAL)
+        roi_values_sizer.Add(self._roi_y_edit, flag=wx.ALIGN_CENTER_VERTICAL)
+        roi_values_sizer.Add(self._roi_width_edit, flag=wx.ALIGN_CENTER_VERTICAL)
+        roi_values_sizer.Add(self._roi_height_edit, flag=wx.ALIGN_CENTER_VERTICAL)
+
         # LM Image Acquisition
         lm_fgs = wx.FlexGridSizer(cols=2, vgap=4, hgap=8)
         lm_fgs.Add(lm_images_output_folder_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
@@ -103,11 +114,9 @@ class LMAcquisitionDialog(wx.Dialog):
         lm_fgs.Add(self._lm_stabilization_time_edit, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
         lm_fgs.Add(lm_acquisition_delay_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         lm_fgs.Add(self._lm_acquisition_delay_edit, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        lm_fgs.Add(empty_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        lm_fgs.Add(empty_label1, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         lm_fgs.Add(self._lm_use_focusmap_checkbox, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        # lm_fgs.Add(self._lm_do_autofocus_checkbox, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        # lm_fgs.Add(self._lm_max_autofocus_change_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        # lm_fgs.Add(self._lm_max_autofocus_change_edit, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+
         lm_fgs.Add(image_size_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         lm_fgs.Add(image_size_pixels, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
@@ -116,13 +125,21 @@ class LMAcquisitionDialog(wx.Dialog):
         lm_sizer.Add(lm_fgs, 0, wx.ALL|wx.CENTER, 10)
 
         # SIFT registration
-        sift_fgs = wx.FlexGridSizer(cols = 2, vgap = 4, hgap = 8)
-        sift_fgs.Add(sift_input_folder_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        sift_fgs.Add(sift_in_sizer, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        sift_fgs.Add(sift_output_folder_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        sift_fgs.Add(sift_out_sizer, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        sift_fgs.Add(sift_pixel_size_label, flag = wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        sift_fgs.Add(self._sift_pixel_size_edit, flag = wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        sift_fgs = wx.FlexGridSizer(cols=2, vgap=4, hgap=8)
+        sift_fgs.Add(sift_input_folder_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        sift_fgs.Add(sift_in_sizer, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        sift_fgs.Add(sift_output_folder_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        sift_fgs.Add(sift_out_sizer, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        sift_fgs.Add(sift_pixel_size_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        sift_fgs.Add(self._sift_pixel_size_edit, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+
+        sift_fgs.Add(empty_label2, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        sift_fgs.Add(self._enhance_contrast_checkbox, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        sift_fgs.Add(empty_label3, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        sift_fgs.Add(self._crop_checkbox, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+
+        sift_fgs.Add(self._roi_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        sift_fgs.Add(roi_values_sizer, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
         sift_box = wx.StaticBox(self, -1, 'SIFT Registration')
         sift_sizer = wx.StaticBoxSizer(sift_box, wx.VERTICAL)
@@ -145,9 +162,14 @@ class LMAcquisitionDialog(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self._on_sift_input_folder_change, self._sift_input_folder_edit)
         self.Bind(wx.EVT_TEXT, self._on_sift_output_folder_change, self._sift_output_folder_edit)
         self.Bind(wx.EVT_TEXT, self._on_sift_pixel_size_change, self._sift_pixel_size_edit)
+        self.Bind(wx.EVT_CHECKBOX, self._on_enhance_contrast_change, self._enhance_contrast_checkbox)
         self.Bind(wx.EVT_CHECKBOX, self._on_use_focusmap_change, self._lm_use_focusmap_checkbox)
-        # self.Bind(wx.EVT_CHECKBOX, self._on_lm_do_autofocus_change, self._lm_do_autofocus_checkbox)
-        # self.Bind(wx.EVT_TEXT, self._on_lm_max_autofocus_change, self._lm_max_autofocus_change_edit)
+        self.Bind(wx.EVT_CHECKBOX, self._on_crop_change, self._crop_checkbox)
+        self.Bind(wx.lib.intctrl.EVT_INT, self._on_roi_int_change, self._roi_x_edit)
+        self.Bind(wx.lib.intctrl.EVT_INT, self._on_roi_int_change, self._roi_y_edit)
+        self.Bind(wx.lib.intctrl.EVT_INT, self._on_roi_int_change, self._roi_width_edit)
+        self.Bind(wx.lib.intctrl.EVT_INT, self._on_roi_int_change, self._roi_height_edit)
+
         self.Bind(wx.EVT_BUTTON, self._on_lm_output_folder_browse_button_click, self._lm_images_output_folder_button)
         self.Bind(wx.EVT_BUTTON, self._on_sift_input_folder_browse_button_click, self._sift_input_folder_button)
         self.Bind(wx.EVT_BUTTON, self._on_sift_output_folder_browse_button_click, self._sift_output_folder_button)
@@ -155,17 +177,13 @@ class LMAcquisitionDialog(wx.Dialog):
 
         b = 5 # border size
         contents = wx.BoxSizer(wx.VERTICAL)
-        contents.Add(lm_sizer, 0, wx.ALL | wx.EXPAND, border = b)
-        contents.Add(sift_sizer, 0, wx.ALL | wx.EXPAND, border = b)
-        contents.Add(instructions_label, 0, wx.ALL | wx.CENTER, border = b)
-        contents.Add(self._acquire_button, 0, wx.ALL | wx.CENTER, border = b)
+        contents.Add(lm_sizer, 0, wx.ALL | wx.EXPAND, border=b)
+        contents.Add(sift_sizer, 0, wx.ALL | wx.EXPAND, border=b)
+        contents.Add(instructions_label, 0, wx.ALL | wx.CENTER, border=b)
+        contents.Add(self._acquire_button, 0, wx.ALL | wx.CENTER, border=b)
 
         self.SetSizer(contents)
         contents.Fit(self)
-
-    # def _enable_autofocus_edit_field(self, enable):
-    #     self._lm_max_autofocus_change_label.Enable(enable)
-    #     self._lm_max_autofocus_change_edit.Enable(enable)
 
     def _can_use_focus_map(self):
         focus_map = self._model.focus_map
@@ -227,14 +245,55 @@ class LMAcquisitionDialog(wx.Dialog):
         self._model.lm_use_focus_map = self._lm_use_focusmap_checkbox.IsChecked()
         print('lm_use_focus_map={}'.format(self._model.lm_use_focus_map))
 
-    # def _on_lm_do_autofocus_change(self, event):
-    #     self._model.lm_do_autofocus = self._lm_do_autofocus_checkbox.IsChecked()
-    #     print('lm_do_autofocus={}'.format(self._model.lm_do_autofocus))
-    #     self._enable_autofocus_edit_field(self._model.lm_do_autofocus)
-    #
-    # def _on_lm_max_autofocus_change(self, event):
-    #     self._model.lm_max_autofocus_change_nanometers = float(self._lm_max_autofocus_change_edit.GetValue())
-    #     print('lm_max_autofocus_change_nanometers={}'.format(self._model.lm_max_autofocus_change_nanometers))
+    def _on_crop_change(self, event):
+        self._model.registration_params['crop'] = self._crop_checkbox.IsChecked()
+        print('crop={}'.format(self._model.registration_params['crop']))
+        self._update_roi()
+
+    def _update_roi(self):
+        if self._model.registration_params['crop']:
+            self._roi_label.Enable(True)
+            self._roi_x_edit.Enable(True)
+            self._roi_y_edit.Enable(True)
+            self._roi_width_edit.Enable(True)
+            self._roi_height_edit.Enable(True)
+            self._roi_x_edit.SetValue(self._model.registration_params['roi'][0])
+            self._roi_y_edit.SetValue(self._model.registration_params['roi'][1])
+            self._roi_width_edit.SetValue(self._model.registration_params['roi'][2])
+            self._roi_height_edit.SetValue(self._model.registration_params['roi'][3])
+        else:
+            self._roi_label.Enable(False)
+            self._roi_x_edit.Enable(False)
+            self._roi_y_edit.Enable(False)
+            self._roi_width_edit.Enable(False)
+            self._roi_height_edit.Enable(False)
+            self._roi_x_edit.ChangeValue(0)  # ChangeValue() does NOT send a change event
+            self._roi_y_edit.ChangeValue(0)
+            self._roi_width_edit.ChangeValue(0)
+            self._roi_height_edit.ChangeValue(0)
+
+
+    def _on_roi_int_change(self, event):
+        if self._model.registration_params['crop'] == False:
+            return
+        obj = event.EventObject
+        roi = self._model.registration_params['roi']
+        if obj == self._roi_x_edit:
+            roi[0] = self._roi_x_edit.GetValue()
+        elif obj == self._roi_y_edit:
+            roi[1] = self._roi_y_edit.GetValue()
+        elif obj == self._roi_width_edit:
+            roi[2] = self._roi_width_edit.GetValue()
+        elif obj == self._roi_height_edit:
+            roi[3] = self._roi_height_edit.GetValue()
+        print('roi=[{} {} {} {}]'.format(self._model.registration_params['roi'][0],
+                                         self._model.registration_params['roi'][1],
+                                         self._model.registration_params['roi'][2],
+                                         self._model.registration_params['roi'][3]))
+
+    def _on_enhance_contrast_change(self, event):
+        self._model.registration_params['enhance_contrast'] = self._enhance_contrast_checkbox.IsChecked()
+        print('enhance_contrast={}'.format(self._model.registration_params['enhance_contrast']))
 
     def _on_sift_input_folder_change(self, event):
         self._model.sift_input_folder = self._sift_input_folder_edit.GetValue()
