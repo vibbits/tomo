@@ -479,7 +479,7 @@ class ApplicationFrame(wx.Frame):
         for mat in sift_matrices:
             # mat is a 2x3 numpy array; 3rd column is the translation vector
             new_center = np.dot(mat, np.array([center[0], center[1], 1.0]))
-            offset = new_center - center  # displacement in pixels
+            offset = center - new_center  # displacement in pixels
             sift_offsets.append(offset)
             print('matrix={} center={} newcenter={} offset={} (in pixels)'.format(mat, center, new_center, offset))
             center = new_center
@@ -487,12 +487,8 @@ class ApplicationFrame(wx.Frame):
         sift_images_pixelsize_in_microns = 1000.0 / self._model.sift_images_pixels_per_mm
         sift_offsets_microns = [sift_offset * sift_images_pixelsize_in_microns for sift_offset in sift_offsets]
 
-        # Invert x component of the SIFT offsets.
-        # (I think that we calculated a compensation direction (vector) which is the opposite of what is correct,
-        # requiring us to flip x and y. But on top of that we probably also forgot a y flip somewhere too.
-        # Together this means we need to flip only x.
-        # IMPROVEME: fix the direction so we only need a y-flip here, that is more logical. I think the fix is a bit higher: offset = center - new_center, and here only a y-flip)
-        sift_offsets_microns = [np.array([-offset[0], offset[1]]) for offset in sift_offsets_microns]
+        # Invert y component of the SIFT offsets.
+        sift_offsets_microns = [np.array([offset[0], -offset[1]]) for offset in sift_offsets_microns]
         print('Fine SIFT offset (in microns): ' + repr(sift_offsets_microns))
 
         # Combine (=sum) the rough translations obtained by mapping the slice polygons (of a x10 or x20 overview image)
