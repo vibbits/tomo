@@ -9,7 +9,3 @@ TODOs for Tomo
   This may be implemented perhaps by saving ROI position + SIFT registration transformation info (or only the offsets) to disk,
   and read it back from disk for EM image acquisition.
 
-- Allow optional specification of ROI that acquired images will be cropped to before running SIFT registration.
-  (To help SIFT focus on relevant portion of the images. This is a hack/workaround for failing SIFT registrations.)
-  Currently that ROI is hard-coded in model.py and sift_registration.py.
-  Additionally also allow contrast enhancement? Does Sergio's attempt work in headless mode?
