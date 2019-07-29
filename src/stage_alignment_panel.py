@@ -118,7 +118,7 @@ class StageAlignmentPanel(wx.Panel):
         pixel_size_meters = (1.0 / self._model.overview_image_pixels_per_mm) / 1000.0
         landmark_stage_pos = secom_tools.get_absolute_stage_position()  # in meters
         self._model.overview_image_to_stage_coord_trf = self._calculate_overview_image_to_stage_transformation_matrix(landmark_stage_pos, landmark_image_pos, pixel_size_meters)
-        print('Overview image and stage are now aligned. Landmark position stage={} image={}. Pixel size={} m. Image to stage trf={}'.format(landmark_stage_pos, landmark_image_pos, pixel_size_meters, self._model.overview_image_to_stage_coord_trf))
+        # print('Overview image and stage are now aligned. Landmark position stage={} image={}. Pixel size={} m. Image to stage trf={}'.format(landmark_stage_pos, landmark_image_pos, pixel_size_meters, self._model.overview_image_to_stage_coord_trf))
 
         # Show alignment state in user interface
         self._update_alignment_state_text(landmark_stage_pos, landmark_image_pos)
