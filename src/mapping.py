@@ -6,7 +6,7 @@ import math
 import numpy as np
 
 # Takes the (x, y) coordinates of a point p and of a quadrilateral
-# and returns normalized coordinates (xi, eta) of this point
+# and returns a 2D Numpy array with the normalized coordinates (xi, eta) of this point
 # relative to a square centered on the origin and with corners (-/+1, -/+1).
 # Note: throws an exception if mapping failed.
 def normalize_point_position(quad, p):
@@ -62,7 +62,7 @@ def normalize_point_position(quad, p):
     return np.array([xi, eta])
 
 # Takes the (x, y) coordinates of a quadrilateral, and the normalized coordinates (xi, eta)
-# of a point relative to a square, and returns the (x, y) coordinates of this point when mapped
+# of a point relative to a square, and returns a 2D numpy array with the (x, y) coordinates of this point when mapped
 # onto the quad.
 def unnormalize_point_position(quad, p_normalized):
     # note: quad y-axis gets flipped (p_normalized already assumes a flipped y-axis)
@@ -94,10 +94,11 @@ def transform_point(quad1, quad2, poi):
     return new_poi
 
 # This function takes a starting point and a list of N
-# consecutive quadss. It then repeatedly maps the point from one quad
+# consecutive quads. It then repeatedly maps the point from one quad
 # onto its analogous position in the next quad. A list of N-1 new points
 # is returned: the positions of the points in quads 2 to N.
 # (starting_point is of course the position in quad 1).
+# Each point is a 2D Numpy array.
 def repeatedly_transform_point(quads, starting_point):
     try:
         num_quads = len(quads)
