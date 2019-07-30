@@ -32,7 +32,8 @@ class FocusPanel(wx.Panel):
         self._stage_position_object = None  # FloatCanvas object for drawing the requested focus position
         self._table = self._make_table()  # table with user-defined focus (x, y, z)
         self._table.Bind(wx.EVT_KEY_DOWN, self._on_grid_keypress)
-        self._table.Bind(wx.grid.EVT_GRID_LABEL_RIGHT_CLICK, self._on_grid_label_right_click)
+        self._table.Bind(wx.grid.EVT_GRID_LABEL_RIGHT_CLICK, self._on_grid_label_right_click)  # to delete a row
+        self._table.Bind(wx.grid.EVT_GRID_LABEL_LEFT_CLICK, self._on_grid_label_left_click)  # to grab focus for copy-paste
 
         title = wx.StaticText(self, wx.ID_ANY, "Focus Map")
         title.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD))
@@ -91,6 +92,23 @@ class FocusPanel(wx.Panel):
 
         self.SetSizer(contents)
         contents.Fit(self)
+
+    def _on_grid_label_left_click(self, event):
+        # User clicked on a table row or column label. It then becomes highlighted in gray.
+        # However, being highlighted in gray does not mean that the table has focus,
+        # so pressing ctrl-C to copy the contents will not work. Only if the selection is in orange
+        # does the table have focus and does ctrl-C work. To avoid this confusing situation we
+        # grab focus programmatically whenever the user click on a row on column label.
+        # IMPROVEME: this is still not ideal, the grid also has the concept of current cell (gridcursor)
+        # which does not automatically change when we select a row/column, but it does get used to determine
+        # which rows/columns to select if the user modifies the selection with a shift-click on a row or column
+        # label. E.g. click on a cell, then click on the label of another row (the grid cursor remains on the original cell,
+        # but the new row is selected. The shift-click on another row. A block of cells is now selected, starting from
+        # the unselected cell with the grid cursor, instead of starting with the selected row. This is strange.
+        # To fix this, I think we should move the grid cursor to the first cell in the row/column if the
+        # user click on a column/row label *and* shift is not pressed; if shift is pressed, do not move the grid cursor.
+        self._table.SetFocus()
+        event.Skip()
 
     def activate(self):
         if self._model.focus_map is None:
@@ -157,6 +175,8 @@ class FocusPanel(wx.Panel):
                     wx.TheClipboard.Close()
             else:
                 print('Focus table has multiple selections. Cannot copy this to the clipboard (it would be confusing).')
+        else:
+            event.Skip()
 
     def _get_number_of_selections_in_table(self):
         # Cells can be selected in different ways (complete row, complete column, individual cells, block of cells).
