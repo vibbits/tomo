@@ -239,7 +239,7 @@ def is_strictly_inside(polygon, point):
 
 def polygons_hit(polygons, point):
     """
-    :param point: x,y coordinates of the point to check
+    :param point: x,y coordinates of the point to check (a tuple, not a numpy array)
     :return: a list with the (0-based) index of all the polygons containing the given point.
              The list can contain 0 polygon indices (point not in any of the polygons),
              1 index (the point is inside exactly one polygon and it overlaps with no other polygons),
