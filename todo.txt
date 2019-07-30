@@ -1,11 +1,16 @@
-TODOs for Tomo
-==============
++------------+
+| Tomo tasks |
++------------+
+
+Work in progress
+----------------
+
+
+To do
+-----
+
 - Add ability to pause/resume/stop image acquisition. See experiments/em_image_acquisition_demo.py
 
-- Add (optional) extra EM "pyramid level" (after EM acquisition at e.g. 5000x maginification, register those images as well,
+- Add (optional) extra EM "pyramid level" (after EM acquisition at e.g. 5000x magnification, register those images as well,
   and use registration offset and rotation as additional fine correction of stage position. Then acquire EM images at e.g. 15000x magnification.
-
-- Add ability to acquire *multiple* ROIs in LM, then vent the microscope, and then acquire the corresponding ROIs in EM.
-  This may be implemented perhaps by saving ROI position + SIFT registration transformation info (or only the offsets) to disk,
-  and read it back from disk for EM image acquisition.
 

@@ -7,6 +7,7 @@ from wx.lib.floatcanvas import FloatCanvas, Resources
 
 import numpy as np
 import os
+import json
 
 import tools
 import secom_tools
@@ -180,8 +181,13 @@ class ApplicationFrame(wx.Frame):
 
         file_menu = wx.Menu()
         self._import_overview_image_item = file_menu.Append(wx.NewId(), "Import Overview Image...")
+        file_menu.AppendSeparator()
         self._load_slice_polygons_item = file_menu.Append(wx.NewId(), "Load Slice Polygons...")
         self._save_slice_polygons_item = file_menu.Append(wx.NewId(), "Save Slice Polygons...")
+        file_menu.AppendSeparator()
+        self._load_poi_item = file_menu.Append(wx.NewId(), "Load Point of Interest...")
+        self._load_poi_item.Enable(False)
+        file_menu.AppendSeparator()
         exit_menu_item = file_menu.Append(wx.NewId(), "Exit")
 
         edit_menu = wx.Menu()
@@ -223,6 +229,7 @@ class ApplicationFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_import_overview_image, self._import_overview_image_item)
         self.Bind(wx.EVT_MENU, self._on_load_slice_polygons, self._load_slice_polygons_item)
         self.Bind(wx.EVT_MENU, self._on_save_slice_polygons, self._save_slice_polygons_item)
+        self.Bind(wx.EVT_MENU, self._on_load_poi, self._load_poi_item)
         self.Bind(wx.EVT_MENU, self._on_set_point_of_interest, self._set_point_of_interest_item)
         self.Bind(wx.EVT_MENU, self._on_align_stage, self._align_stage_item)
         self.Bind(wx.EVT_MENU, self._on_lm_image_acquisition, self._lm_image_acquisition_item)
@@ -257,6 +264,16 @@ class ApplicationFrame(wx.Frame):
             dlg.CenterOnScreen()
             if dlg.ShowModal() == wx.ID_OK:
                 self._do_import_overview_image()
+
+    def _on_load_poi(self, event):
+        with wx.FileDialog(self, "Specify name of point of interest file to load",
+                           defaultDir='',
+                           defaultFile='poi_info.json',
+                           wildcard="JSON files (*.json)|*.json",
+                           style=wx.FD_OPEN) as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
+                path = dlg.GetPath()
+                self._do_load_poi(path)
 
     def _on_load_slice_polygons(self, event):
         with RibbonOutlineDialog(self._model, None, wx.ID_ANY, "Slice Polygons") as dlg:
@@ -322,6 +339,9 @@ class ApplicationFrame(wx.Frame):
         stage_is_aligned = (self._model.overview_image_to_stage_coord_trf is not None)
         self._build_focus_map_item.Enable(stage_is_aligned)  # during focus acquisition we will move the stage, so it needs to be aligned
         self._lm_image_acquisition_item.Enable(self._can_acquire_lm_images())
+        self._em_image_acquisition_item.Enable(self._can_acquire_em_images())
+
+        # FIXME/CHECKME: do we need to recalculate or redo certain operations if the stage was aligned already, and the user now changes it?
 
     def _on_set_point_of_interest(self, event):
         self._show_side_panel(self._point_of_interest_panel, True)
@@ -334,9 +354,17 @@ class ApplicationFrame(wx.Frame):
         self._em_image_acquisition_item.Enable(False)  # After changing the POI we need to acquire LM images first to obtain SIFT-corrected stage movements.
 
     def _can_acquire_lm_images(self):
-        stage_is_aligned = (self._model.overview_image_to_stage_coord_trf is not None)
+        stage_is_aligned = self._stage_is_aligned()
         have_point_of_interest = bool(self._model.all_points_of_interest)
         return stage_is_aligned and have_point_of_interest
+
+    def _can_acquire_em_images(self):
+        stage_is_aligned = self._stage_is_aligned()
+        have_accurate_poi_positions = self._model.combined_offsets_microns is not None
+        return stage_is_aligned and have_accurate_poi_positions
+
+    def _stage_is_aligned(self):
+        return self._model.overview_image_to_stage_coord_trf is not None
 
     def _show_side_panel(self, side_panel, show):
         # Note: while the side panel is shown, the application behaves more or less like modal
@@ -371,10 +399,11 @@ class ApplicationFrame(wx.Frame):
         e6 = self._build_focus_map_item.IsEnabled(); self._build_focus_map_item.Enable(False)
         e7 = self._set_point_of_interest_item.IsEnabled(); self._set_point_of_interest_item.Enable(False)
         e8 = self._align_stage_item.IsEnabled(); self._align_stage_item.Enable(False)
-        return (e1, e2, e3, e4, e5, e6, e7, e8)
+        e9 = self._load_poi_item.IsEnabled(); self._load_poi_item.Enable(False)
+        return e1, e2, e3, e4, e5, e6, e7, e8, e9
 
     def _enable_menu(self, state):
-        e1, e2, e3, e4, e5, e6, e7, e8 = state
+        e1, e2, e3, e4, e5, e6, e7, e8, e9 = state
         self._import_overview_image_item.Enable(e1)
         self._lm_image_acquisition_item.Enable(e2)
         self._em_image_acquisition_item.Enable(e3)
@@ -383,6 +412,7 @@ class ApplicationFrame(wx.Frame):
         self._build_focus_map_item.Enable(e6)
         self._set_point_of_interest_item.Enable(e7)
         self._align_stage_item.Enable(e8)
+        self._load_poi_item.Enable(e9)
 
     def _do_import_overview_image(self):
         # Display overview image pixel size information
@@ -411,11 +441,12 @@ class ApplicationFrame(wx.Frame):
         self._overview_canvas.zoom_to_fit()
         self._overview_canvas.redraw()
 
-        # Enable the menu item for setting the point of interest
+        # Enable the menu item for setting or loading a point of interest
         # (We can now because we have reference slice contours - though typically we will also want to load the overview image)
         self._set_point_of_interest_item.Enable(True)
+        self._load_poi_item.Enable(True)
 
-    def _image_coords_to_stage_coords(self, image_coords):   # IMPROVEME: this is also coded somewhere else, use this function instead
+    def _transform_image_coords_to_stage_coords(self, image_coords):   # IMPROVEME: this is also coded somewhere else, use this function instead
         # Convert image coords to stage coords
         mat = self._model.overview_image_to_stage_coord_trf
         homog_pos = np.array([image_coords[0], image_coords[1], 1])
@@ -423,14 +454,17 @@ class ApplicationFrame(wx.Frame):
         stage_pos = homog_trf_pos[0:2]
         return stage_pos
 
+    def _move_stage_to_first_point_of_interest(self):
+        print('Moving stage to the first point-of-interest.')
+        poi_image_coords = self._model.all_points_of_interest[0]
+        poi_stage_coords = self._transform_image_coords_to_stage_coords(poi_image_coords)
+        secom_tools.set_absolute_stage_position(poi_stage_coords)
+
     def _do_lm_acquire(self):
         # Move the stage to the first point of interest.
         # The stage may not currently be positioned there because,
         # for example, we may have moved the stage while building the focus map.
-        print('Moving stage to the first point-of-interest.')
-        poi_image_coords = self._model.all_points_of_interest[0]
-        poi_stage_coords = self._image_coords_to_stage_coords(poi_image_coords)
-        secom_tools.set_absolute_stage_position(poi_stage_coords)
+        self._move_stage_to_first_point_of_interest()
 
         # Calculate the physical displacements on the sample required for moving between the points of interest.
         overview_image_pixelsize_in_microns = 1000.0 / self._model.overview_image_pixels_per_mm
@@ -445,6 +479,8 @@ class ApplicationFrame(wx.Frame):
                                               self._model.odemis_cli, self._model.lm_images_output_folder, self._model.lm_images_prefix,
                                               self._model.focus_map if self._model.lm_use_focus_map else None)
         del wait
+
+        # IMPROVEME: Factor out the registration code. We will perhaps use it to register and align EM image stacks too.
 
         # Now tell Fiji to execute a macro that (i) reads the LM images, (ii) merges them into a stack,
         # (iii) saves the stack to TIFF, (iv) aligns the slices in this stack
@@ -505,8 +541,58 @@ class ApplicationFrame(wx.Frame):
         total_stage_movement_microns = sum(self._model.slice_offsets_microns)
         secom_tools.move_stage_relative(self._model.odemis_cli, -total_stage_movement_microns)
 
+        # Save point-of-interest position information
+        self._do_save_poi_info(self._model.sift_output_folder, self._model.all_points_of_interest, self._model.slice_offsets_microns, sift_offsets_microns, self._model.combined_offsets_microns, self._model.overview_image_to_stage_coord_trf, self._model.overview_image_pixels_per_mm)
+
         # Enable/disable menu entries
         self._em_image_acquisition_item.Enable(True)
+
+    def _do_save_poi_info(self, output_folder, all_points_of_interest, slice_offsets_microns, sift_offsets_microns, combined_offsets_microns, overview_image_to_stage_coord_trf, image_pixels_per_mm):
+        # Make the point of interest (POI) position data persistent.
+        # This will allow us to first perform LM image acquisitions for multiple initial ROIs,
+        # then prepare the microscope for EM image acquisition (this is time consuming since microscope needs to be pumped vacuum),
+        # and finally use the stored data from the LM acquisition to image all corresponding sections for each POI in EM mode.
+        # Note: we store more data than is strictly necessary, partially for debugging purposes, and partially in case we later
+        # need the additional information after all for some reason.
+        poi_info = {'all_points_of_interest': make_json_serializable(all_points_of_interest),
+                    'combined_offsets_microns': make_json_serializable(combined_offsets_microns),
+                    'slice_offsets_microns': make_json_serializable(slice_offsets_microns),  # info only, not used
+                    'sift_offsets_microns': make_json_serializable(sift_offsets_microns),  # info only, not used
+                    'overview_image_to_stage_coord_trf': make_json_serializable(overview_image_to_stage_coord_trf),  # info only, not used
+                    'image_pixels_per_mm': image_pixels_per_mm}  # info only, not used
+        poi_json = json.dumps(poi_info)
+        print(poi_json)
+
+        filename = os.path.join(output_folder, 'poi_info.json')
+        print('Saving POI info to {}'.format(filename))
+        with open(filename, 'w') as f:   # IMPROVEME: check for IO errors e.g. file is locked or already exists etc.
+            f.write(poi_json)
+
+    def _do_load_poi(self, filename):
+        print('Loading POI info from {}'.format(filename))
+        with open(filename) as f:
+            poi_info = json.load(f)  # IMPROVEME: check for IO errors
+        print(poi_info)
+
+        # Update model with loaded point of interest
+        self._model.combined_offsets_microns = poi_info['combined_offsets_microns']
+        self._model.all_points_of_interest = poi_info['all_points_of_interest']
+        self._model.original_point_of_interest = self._model.all_points_of_interest[0]
+
+        # Update POI panel
+        self._point_of_interest_panel.on_poi_loaded_from_file()
+
+        # Move stage to the first point of interest. This is where the stage needs to be if the user
+        # wants to start EM image acquisition.
+        # (I'm not sure if answering "No" here is ever useful for the user. Perhaps a simple info message would suffice?)
+        answer = wx.MessageBox('Move the stage to the point of interest in the first section?', 'Move stage?',
+                               wx.YES_NO | wx.ICON_QUESTION, self)       # "Yes" is selected by default
+        if answer == wx.YES:
+            self._move_stage_to_first_point_of_interest()
+
+        # Enable/disable menu items
+        self._lm_image_acquisition_item.Enable(self._stage_is_aligned())
+        self._em_image_acquisition_item.Enable(self._stage_is_aligned())
 
     def _do_em_acquire(self):
         # At this point the user should have vented the EM chamber and positioned the EM microscope
@@ -531,3 +617,6 @@ class ApplicationFrame(wx.Frame):
         # Note: since the user needs to manually position the EM microscope over the POI in the first slice,
         # multiple series of EM image acquisition using _do_em_acquire() are perfectly fine.
         # (As long as the user did at least one LM image acquisition so we could calculate SIFT-corrected stage movements.)
+
+def make_json_serializable(list_of_numpy_arrays):
+    return [numpy_array.tolist() for numpy_array in list_of_numpy_arrays]

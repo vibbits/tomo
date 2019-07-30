@@ -1,25 +1,20 @@
 import wx
 import mapping
+import numpy as np
 from mark_mode import MarkMode
 from constants import POINTER_MODE_NAME
 import tools
 
 class PointOfInterestPanel(wx.Panel):
-    _canvas = None
-    _model = None
-    _num_pois = 0
-    _predicted_pois = []
-
-    # user interface
-    done_button = None
-    _poi_label = None
-    _num_pois_edit = None
 
     def __init__(self, parent, model, canvas):
         wx.Panel.__init__(self, parent, size=(350, -1))
 
         self._canvas = canvas
         self._model = model
+
+        self._num_pois = 0
+        self._predicted_pois = []
 
         # Build the user interface
         title = wx.StaticText(self, wx.ID_ANY, "Point of interest")
@@ -76,6 +71,13 @@ class PointOfInterestPanel(wx.Panel):
 
         self._canvas.Canvas.Unbind(MarkMode.EVT_TOMO_MARK_LEFT_DOWN)
 
+    def on_poi_loaded_from_file(self):
+        # Called when point of interest data was loaded from file
+        # (in application_frame.py)
+        self._predicted_pois = self._model.all_points_of_interest if self._model.all_points_of_interest is not None else []
+        self._num_pois = len(self._predicted_pois)
+        self._update_ui()
+
     def _on_num_pois_key_down(self, event):
         keycode = event.GetKeyCode()
         if keycode == wx.WXK_RETURN or keycode == wx.WXK_NUMPAD_ENTER or keycode == wx.WXK_TAB:
@@ -114,7 +116,7 @@ class PointOfInterestPanel(wx.Panel):
         self._canvas.redraw()
 
     def _update_poi(self, image_coords):
-        txt = 'x={:d} y={:d}'.format(image_coords[0], image_coords[1]) if image_coords else 'not yet specified'
+        txt = 'x={:d} y={:d}'.format(image_coords[0], image_coords[1]) if image_coords is not None else 'not yet specified'
         self._poi_label.SetLabelText(txt)
 
     def _update_num_pois(self):
@@ -122,9 +124,9 @@ class PointOfInterestPanel(wx.Panel):
 
     def _on_left_mouse_button_down(self, event):
         canvas_coords = event.GetCoords()
-        poi_coords = (int(round(canvas_coords[0])), -int(round(canvas_coords[1])))
+        poi_coords = np.array([int(round(canvas_coords[0])), -int(round(canvas_coords[1]))])
 
-        slices_hit = tools.polygons_hit(self._model.slice_polygons, poi_coords)
+        slices_hit = tools.polygons_hit(self._model.slice_polygons, (poi_coords[0], poi_coords[1]))
         if not slices_hit:
             print("No point of interest was selected. Please click inside a slice.") # IMPROVEME: show message in GUI - a message box? or a warning in the side panel?
             self._model.original_point_of_interest = None
