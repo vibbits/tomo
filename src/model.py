@@ -31,13 +31,13 @@ class TomoModel:
     _KEY_PREPROCESSED_OVERVIEW_IMAGE_PATH = 'preprocessed_overview_image_path'
 
     def __init__(self):
-        # User defined model parameters (will be made persistent)
+        # Data stored in persistent storage, e.g. user defined model parameters
         self.overview_image_path = None  # path to the overview image; it shows an overview of the section ribbons; typically obtained by stitching many LM image tiles together
         self.slice_polygons_path = None
         self.ribbons_mask_path = None
         self.lm_images_output_folder = None
         self.em_images_output_folder = None
-        self.original_point_of_interest = None
+        self.original_point_of_interest = None  # in overview image coordinates
         self.lm_stabilization_time_secs = 0.0  # time in seconds that we wait for the immersion oil droplet and stage etc. to stabilize before acquiring 100x LM images
         self.delay_between_LM_image_acquisition_secs = 0.0  # time in seconds to pause between successive microscope commands to acquire an LM image (maybe 1 or 2 secs in reality)
         self.delay_between_EM_image_acquisition_secs = 0.0  # time in seconds to pause between successive microscope commands to acquire an EM image (maybe 1 or 2 secs in reality)
@@ -45,7 +45,7 @@ class TomoModel:
         self.sift_images_pixels_per_mm = 0.0  # of the e.g. x100 lens LM images that will be acquired and used for SIFT registration
         self.fiji_path = None  # path to the Fiji executable; a headless Fiji is called in the background to perform LM image registration using one of the Fiji plugins
         self.odemis_cli = None  # path to the Odemis CLI (command line interface) tool
-        self.sift_registration_script = None
+        self.sift_registration_script = None  # full path of the Python image registration script that will be run from a headless Fiji that will be started from Tomo
         self.lm_images_prefix = None  # prefix of x100 image filenames
         self.em_images_prefix = None  # prefix of EM image filenames
         self.sift_input_folder = None
@@ -53,9 +53,9 @@ class TomoModel:
         self.template_slice_path = None
         self.preprocessed_overview_image_path = None  # the path of the most recently loaded preprocessed overview image
 
-        # Calculated model parameters (not persistent)
+        # Data stored in persistent storage, e.g. derived parameters or data unlikely to remain the same for multiple experiments
         self.slice_polygons = []
-        self.all_points_of_interest = None
+        self.all_points_of_interest = None  # in overview image coordinates, first point is user selected POI in first section, all others are predicted POIs in subsequent sections
         self.slice_offsets_microns = None  # stage movements to move from the point-of-interest in slice to to slice i+1, based only on mapping the slice outline quadrilaterals
         self.combined_offsets_microns = None  # refined stage movement (combining slice outline mapping + SIFT registration of x100 images)
         self.overview_image_to_stage_coord_trf = None  # a numpy 3 x 3 homogeneous transformation matrix from overview image (pixel) coordinates to stage position coordinates (in mm); the third row of the matrix is [0 0 1], and it transforms a column matrix [xi; yi; 1]
@@ -63,11 +63,10 @@ class TomoModel:
         self.lm_use_focus_map = True  # Flag deciding whether or not to use the focus map (self.focus_map) created with the low magnification lens (e.g. 20x) to set the (rough) focus during LM image acquisition with the 100x lens. The 100x lens has a smaller depth of field than the 20x, so focus set this way may not be very good, but it could be a decent initial focus guess for autofocus.
         self.focus_map = None  # The actual focus map. It can be built and saved for use in the tiled overview image acquisition plugin for Odemis, and optionally used lateron during 100x LM image acquisition as well. Note: we need an overview image aligned with the stage before we can build a focus map (because we need to know the extent of the sample grid)
 
-        # Constant
-        self.image_size = (2048, 2048)  # (width, height) of the LM images in pixels; this is the size of the images that Odemis acquires; it is assumed to be constant.
-
-        # TODO? Make registration parameters persistent too?
         self.registration_params = { 'crop': False, 'roi': [0, 0, 2048, 2048], 'enhance_contrast': False }  # roi=[top left x, top left y, width, height] in pixels (integer values)
+
+        # Constants
+        self.image_size = (2048, 2048)  # (width, height) of the LM images in pixels; this is the size of the images that Odemis acquires; it is assumed to be constant.
 
         # Persistent storage
         self._config = wx.Config('be.vib.bits.tomo')
@@ -122,7 +121,7 @@ class TomoModel:
 
     # Note
     #
-    # On our SECOM we have the following image resolutions:
+    # On our SECOM we have the following approximate image resolutions:
     # +------+-------------+
     # | lens | pixels/mm   |
     # +------+-------------+
