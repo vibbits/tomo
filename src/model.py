@@ -53,7 +53,7 @@ class TomoModel:
         self.template_slice_path = None
         self.preprocessed_overview_image_path = None  # the path of the most recently loaded preprocessed overview image
 
-        # Data stored in persistent storage, e.g. derived parameters or data unlikely to remain the same for multiple experiments
+        # Data not stored in persistent storage, e.g. derived parameters or data unlikely to remain the same for multiple experiments
         self.slice_polygons = []
         self.all_points_of_interest = None  # in overview image coordinates, first point is user selected POI in first section, all others are predicted POIs in subsequent sections
         self.slice_offsets_microns = None  # stage movements to move from the point-of-interest in slice to to slice i+1, based only on mapping the slice outline quadrilaterals
