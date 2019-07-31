@@ -12,7 +12,7 @@ import subprocess
 # green = (0, 255, 0)
 
 
-def get_best_window_size(img, max_width = 1800, max_height = 1000):
+def get_best_window_size(img, max_width=1800, max_height=1000):
     """Returns the maximal dimensions of a window that has the same aspect ratio as the image,
        but is no larger than a certain size."""
     yscale = min(1.0, max_height / float(img.shape[0]))
@@ -23,7 +23,7 @@ def get_best_window_size(img, max_width = 1800, max_height = 1000):
     return (width, height)
 
 
-def display(img, title = ''):
+def display(img, title=''):
     """Display the image in a window, wait for a keypress and close it."""
     cv2.namedWindow(title, cv2.WINDOW_NORMAL)
     width, height = get_best_window_size(img)
@@ -101,7 +101,7 @@ def read_image_as_color_image(filename):
     """
     # Read overview image with the ribbon
     # (We read it as a color image so we can draw colored contours on it later.)
-    if (cv2.__version__[0] == '2'):
+    if cv2.__version__[0] == '2':
         img = cv2.imread(filename, cv2.CV_LOAD_IMAGE_COLOR)
     else:
         img = cv2.imread(filename, cv2.IMREAD_COLOR)
@@ -159,8 +159,8 @@ def sample_image(image, pos):
     x_fraction = float(pos[0] - x_left)
     y_fraction = float(pos[1] - y_top)
 
-    assert x_fraction >= 0.0 and x_fraction < 1.0001
-    assert y_fraction >= 0.0 and y_fraction < 1.0001
+    assert 0.0 <= x_fraction < 1.0001
+    assert 0.0 <= y_fraction < 1.0001
 
     # Note the conversion from unsigned byte pixels to float for safe calculations
     val_tl = float(image[y_top][x_left])
@@ -233,7 +233,7 @@ def polygon_center(polygon):
 #
 
 def is_strictly_inside(polygon, point):
-    inside = cv2.pointPolygonTest(polygon, point, measureDist = False)
+    inside = cv2.pointPolygonTest(polygon, point, measureDist=False)
     return inside > 0
 
 
@@ -299,7 +299,7 @@ def draw_slice_polygons(img, slice_polygons):
         # cv2.polylines() expects an array of shape ROWSx1x2,
         # where ROWS is the number of vertices, so reshape the array accordingly
         poly = slice_polygon.reshape((-1, 1, 2))
-        cv2.polylines(img, [poly], True, green, thickness = 20)
+        cv2.polylines(img, [poly], True, green, thickness=20)
 
 # # Draw the points of interest onto the overview image.
 # # The first point in points_of_interest is the point-of-interest as specified by the user.
@@ -320,9 +320,9 @@ def draw_slice_polygons(img, slice_polygons):
 def json_load_polygons(filename, opencv_style = False):
     with open(filename) as f:
         d = json.load(f)
-    polygons_list = [np.array(a, dtype = np.int32) for a in d]
+    polygons_list = [np.array(a, dtype=np.int32) for a in d]
     if opencv_style:
-        polygons_list = [np.expand_dims(a, axis = 1) for a in polygons_list]
+        polygons_list = [np.expand_dims(a, axis=1) for a in polygons_list]
     return polygons_list
 
 
@@ -366,7 +366,6 @@ def physical_point_of_interest_offsets_in_microns(all_points_of_interest, pixels
     return physical_offsets_microns
 
 
-
 # Turns a string like '[0.9999774253040736, -0.006719291795643401, 0.006719291795643401, 0.9999774253040736, 344.7268472712018, 34.41100247082332]'
 # into a 2 x 3 numpy array
 def matrix_string_to_numpy_array(str):
@@ -407,7 +406,7 @@ def extract_sift_alignment_matrices(sift_plugin_log_string):
     trf_matrix_strings = [re.search(pattern, trf_line).group(1) for trf_line in trf_lines]
 
     # Turn matrix strings into 2 x 3 numpy arrays. The 3rd column is the translation vector.
-    trf_matrices = [matrix_string_to_numpy_array(str) for str in trf_matrix_strings]
+    trf_matrices = [matrix_string_to_numpy_array(s) for s in trf_matrix_strings]
     return trf_matrices
 
 
@@ -433,7 +432,7 @@ def show_offsets_table(slice_offsets_microns, sift_offsets_microns, combined_off
 def commandline_exec(lst):
     print('Command: ' + ' '.join(lst))
 
-    proc = subprocess.Popen(lst, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+    proc = subprocess.Popen(lst, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate()
 
     encoding = sys.stdout.encoding  # I'm not sure that this is correct on all platforms
