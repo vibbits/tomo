@@ -1,5 +1,4 @@
 import os
-import wx  # for confirmation dialog
 import time
 from tools import commandline_exec
 
@@ -100,18 +99,10 @@ def move_stage_relative(odemis_cli, offset_microns):   # move the stage a certai
 
 
 def set_absolute_stage_position(pos):  # move the stage to the specified absolute position (in meters)
-    stage = model.getComponent(role="stage")
     x, y = pos
-    msg = "Move stage to absolute position x={} y={}".format(x, y)
-
-    # # For minimal safety, pop up a confirmation dialog for now.
-    # dlg = wx.MessageDialog(None, msg + " ?", "Move stage?", style=wx.YES | wx.NO)
-    # if dlg.ShowModal() == wx.ID_YES:
-    print(msg)
+    print("Move stage to absolute position x={} y={}".format(x, y))
+    stage = model.getComponent(role="stage")
     stage.moveAbsSync({"x": x, "y": y})
-    # else:
-    #     print(msg + " -- CANCELLED")
-    # dlg.Destroy()
 
     # IMPROVEME: is there a way to protect against stage movements that are too large (and will jam the stage)?
     #            this could happen if for example the user clicks outside the overview image (FIXME: need to protect against that)
@@ -132,19 +123,12 @@ def get_absolute_focus_z_position():    # returns the focus z value (CHECKME: in
     return z
 
 
-def set_absolute_focus_z_position(z):      # z is the absolute focus value  (use the same units as get_absolute_focus_z_position...)
-                                           # (CHECKME: what are those units?)
+def set_absolute_focus_z_position(z):
+    # z is the absolute focus value  (use the same units as get_absolute_focus_z_position...)
+    # (CHECKME: what are those units?)
+    print("Set absolute focus position to z={}".format(z))
     focus = model.getComponent(role="focus")
-    msg = "Set absolute focus position to z={}".format(z)
-
-    # # For minimal safety, pop up a confirmation dialog for now.
-    # dlg = wx.MessageDialog(None, msg + " ?", "Set focus?", style=wx.YES | wx.NO)
-    # if dlg.ShowModal() == wx.ID_YES:
-    print(msg)
     focus.moveAbsSync({"z": z})
-    # else:
-    #     print(msg + " -- CANCELLED")
-    # dlg.Destroy()
 
 
 ######################################################################################################################
