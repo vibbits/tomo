@@ -18,23 +18,25 @@ except ImportError:
     from odemis_stubs import align
     odemis_stubbed = True
 
+# IMPROVEME? Use the Odemis Python API instead of odemis_cli? This is more elegant, but has the disadvantage that we cannot
+# easily reproduce bugs or test issues using an Odemis command line (removing Tomo as a possible cause of the problem).
 
-# This function automatically acquires multiple LM or EM images.
+# This function automatically acquires multiple LM images.
 # It assumes that the microscope parameters are already set correctly in Odemis, and that the stage is positioned
-# at the initial point of interest. It then repeatedly moves the stage and acquires an LM/EM image. The image is saved
-# to 'images_output_folder' with filename images_prefix + number + ome.tiff. The stage movement distances
+# at the initial point of interest. It then repeatedly moves the stage and acquires an LM image. The image is saved
+# to 'images_output_folder' with filename images_prefix + number + ome.tiff. The relative stage movement distances
 # are specified in 'physical_offsets_microns'.
 # (physical_offsets_microns: an offset per slice; with the first slice always having offset (0,0))
-# The 'mode' must be 'EM' or 'LM' to acquire electron resp. light microscope images.
 # If the user manually acquired focus z-values in a couple of positions these values will be interpolated
 # and used as focus-z for each image.
-def acquire_microscope_images(mode, physical_offsets_microns, stabilization_time, delay_between_image_acquisition_secs,
-                              odemis_cli, images_output_folder, images_prefix, focus_map = None):
+def acquire_lm_microscope_images(physical_offsets_microns, stabilization_time, delay_between_image_acquisition_secs,
+                                 odemis_cli, images_output_folder, images_prefix, focus_map=None):
+    print('Acquiring LM images')
 
     # Ensure that the output folder for the images exists
     Path(images_output_folder).mkdir(parents=True, exist_ok=True)
 
-    print('Acquiring {} images'.format(mode))
+    # Acquire an image at each section
     for i, offset_microns in enumerate(physical_offsets_microns):
         # Move the stage
         move_stage_relative(odemis_cli, offset_microns)
@@ -44,20 +46,42 @@ def acquire_microscope_images(mode, physical_offsets_microns, stabilization_time
         if focus_map:
             pos = get_absolute_stage_position()
             z = focus_map.get_focus_value(pos)
-            if z != None:
+            if z is not None:
                 set_absolute_focus_z_position(z)
 
         # Wait for everything to settle (e.g. we suspect the viscous (vicious ;-) immersion oil droplet to be deformed
         # a bit after moving the stage, resulting in out of focus images. So wait a little while before imaging.
         time.sleep(stabilization_time)
 
+        # Acquire an LM image and save it to the output folder
+        image_path = os.path.join(images_output_folder, '{}{}.ome.tiff'.format(images_prefix, i))
+        commandline_exec([odemis_cli, "--acquire", "ccd", "--output", image_path])
+
+        # Wait a short time for the image acquisition to finish
+        # CHECKME: Is this needed? Maybe odemis_cli will automatically buffer commands until it is finished?
+        time.sleep(delay_between_image_acquisition_secs)
+
+
+def acquire_em_microscope_images(physical_offsets_microns, delay_between_image_acquisition_secs,
+                                 odemis_cli, images_output_folder, images_prefix, scale_string, magnification, dwell_time_microsecs):
+    print('Acquiring EM images')
+
+    # Ensure that the output folder for the images exists
+    Path(images_output_folder).mkdir(parents=True, exist_ok=True)
+
+    # Setup microscope
+    commandline_exec([odemis_cli, "--set-attr", "e-beam", "scale", scale_string])
+    commandline_exec([odemis_cli, "--set-attr", "e-beam", "magnification", str(magnification)])
+    commandline_exec([odemis_cli, "--set-attr", "e-beam", "dwellTime", str(dwell_time_microsecs * 1.0e-6)])  # the dwellTime argument for odemis_cli presumably is in seconds
+
+    # Acquire an image at each section
+    for i, offset_microns in enumerate(physical_offsets_microns):
+        # Move the stage
+        move_stage_relative(odemis_cli, offset_microns)
+
         # Acquire an LM/EM image and save it to the output folder
         image_path = os.path.join(images_output_folder, '{}{}.ome.tiff'.format(images_prefix, i))
-        if mode == "LM":
-            detector = "ccd"
-        else:  # EM
-            detector = "se-detector"
-        commandline_exec([odemis_cli, "--acquire", detector, "--output", image_path])  # IMPROVEME: use the Odemis Python API instead of odemis_cli
+        commandline_exec([odemis_cli, "--acquire", "se-detector", "--output", image_path])
 
         # Wait a short time for the image acquisition to finish
         # CHECKME: Is this needed? Maybe odemis_cli will automatically buffer commands until it is finished?
@@ -73,6 +97,7 @@ def move_stage_relative(odemis_cli, offset_microns):   # move the stage a certai
     # stage.moveRel({"x": dx_microns, "y": dy_microns})   # in what units is x and y?? Possibly meters instead of microns
     # CHECKME: moveRelSync or moveRel? Answer: most likely MoveRelSync to ensure the move is completed before we continue and acquire and image, for example
     # CHECKME: moveRel() returns a future?? Do we need to apply
+
 
 def set_absolute_stage_position(pos):  # move the stage to the specified absolute position (in meters)
     stage = model.getComponent(role="stage")

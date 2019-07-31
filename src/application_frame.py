@@ -38,31 +38,8 @@ from ribbon_builder_mixin import RibbonBuilderMixin
 from ribbon_builder_mode import RibbonBuilderMode
 
 class ApplicationFrame(wx.Frame):
-    _model = None
 
-    _overview_canvas = None
-    _status_label = None
-    _focus_panel = None
-    _contour_finder_panel = None
-    _stage_alignment_panel = None
-    _point_of_interest_panel = None
-    _segmentation_panel = None
-
-    # Menu
-    _import_overview_image_item = None
-    _load_slice_polygons_item = None
-    _lm_image_acquisition_item = None
-    _em_image_acquisition_item = None
-    _segment_ribbons_item = None
-    _set_point_of_interest_item = None
-    _build_focus_map_item = None
-    _about_item = None
-
-    _menu_state = None  # a tuple with enabled/disabled flags for various menu items; used when a side panel is visible and we want to behave in a modal fashion
-
-    # IMPROVEME: enable/disable saving the polygons (via the menu, _save_slice_polygons_item) if we have slice polygons (either loaded or drawn manually)
-
-    def __init__(self, parent, ID, title, size=(1280, 1024), pos = wx.DefaultPosition):
+    def __init__(self, parent, ID, title, size=(1280, 1024), pos=wx.DefaultPosition):
         wx.Frame.__init__(self, parent, ID, title, pos, size)
         self.SetBackgroundColour(wx.Colour(240, 240, 240))  # TODO: the same default background color as for wx.Dialog - can we set it automatically, or via some style?
 
@@ -73,6 +50,7 @@ class ApplicationFrame(wx.Frame):
         self.SetIcon(icon)
 
         # Menu
+        self._menu_state = None  # a tuple with enabled/disabled flags for various menu items; used when a side panel is visible and we want to behave in a modal fashion
         menu_bar = self._build_menu_bar()
         self.SetMenuBar(menu_bar)
 
@@ -189,6 +167,8 @@ class ApplicationFrame(wx.Frame):
         self._load_poi_item.Enable(False)
         file_menu.AppendSeparator()
         exit_menu_item = file_menu.Append(wx.NewId(), "Exit")
+
+        # IMPROVEME: enable/disable saving the polygons (via the menu, _save_slice_polygons_item) if we have slice polygons (either loaded or drawn manually)
 
         edit_menu = wx.Menu()
         prefs_menu_item = edit_menu.Append(wx.NewId(), "Preferences...")
@@ -474,10 +454,9 @@ class ApplicationFrame(wx.Frame):
 
         # Now acquire an LM image at the point of interest location in each slice.
         wait = wx.BusyInfo("Acquiring LM images...")
-        secom_tools.acquire_microscope_images('LM',
-                                              self._model.slice_offsets_microns, self._model.lm_stabilization_time_secs, self._model.delay_between_LM_image_acquisition_secs,
-                                              self._model.odemis_cli, self._model.lm_images_output_folder, self._model.lm_images_prefix,
-                                              self._model.focus_map if self._model.lm_use_focus_map else None)
+        secom_tools.acquire_lm_microscope_images(self._model.slice_offsets_microns, self._model.lm_stabilization_time_secs, self._model.delay_between_LM_image_acquisition_secs,
+                                                 self._model.odemis_cli, self._model.lm_images_output_folder, self._model.lm_images_prefix,
+                                                 self._model.focus_map if self._model.lm_use_focus_map else None)
         del wait
 
         # IMPROVEME: Factor out the registration code. We will perhaps use it to register and align EM image stacks too.
@@ -547,6 +526,23 @@ class ApplicationFrame(wx.Frame):
         # Enable/disable menu entries
         self._em_image_acquisition_item.Enable(True)
 
+    def _do_em_acquire(self):
+        # At this point the user should have vented the EM chamber and positioned the EM microscope
+        # precisely on the (sub-cellular) feature of interest, close to the original point-of-interest
+        # on the first slice.
+
+        # Now acquire an EM image at the same point of interest location in each slice,
+        # but use the more accurate stage offsets (obtained from slice mapping + SIFT registration).
+        wait = wx.BusyInfo("Acquiring EM images...")
+        secom_tools.acquire_em_microscope_images(self._model.combined_offsets_microns, self._model.delay_between_EM_image_acquisition_secs,
+                                                 self._model.odemis_cli, self._model.em_images_output_folder, self._model.em_images_prefix,
+                                                 self._model.em_scale, self._model.em_magnification, self._model.em_dwell_time_microseconds)
+        del wait
+
+        # Note: since the user needs to manually position the EM microscope over the POI in the first slice,
+        # multiple series of EM image acquisition using _do_em_acquire() are perfectly fine.
+        # (As long as the user did at least one LM image acquisition so we could calculate SIFT-corrected stage movements.)
+
     def _do_save_poi_info(self, output_folder, all_points_of_interest, slice_offsets_microns, sift_offsets_microns, combined_offsets_microns, overview_image_to_stage_coord_trf, image_pixels_per_mm):
         # Make the point of interest (POI) position data persistent.
         # This will allow us to first perform LM image acquisitions for multiple initial ROIs,
@@ -554,7 +550,8 @@ class ApplicationFrame(wx.Frame):
         # and finally use the stored data from the LM acquisition to image all corresponding sections for each POI in EM mode.
         # Note: we store more data than is strictly necessary, partially for debugging purposes, and partially in case we later
         # need the additional information after all for some reason.
-        poi_info = {'all_points_of_interest': make_json_serializable(all_points_of_interest),
+        poi_info = {'version': '1',  # version of this POI info file
+                    'all_points_of_interest': make_json_serializable(all_points_of_interest),
                     'combined_offsets_microns': make_json_serializable(combined_offsets_microns),
                     'slice_offsets_microns': make_json_serializable(slice_offsets_microns),  # info only, not used
                     'sift_offsets_microns': make_json_serializable(sift_offsets_microns),  # info only, not used
@@ -593,30 +590,6 @@ class ApplicationFrame(wx.Frame):
         # Enable/disable menu items
         self._lm_image_acquisition_item.Enable(self._stage_is_aligned())
         self._em_image_acquisition_item.Enable(self._stage_is_aligned())
-
-    def _do_em_acquire(self):
-        # At this point the user should have vented the EM chamber and positioned the EM microscope
-        # precisely on the (sub-cellular) feature of interest, close to the original point-of-interest
-        # on the first slice.
-
-        # Now acquire an EM image at the same point of interest location in each slice,
-        # but use the more accurate stage offsets (obtained from slice mapping + SIFT registration).
-        wait = wx.BusyInfo("Acquiring EM images...")
-        secom_tools.acquire_microscope_images('EM',
-                                              self._model.combined_offsets_microns, 0.0, self._model.delay_between_EM_image_acquisition_secs,
-                                              self._model.odemis_cli, self._model.em_images_output_folder, self._model.em_images_prefix)
-        del wait
-
-        # wait = wx.BusyInfo("Acquiring LM images 2nd time...")
-        # secom_tools.acquire_microscope_images('LM',
-        #                                       self._model.combined_offsets_microns, self._model.lm_stabilization_time_secs, self._model.delay_between_LM_image_acquisition_secs,
-        #                                       self._model.odemis_cli, self._model.em_images_output_folder, self._model.lm_images_prefix,
-        #                                       self._model.focus_map if self._model.lm_use_focus_map else None)
-        # del wait
-
-        # Note: since the user needs to manually position the EM microscope over the POI in the first slice,
-        # multiple series of EM image acquisition using _do_em_acquire() are perfectly fine.
-        # (As long as the user did at least one LM image acquisition so we could calculate SIFT-corrected stage movements.)
 
 def make_json_serializable(list_of_numpy_arrays):
     return [numpy_array.tolist() for numpy_array in list_of_numpy_arrays]
