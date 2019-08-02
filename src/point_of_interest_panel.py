@@ -5,8 +5,8 @@ from mark_mode import MarkMode
 from constants import POINTER_MODE_NAME
 import tools
 
-class PointOfInterestPanel(wx.Panel):
 
+class PointOfInterestPanel(wx.Panel):
     def __init__(self, parent, model, canvas):
         wx.Panel.__init__(self, parent, size=(350, -1))
 
@@ -97,6 +97,8 @@ class PointOfInterestPanel(wx.Panel):
             if valid_change:
                 self._num_pois = new_num_pois
                 self._model.all_points_of_interest = self._predicted_pois[:new_num_pois]
+                # FIXME: what if the user already acquired LM images for this roi and changes the number of sections here
+                # (e.g after loading the poi_info.json file). we can change all_points_of_interest, but what about the combined_offsets_microns??
                 self._update_ui()
                 return
 
@@ -128,7 +130,7 @@ class PointOfInterestPanel(wx.Panel):
 
         slices_hit = tools.polygons_hit(self._model.slice_polygons, (poi_coords[0], poi_coords[1]))
         if not slices_hit:
-            print("No point of interest was selected. Please click inside a slice.") # IMPROVEME: show message in GUI - a message box? or a warning in the side panel?
+            print("No point of interest was selected. Please click inside a slice.")  # IMPROVEME: show message in GUI - a message box? or a warning in the side panel?
             self._model.original_point_of_interest = None
             self._predicted_pois = []
             self._num_pois = 0
