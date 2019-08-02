@@ -19,6 +19,8 @@ except ImportError:
 
 # IMPROVEME? Use the Odemis Python API instead of odemis_cli? This is more elegant, but has the disadvantage that we cannot
 # easily reproduce bugs or test issues using an Odemis command line (removing Tomo as a possible cause of the problem).
+# Another issue with the API is that starting Odemis, starting Tomo, then stopping and restarting Odemis, seems to result
+# in Tomo having Odemis objects that are "obsolete": e.g. model.getComponent(role="stage") then fails with a Pyro4 error/exception.
 
 # This function automatically acquires multiple LM images.
 # It assumes that the microscope parameters are already set correctly in Odemis, and that the stage is positioned
@@ -98,21 +100,24 @@ def move_stage_relative(odemis_cli, offset_microns):   # move the stage a certai
     # CHECKME: moveRel() returns a future?? Do we need to apply
 
 
-def set_absolute_stage_position(pos):  # move the stage to the specified absolute position (in meters)
-    x, y = pos
-    print("Move stage to absolute position x={} y={}".format(x, y))
-    stage = model.getComponent(role="stage")
-    stage.moveAbsSync({"x": x, "y": y})
-
+def set_absolute_stage_position(pos):
+    """
+    Move the stage to the specified absolute position (in meters)
+    """
     # IMPROVEME: is there a way to protect against stage movements that are too large (and will jam the stage)?
     #            this could happen if for example the user clicks outside the overview image (FIXME: need to protect against that)
     #            but also if the overview image resolution entered by the user is too large.
+    x, y = pos
+    print("Move stage to absolute position x={} y={} [m]".format(x, y))
+    stage = model.getComponent(role="stage")
+    stage.moveAbsSync({"x": x, "y": y})
+
 
 def get_absolute_stage_position():   # return the absolute (x,y) stage position (in meters)
     stage = model.getComponent(role="stage")
     x = stage.position.value["x"]
     y = stage.position.value["y"]
-    print("Get stage absolute position: x={} y={} (unit: m)".format(x, y))
+    print("Get stage absolute position: x={} y={} [m]".format(x, y))
     return x, y
 
 
