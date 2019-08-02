@@ -5,23 +5,8 @@
 import wx
 import wx.lib.intctrl
 
+
 class LMAcquisitionDialog(wx.Dialog):
-    _model = None
-
-    # UI elements
-    _lm_images_output_folder_edit = None
-    _prefix_edit = None
-    _lm_stabilization_time_edit = None
-    _lm_acquisition_delay_edit = None
-    _sift_input_folder_edit = None
-    _sift_output_folder_edit = None
-    _sift_pixel_size_edit = None
-    _sift_input_folder_button = None
-    _sift_output_folder_button = None
-    _lm_images_output_folder_button = None
-    _acquire_button = None
-    _lm_use_focusmap_checkbox = None
-
     def __init__(self, model, parent, ID, title, size=wx.DefaultSize, pos=wx.DefaultPosition, style=wx.DEFAULT_DIALOG_STYLE):
         wx.Dialog.__init__(self, parent, ID, title, pos, size, style)
 
@@ -59,16 +44,6 @@ class LMAcquisitionDialog(wx.Dialog):
         empty_label2 = wx.StaticText(self, wx.ID_ANY, "")
         empty_label3 = wx.StaticText(self, wx.ID_ANY, "")
 
-        #
-        sift_input_folder_label = wx.StaticText(self, wx.ID_ANY, "Input Folder:")
-        self._sift_input_folder_edit = wx.TextCtrl(self, wx.ID_ANY, self._model.sift_input_folder, size=(w, -1))
-        self._sift_input_folder_button = wx.Button(self, wx.ID_ANY, "Browse")
-
-        sift_in_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sift_in_sizer.Add(self._sift_input_folder_edit, flag=wx.ALIGN_CENTER_VERTICAL)
-        sift_in_sizer.AddSpacer(8)
-        sift_in_sizer.Add(self._sift_input_folder_button, flag=wx.ALIGN_CENTER_VERTICAL)
-
         sift_output_folder_label = wx.StaticText(self, wx.ID_ANY, "Output Folder:")
         self._sift_output_folder_edit = wx.TextCtrl(self, wx.ID_ANY, self._model.sift_output_folder, size=(w, -1))
         self._sift_output_folder_button = wx.Button(self, wx.ID_ANY, "Browse")
@@ -83,7 +58,7 @@ class LMAcquisitionDialog(wx.Dialog):
 
         # The image size is just information to the user, a reminder that we rely on the acquired images to be of a certain size.
         image_size_label = wx.StaticText(self, wx.ID_ANY, "Image size (width x height):")
-        image_size_pixels = wx.StaticText(self, wx.ID_ANY, "{} x {} pixels".format(self._model.image_size[0], self._model.image_size[1]))
+        image_size_pixels = wx.StaticText(self, wx.ID_ANY, "{} x {} pixels".format(self._model.lm_image_size[0], self._model.lm_image_size[1]))
 
         self._enhance_contrast_checkbox = wx.CheckBox(self, wx.ID_ANY, "Enhance contrast before registration")
         self._enhance_contrast_checkbox.SetValue(self._model.registration_params["enhance_contrast"])
@@ -126,8 +101,6 @@ class LMAcquisitionDialog(wx.Dialog):
 
         # SIFT registration
         sift_fgs = wx.FlexGridSizer(cols=2, vgap=4, hgap=8)
-        sift_fgs.Add(sift_input_folder_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        sift_fgs.Add(sift_in_sizer, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
         sift_fgs.Add(sift_output_folder_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         sift_fgs.Add(sift_out_sizer, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
         sift_fgs.Add(sift_pixel_size_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
@@ -159,7 +132,6 @@ class LMAcquisitionDialog(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self._on_prefix_change, self._prefix_edit)
         self.Bind(wx.EVT_TEXT, self._on_stabilization_time_change, self._lm_stabilization_time_edit)
         self.Bind(wx.EVT_TEXT, self._on_delay_change, self._lm_acquisition_delay_edit)
-        self.Bind(wx.EVT_TEXT, self._on_sift_input_folder_change, self._sift_input_folder_edit)
         self.Bind(wx.EVT_TEXT, self._on_sift_output_folder_change, self._sift_output_folder_edit)
         self.Bind(wx.EVT_TEXT, self._on_sift_pixel_size_change, self._sift_pixel_size_edit)
         self.Bind(wx.EVT_CHECKBOX, self._on_enhance_contrast_change, self._enhance_contrast_checkbox)
@@ -169,9 +141,7 @@ class LMAcquisitionDialog(wx.Dialog):
         self.Bind(wx.lib.intctrl.EVT_INT, self._on_roi_int_change, self._roi_y_edit)
         self.Bind(wx.lib.intctrl.EVT_INT, self._on_roi_int_change, self._roi_width_edit)
         self.Bind(wx.lib.intctrl.EVT_INT, self._on_roi_int_change, self._roi_height_edit)
-
         self.Bind(wx.EVT_BUTTON, self._on_lm_output_folder_browse_button_click, self._lm_images_output_folder_button)
-        self.Bind(wx.EVT_BUTTON, self._on_sift_input_folder_browse_button_click, self._sift_input_folder_button)
         self.Bind(wx.EVT_BUTTON, self._on_sift_output_folder_browse_button_click, self._sift_output_folder_button)
         self.Bind(wx.EVT_BUTTON, self._on_acquire_button_click, self._acquire_button)
 
@@ -189,7 +159,7 @@ class LMAcquisitionDialog(wx.Dialog):
         focus_map = self._model.focus_map
         return (focus_map is not None) and (len(focus_map.get_user_defined_focus_positions()) > 0)
 
-    # TODO: try to generalize/unify the 3 functions below (and similar ones in other ui source files)
+    # TODO: try to generalize/unify the 2 functions below (and similar ones in other ui source files)
 
     def _on_lm_output_folder_browse_button_click(self, event):
         defaultPath = self._model.lm_images_output_folder
@@ -200,16 +170,6 @@ class LMAcquisitionDialog(wx.Dialog):
                 print('Set lm_images_output_folder = ' + path)
                 self._model.lm_images_output_folder = path
                 self._lm_images_output_folder_edit.SetValue(path)
-
-    def _on_sift_input_folder_browse_button_click(self, event):
-        defaultPath = self._model.sift_input_folder
-        print('defaultPath='+defaultPath)
-        with wx.DirDialog(self, "Select the SIFT input directory", defaultPath) as dlg:
-            if dlg.ShowModal() == wx.ID_OK:
-                path = dlg.GetPath()
-                print('Set sift_input_folder = ' + path)
-                self._model.sift_input_folder = path
-                self._sift_input_folder_edit.SetValue(path)
 
     def _on_sift_output_folder_browse_button_click(self, event):
         defaultPath = self._model.sift_output_folder
@@ -286,18 +246,14 @@ class LMAcquisitionDialog(wx.Dialog):
             roi[2] = self._roi_width_edit.GetValue()
         elif obj == self._roi_height_edit:
             roi[3] = self._roi_height_edit.GetValue()
-        print('roi=[{} {} {} {}]'.format(self._model.registration_params['roi'][0],
-                                         self._model.registration_params['roi'][1],
-                                         self._model.registration_params['roi'][2],
-                                         self._model.registration_params['roi'][3]))
+        # print('roi=[{} {} {} {}]'.format(self._model.registration_params['roi'][0],
+        #                                  self._model.registration_params['roi'][1],
+        #                                  self._model.registration_params['roi'][2],
+        #                                  self._model.registration_params['roi'][3]))
 
     def _on_enhance_contrast_change(self, event):
         self._model.registration_params['enhance_contrast'] = self._enhance_contrast_checkbox.IsChecked()
         print('enhance_contrast={}'.format(self._model.registration_params['enhance_contrast']))
-
-    def _on_sift_input_folder_change(self, event):
-        self._model.sift_input_folder = self._sift_input_folder_edit.GetValue()
-        print('sift_input_folder={}'.format(self._model.sift_input_folder))
 
     def _on_sift_output_folder_change(self, event):
         self._model.sift_output_folder = self._sift_output_folder_edit.GetValue()

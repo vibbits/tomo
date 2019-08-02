@@ -468,7 +468,7 @@ class ApplicationFrame(wx.Frame):
 
         print('Registering LM images')
         print('Starting a headless Fiji and calling the SIFT image registration plugin. Please be patient...')
-        script_args = "srcdir='{}',dstdir='{}',prefix='{}',numimages='{}',do_enhance_contrast='{}',do_crop='{}',roi_x='{}',roi_y='{}',roi_width='{}',roi_height='{}'".format(self._model.sift_input_folder, self._model.sift_output_folder, self._model.lm_images_prefix, len(self._model.all_points_of_interest), self._model.registration_params["enhance_contrast"], self._model.registration_params["crop"], self._model.registration_params["roi"][0], self._model.registration_params["roi"][1], self._model.registration_params["roi"][2], self._model.registration_params["roi"][3])
+        script_args = "srcdir='{}',dstdir='{}',prefix='{}',numimages='{}',do_enhance_contrast='{}',do_crop='{}',roi_x='{}',roi_y='{}',roi_width='{}',roi_height='{}'".format(self._model.lm_images_output_folder, self._model.sift_output_folder, self._model.lm_images_prefix, len(self._model.all_points_of_interest), self._model.registration_params["enhance_contrast"], self._model.registration_params["crop"], self._model.registration_params["roi"][0], self._model.registration_params["roi"][1], self._model.registration_params["roi"][2], self._model.registration_params["roi"][3])
 
         # Info about headless ImageJ: https://imagej.net/Headless#Running_macros_in_headless_mode
         wait = wx.BusyInfo("Registering LM images...")
