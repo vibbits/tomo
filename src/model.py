@@ -48,7 +48,7 @@ class TomoModel:
         self.sift_registration_script = None  # full path of the Python image registration script that will be run from a headless Fiji that will be started from Tomo
         self.lm_images_prefix = None  # prefix of x100 image filenames
         self.em_images_prefix = None  # prefix of EM image filenames
-        self.sift_input_folder = None
+        self.sift_input_folder = None  # TODO: I think this is always == lm_images_output_folder
         self.sift_output_folder = None
         self.template_slice_path = None
         self.preprocessed_overview_image_path = None  # the path of the most recently loaded preprocessed overview image
@@ -65,12 +65,13 @@ class TomoModel:
 
         self.registration_params = {'crop': False, 'roi': [0, 0, 2048, 2048], 'enhance_contrast': False}  # roi=[top left x, top left y, width, height] in pixels (integer values)
 
-        self.em_scale = '1,1'  # scale for EM image acquisition (a string, not sure what it means...)
+        self.em_scale = '1,1'  # scale for EM image acquisition (a string)
         self.em_dwell_time_microseconds = 50  # dwell time for EM image acquisition (in microseconds)
         self.em_magnification = 5000  # magnification factor for EM image acquisition
 
         # Constants
-        self.image_size = (2048, 2048)  # (width, height) of the LM images in pixels; this is the size of the images that Odemis acquires; it is assumed to be constant.
+        self.lm_image_size = (2048, 2048)  # (width, height) of the LM images in pixels; this is the size of the images that Odemis acquires; it is assumed to be constant.
+        self.em_image_size = (5120, 3840)  # (width, height) of the EM images in pixels for an em_scale='1,1'. For a scale s,s the acquired EM images are 5120/s, 3840/s pixels large.
 
         # Persistent storage
         self._config = wx.Config('be.vib.bits.tomo')

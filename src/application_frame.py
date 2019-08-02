@@ -459,19 +459,19 @@ class ApplicationFrame(wx.Frame):
                                                  self._model.focus_map if self._model.lm_use_focus_map else None)
         del wait
 
-        # IMPROVEME: Factor out the registration code. We will perhaps use it to register and align EM image stacks too.
-
         # Now tell Fiji to execute a macro that (i) reads the LM images, (ii) merges them into a stack,
         # (iii) saves the stack to TIFF, (iv) aligns the slices in this stack
         # using Fiji's Plugins > Registration > Linear Stack Alignment with SIFT
         # and (v) saves the aligned stack to TIFF.
 
-        print('Aligning LM images')
+        #----------------------------------------------
+
+        print('Registering LM images')
         print('Starting a headless Fiji and calling the SIFT image registration plugin. Please be patient...')
         script_args = "srcdir='{}',dstdir='{}',prefix='{}',numimages='{}',do_enhance_contrast='{}',do_crop='{}',roi_x='{}',roi_y='{}',roi_width='{}',roi_height='{}'".format(self._model.sift_input_folder, self._model.sift_output_folder, self._model.lm_images_prefix, len(self._model.all_points_of_interest), self._model.registration_params["enhance_contrast"], self._model.registration_params["crop"], self._model.registration_params["roi"][0], self._model.registration_params["roi"][1], self._model.registration_params["roi"][2], self._model.registration_params["roi"][3])
 
         # Info about headless ImageJ: https://imagej.net/Headless#Running_macros_in_headless_mode
-        wait = wx.BusyInfo("Aligning LM images...")
+        wait = wx.BusyInfo("Registering LM images...")
         retcode, out, err = tools.commandline_exec(
             [self._model.fiji_path, "-Dpython.console.encoding=UTF-8", "--ij2", "--headless", "--console", "--run",
              self._model.sift_registration_script, script_args])
@@ -487,7 +487,7 @@ class ApplicationFrame(wx.Frame):
 
         # Calculate a fine stage position correction (in pixels) from the transformation
         # that is needed to register successive images of the same ROI in successive sample sections.
-        image_size = self._model.registration_params["roi"][2:] if self._model.registration_params["crop"] else self._model.image_size
+        image_size = self._model.registration_params["roi"][2:] if self._model.registration_params["crop"] else self._model.lm_image_size
         center = np.array([image_size[0] / 2.0, image_size[1] / 2.0])  # image center, in pixels
         sift_offsets = [np.array([0, 0])]  # stage position correction (in pixels)
 
@@ -515,6 +515,8 @@ class ApplicationFrame(wx.Frame):
         # Show overview of the offsets
         tools.show_offsets_table(self._model.slice_offsets_microns, sift_offsets_microns, self._model.combined_offsets_microns)
 
+        #----------------------------------------------
+
         # Move stage back to the first slice (using the inverse coarse movements)
         print('Moving stage back to the first point-of-interest.')
         total_stage_movement_microns = sum(self._model.slice_offsets_microns)
@@ -525,6 +527,84 @@ class ApplicationFrame(wx.Frame):
 
         # Enable/disable menu entries
         self._em_image_acquisition_item.Enable(True)
+
+
+
+    # def _do_registration(self, xxxxx):
+    #     # Parameters:
+    #     # - Fiji path (stored in model, same for LM and EM)
+    #     # - input folder (with individual LM/EM images) and output folder (for LM/EM image stacks, unregistered and registered)
+    #     # - path to registration script
+    #     # - filename prefix (to detect which images to register)
+    #     # - number of images to register
+    #     # - registration params (enhance contrast, do crop, crop roi)
+    #     # - image size (either from crop rectangle) or from lm_image_size or em_image_size / em_scale
+    #     # - pixel size
+    #     # - slices offsets + LM sift offset = combined offset;   + EM sift offset = final offset
+    #     #
+    #
+    #     # TODO: the registration params were set in the LM acquisition dialog. Probably other parameters are needed for EM registration? Adapt EM acq. dialog?
+    #     # TODO: the size of the acquired EM images depends on the em_scale. And this size is relevant for SIFT-based position finetuning.
+    #     # TODO: we will also need to save the POI with the more accurate EM SIFT correction
+    #     #-------------------------------------------------
+    #     print('Registering LM images')
+    #     print('Starting a headless Fiji and calling the SIFT image registration plugin. Please be patient...')
+    #     script_args = "srcdir='{}',dstdir='{}',prefix='{}',numimages='{}',do_enhance_contrast='{}',do_crop='{}',roi_x='{}',roi_y='{}',roi_width='{}',roi_height='{}'".format(
+    #         self._model.sift_input_folder, self._model.sift_output_folder, self._model.lm_images_prefix,
+    #         len(self._model.all_points_of_interest), self._model.registration_params["enhance_contrast"],
+    #         self._model.registration_params["crop"], self._model.registration_params["roi"][0],
+    #         self._model.registration_params["roi"][1], self._model.registration_params["roi"][2],
+    #         self._model.registration_params["roi"][3])
+    #
+    #     # Info about headless ImageJ: https://imagej.net/Headless#Running_macros_in_headless_mode
+    #     wait = wx.BusyInfo("Registering LM images...")
+    #     retcode, out, err = tools.commandline_exec(
+    #         [self._model.fiji_path, "-Dpython.console.encoding=UTF-8", "--ij2", "--headless", "--console", "--run",
+    #          self._model.sift_registration_script, script_args])
+    #
+    #     print('retcode={}\nstdout=\n{}\nstderr={}\n'.format(retcode, out, err))
+    #     del wait
+    #
+    #     # Parse the output of the SIFT registration plugin and extract
+    #     # the transformation matrices to register each slice onto the next.
+    #     print('Extracting SIFT transformation for fine slice transformation')
+    #     sift_matrices = tools.extract_sift_alignment_matrices(out)
+    #     print(sift_matrices)
+    #
+    #     # Calculate a fine stage position correction (in pixels) from the transformation
+    #     # that is needed to register successive images of the same ROI in successive sample sections.
+    #     image_size = self._model.registration_params["roi"][2:] if self._model.registration_params["crop"] else self._model.lm_image_size
+    #     center = np.array([image_size[0] / 2.0, image_size[1] / 2.0])  # image center, in pixels
+    #     sift_offsets = [np.array([0, 0])]  # stage position correction (in pixels)
+    #
+    #     for mat in sift_matrices:
+    #         # mat is a 2x3 numpy array; 3rd column is the translation vector
+    #         new_center = np.dot(mat, np.array([center[0], center[1], 1.0]))
+    #         offset = center - new_center  # displacement in pixels
+    #         sift_offsets.append(offset)
+    #         print('matrix={} center={} newcenter={} offset={} (in pixels)'.format(mat, center, new_center, offset))
+    #         center = new_center
+    #
+    #     sift_images_pixelsize_in_microns = 1000.0 / self._model.sift_images_pixels_per_mm
+    #     sift_offsets_microns = [sift_offset * sift_images_pixelsize_in_microns for sift_offset in sift_offsets]
+    #
+    #     # Invert y component of the SIFT offsets.
+    #     sift_offsets_microns = [np.array([offset[0], -offset[1]]) for offset in sift_offsets_microns]
+    #     print('Fine SIFT offset (in microns): ' + repr(sift_offsets_microns))
+    #
+    #     # Combine (=sum) the rough translations obtained by mapping the slice polygons (of a x10 or x20 overview image)
+    #     # onto one another with the fine corrections obtained by SIFT registration of (x100) light microscopy images.
+    #     self._model.combined_offsets_microns = [trf_pair[0] + trf_pair[1] for i, trf_pair in
+    #                                             enumerate(zip(self._model.slice_offsets_microns, sift_offsets_microns))]
+    #     print('Rough offset from slice polygons + fine SIFT offset (in microns): ' + repr(
+    #         self._model.combined_offsets_microns))
+    #
+    #     # Show overview of the offsets
+    #     tools.show_offsets_table(self._model.slice_offsets_microns, sift_offsets_microns,
+    #                              self._model.combined_offsets_microns)
+    #
+    #     #-------------------------------------------------
+
 
     def _do_em_acquire(self):
         # At this point the user should have vented the EM chamber and positioned the EM microscope
@@ -593,3 +673,49 @@ class ApplicationFrame(wx.Frame):
 
 def make_json_serializable(list_of_numpy_arrays):
     return [numpy_array.tolist() for numpy_array in list_of_numpy_arrays]
+
+
+# ###############################
+# #  EM   # EM image dimensions #
+# # Scale #   width   height    #
+# ###############################
+# #  1,1  #   5120     3840     #
+# #  2,2  #   2560     1920     #
+# #  4,4  #   1280      960     #
+# #  8,8  #    640      480     #
+# # 16,16 #    320      240     #
+# ###############################
+# def get_em_image_size_in_pixels(scale):
+#     # scale=1, 2, 4, 8 or 16
+#     # returns (width, height) of EM image in pixels
+#     width_pixels = 5120 / scale
+#     height_pixels = 3840 / scale
+#     return width_pixels, height_pixels
+#
+#
+# def get_em_image_size_in_microns(magnification):
+#     width_microns = 119 * (1000.0 / magnification)
+#     height_microns = 89.25 * (1000.0 / magnification)
+#     return width_microns, height_microns
+#
+#
+# # About EM image pixel size:
+# # One example image:
+# #   magnification=1000
+# #   scale=(4,4) so 1280x960 pixels
+# #   has physical FOV 119 x 89.25 micrometers
+# #   => pixels/micrometer = 1280/119 (or 960/89.25) = 10.756302521
+# #   If scale changes, the same physical FOV is imaged, so the pixels become accordingly larger or smaller.
+# #   If magnification becomes m times larger, the physical FOV becomes m times smaller.
+#
+# def get_em_pixels_per_micrometer(magnification, scale):
+#     # scale=1,2,4,8 or 16 (NOT a string such as '4,4')
+#     # magnification value (e.g. 5000 or 15000)
+#     width_pixels, height_pixels = get_em_image_size_in_pixels(scale)
+#     width_microns, height_microns = get_em_image_size_in_microns(magnification)
+#     pixels_per_micrometer = width_pixels / width_microns
+#     print(width_pixels / width_microns)
+#     print(height_pixels / height_microns)
+#     return pixels_per_micrometer
+#
+
