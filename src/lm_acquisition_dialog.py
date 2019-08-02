@@ -45,7 +45,7 @@ class LMAcquisitionDialog(wx.Dialog):
         empty_label3 = wx.StaticText(self, wx.ID_ANY, "")
 
         sift_output_folder_label = wx.StaticText(self, wx.ID_ANY, "Output Folder:")
-        self._sift_output_folder_edit = wx.TextCtrl(self, wx.ID_ANY, self._model.sift_output_folder, size=(w, -1))
+        self._sift_output_folder_edit = wx.TextCtrl(self, wx.ID_ANY, self._model.lm_sift_output_folder, size=(w, -1))
         self._sift_output_folder_button = wx.Button(self, wx.ID_ANY, "Browse")
 
         sift_out_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -54,17 +54,17 @@ class LMAcquisitionDialog(wx.Dialog):
         sift_out_sizer.Add(self._sift_output_folder_button, flag=wx.ALIGN_CENTER_VERTICAL)
 
         sift_pixel_size_label = wx.StaticText(self, wx.ID_ANY, "Pixel size (pixels/mm):")
-        self._sift_pixel_size_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.sift_images_pixels_per_mm), size=(100, -1))
+        self._sift_pixel_size_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.lm_sift_images_pixels_per_mm), size=(100, -1))
 
         # The image size is just information to the user, a reminder that we rely on the acquired images to be of a certain size.
         image_size_label = wx.StaticText(self, wx.ID_ANY, "Image size (width x height):")
         image_size_pixels = wx.StaticText(self, wx.ID_ANY, "{} x {} pixels".format(self._model.lm_image_size[0], self._model.lm_image_size[1]))
 
         self._enhance_contrast_checkbox = wx.CheckBox(self, wx.ID_ANY, "Enhance contrast before registration")
-        self._enhance_contrast_checkbox.SetValue(self._model.registration_params["enhance_contrast"])
+        self._enhance_contrast_checkbox.SetValue(self._model.lm_registration_params["enhance_contrast"])
 
         self._crop_checkbox = wx.CheckBox(self, wx.ID_ANY, "Crop before registration")
-        self._crop_checkbox.SetValue(self._model.registration_params["crop"])
+        self._crop_checkbox.SetValue(self._model.lm_registration_params["crop"])
 
         self._roi_label = wx.StaticText(self, wx.ID_ANY, "Crop ROI (x, y, width, height):")  # in pixels
         self._roi_x_edit = wx.lib.intctrl.IntCtrl(self, wx.ID_ANY, 0, min=0, limited=True, allow_none=False, size=(50, -1))
@@ -172,13 +172,13 @@ class LMAcquisitionDialog(wx.Dialog):
                 self._lm_images_output_folder_edit.SetValue(path)
 
     def _on_sift_output_folder_browse_button_click(self, event):
-        defaultPath = self._model.sift_output_folder
+        defaultPath = self._model.lm_sift_output_folder
         print('defaultPath='+defaultPath)
         with wx.DirDialog(self, "Select the SIFT output directory", defaultPath) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
                 path = dlg.GetPath()
-                print('Set sift_output_folder = ' + path)
-                self._model.sift_output_folder = path
+                print('Set lm_sift_output_folder = ' + path)
+                self._model.lm_sift_output_folder = path
                 self._sift_output_folder_edit.SetValue(path)
 
     def _on_acquire_button_click(self, event):
@@ -206,21 +206,21 @@ class LMAcquisitionDialog(wx.Dialog):
         print('lm_use_focus_map={}'.format(self._model.lm_use_focus_map))
 
     def _on_crop_change(self, event):
-        self._model.registration_params['crop'] = self._crop_checkbox.IsChecked()
-        print('crop={}'.format(self._model.registration_params['crop']))
+        self._model.lm_registration_params['crop'] = self._crop_checkbox.IsChecked()
+        print('crop={}'.format(self._model.lm_registration_params['crop']))
         self._update_roi()
 
     def _update_roi(self):
-        if self._model.registration_params['crop']:
+        if self._model.lm_registration_params['crop']:
             self._roi_label.Enable(True)
             self._roi_x_edit.Enable(True)
             self._roi_y_edit.Enable(True)
             self._roi_width_edit.Enable(True)
             self._roi_height_edit.Enable(True)
-            self._roi_x_edit.SetValue(self._model.registration_params['roi'][0])
-            self._roi_y_edit.SetValue(self._model.registration_params['roi'][1])
-            self._roi_width_edit.SetValue(self._model.registration_params['roi'][2])
-            self._roi_height_edit.SetValue(self._model.registration_params['roi'][3])
+            self._roi_x_edit.SetValue(self._model.lm_registration_params['roi'][0])
+            self._roi_y_edit.SetValue(self._model.lm_registration_params['roi'][1])
+            self._roi_width_edit.SetValue(self._model.lm_registration_params['roi'][2])
+            self._roi_height_edit.SetValue(self._model.lm_registration_params['roi'][3])
         else:
             self._roi_label.Enable(False)
             self._roi_x_edit.Enable(False)
@@ -234,10 +234,10 @@ class LMAcquisitionDialog(wx.Dialog):
 
 
     def _on_roi_int_change(self, event):
-        if self._model.registration_params['crop'] == False:
+        if self._model.lm_registration_params['crop'] == False:
             return
         obj = event.EventObject
-        roi = self._model.registration_params['roi']
+        roi = self._model.lm_registration_params['roi']
         if obj == self._roi_x_edit:
             roi[0] = self._roi_x_edit.GetValue()
         elif obj == self._roi_y_edit:
@@ -246,19 +246,19 @@ class LMAcquisitionDialog(wx.Dialog):
             roi[2] = self._roi_width_edit.GetValue()
         elif obj == self._roi_height_edit:
             roi[3] = self._roi_height_edit.GetValue()
-        # print('roi=[{} {} {} {}]'.format(self._model.registration_params['roi'][0],
-        #                                  self._model.registration_params['roi'][1],
-        #                                  self._model.registration_params['roi'][2],
-        #                                  self._model.registration_params['roi'][3]))
+        # print('roi=[{} {} {} {}]'.format(self._model.lm_registration_params['roi'][0],
+        #                                  self._model.lm_registration_params['roi'][1],
+        #                                  self._model.lm_registration_params['roi'][2],
+        #                                  self._model.lm_registration_params['roi'][3]))
 
     def _on_enhance_contrast_change(self, event):
-        self._model.registration_params['enhance_contrast'] = self._enhance_contrast_checkbox.IsChecked()
-        print('enhance_contrast={}'.format(self._model.registration_params['enhance_contrast']))
+        self._model.lm_registration_params['enhance_contrast'] = self._enhance_contrast_checkbox.IsChecked()
+        print('enhance_contrast={}'.format(self._model.lm_registration_params['enhance_contrast']))
 
     def _on_sift_output_folder_change(self, event):
-        self._model.sift_output_folder = self._sift_output_folder_edit.GetValue()
-        print('sift_output_folder={}'.format(self._model.sift_output_folder))
+        self._model.lm_sift_output_folder = self._sift_output_folder_edit.GetValue()
+        print('lm_sift_output_folder={}'.format(self._model.lm_sift_output_folder))
 
     def _on_sift_pixel_size_change(self, event):
-        self._model.sift_images_pixels_per_mm = float(self._sift_pixel_size_edit.GetValue())
-        print('sift_images_pixels_per_mm={}'.format(self._model.sift_images_pixels_per_mm))
+        self._model.lm_sift_images_pixels_per_mm = float(self._sift_pixel_size_edit.GetValue())
+        print('lm_sift_images_pixels_per_mm={}'.format(self._model.lm_sift_images_pixels_per_mm))

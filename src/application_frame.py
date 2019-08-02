@@ -468,7 +468,7 @@ class ApplicationFrame(wx.Frame):
 
         print('Registering LM images')
         print('Starting a headless Fiji and calling the SIFT image registration plugin. Please be patient...')
-        script_args = "srcdir='{}',dstdir='{}',prefix='{}',numimages='{}',do_enhance_contrast='{}',do_crop='{}',roi_x='{}',roi_y='{}',roi_width='{}',roi_height='{}'".format(self._model.lm_images_output_folder, self._model.sift_output_folder, self._model.lm_images_prefix, len(self._model.all_points_of_interest), self._model.registration_params["enhance_contrast"], self._model.registration_params["crop"], self._model.registration_params["roi"][0], self._model.registration_params["roi"][1], self._model.registration_params["roi"][2], self._model.registration_params["roi"][3])
+        script_args = "srcdir='{}',dstdir='{}',prefix='{}',numimages='{}',do_enhance_contrast='{}',do_crop='{}',roi_x='{}',roi_y='{}',roi_width='{}',roi_height='{}'".format(self._model.lm_images_output_folder, self._model.lm_sift_output_folder, self._model.lm_images_prefix, len(self._model.all_points_of_interest), self._model.lm_registration_params["enhance_contrast"], self._model.lm_registration_params["crop"], self._model.lm_registration_params["roi"][0], self._model.lm_registration_params["roi"][1], self._model.lm_registration_params["roi"][2], self._model.lm_registration_params["roi"][3])
 
         # Info about headless ImageJ: https://imagej.net/Headless#Running_macros_in_headless_mode
         wait = wx.BusyInfo("Registering LM images...")
@@ -487,7 +487,7 @@ class ApplicationFrame(wx.Frame):
 
         # Calculate a fine stage position correction (in pixels) from the transformation
         # that is needed to register successive images of the same ROI in successive sample sections.
-        image_size = self._model.registration_params["roi"][2:] if self._model.registration_params["crop"] else self._model.lm_image_size
+        image_size = self._model.lm_registration_params["roi"][2:] if self._model.lm_registration_params["crop"] else self._model.lm_image_size
         center = np.array([image_size[0] / 2.0, image_size[1] / 2.0])  # image center, in pixels
         sift_offsets = [np.array([0, 0])]  # stage position correction (in pixels)
 
@@ -499,7 +499,7 @@ class ApplicationFrame(wx.Frame):
             print('matrix={} center={} newcenter={} offset={} (in pixels)'.format(mat, center, new_center, offset))
             center = new_center
 
-        sift_images_pixelsize_in_microns = 1000.0 / self._model.sift_images_pixels_per_mm
+        sift_images_pixelsize_in_microns = 1000.0 / self._model.lm_sift_images_pixels_per_mm
         sift_offsets_microns = [sift_offset * sift_images_pixelsize_in_microns for sift_offset in sift_offsets]
 
         # Invert y component of the SIFT offsets.
@@ -523,7 +523,7 @@ class ApplicationFrame(wx.Frame):
         secom_tools.move_stage_relative(self._model.odemis_cli, -total_stage_movement_microns)
 
         # Save point-of-interest position information
-        self._do_save_poi_info(self._model.sift_output_folder, self._model.all_points_of_interest, self._model.slice_offsets_microns, sift_offsets_microns, self._model.combined_offsets_microns, self._model.overview_image_to_stage_coord_trf, self._model.overview_image_pixels_per_mm)
+        self._do_save_poi_info(self._model.lm_sift_output_folder, self._model.all_points_of_interest, self._model.slice_offsets_microns, sift_offsets_microns, self._model.combined_offsets_microns, self._model.overview_image_to_stage_coord_trf, self._model.overview_image_pixels_per_mm)
 
         # Enable/disable menu entries
         self._em_image_acquisition_item.Enable(True)
@@ -550,7 +550,7 @@ class ApplicationFrame(wx.Frame):
     #     print('Registering LM images')
     #     print('Starting a headless Fiji and calling the SIFT image registration plugin. Please be patient...')
     #     script_args = "srcdir='{}',dstdir='{}',prefix='{}',numimages='{}',do_enhance_contrast='{}',do_crop='{}',roi_x='{}',roi_y='{}',roi_width='{}',roi_height='{}'".format(
-    #         self._model.sift_input_folder, self._model.sift_output_folder, self._model.lm_images_prefix,
+    #         self._model.sift_input_folder, self._model.lm_sift_output_folder, self._model.lm_images_prefix,
     #         len(self._model.all_points_of_interest), self._model.registration_params["enhance_contrast"],
     #         self._model.registration_params["crop"], self._model.registration_params["roi"][0],
     #         self._model.registration_params["roi"][1], self._model.registration_params["roi"][2],
@@ -585,7 +585,7 @@ class ApplicationFrame(wx.Frame):
     #         print('matrix={} center={} newcenter={} offset={} (in pixels)'.format(mat, center, new_center, offset))
     #         center = new_center
     #
-    #     sift_images_pixelsize_in_microns = 1000.0 / self._model.sift_images_pixels_per_mm
+    #     sift_images_pixelsize_in_microns = 1000.0 / self._model.lm_sift_images_pixels_per_mm
     #     sift_offsets_microns = [sift_offset * sift_images_pixelsize_in_microns for sift_offset in sift_offsets]
     #
     #     # Invert y component of the SIFT offsets.
