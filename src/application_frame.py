@@ -8,6 +8,8 @@ from wx.lib.floatcanvas import FloatCanvas, Resources
 import numpy as np
 import os
 import json
+import copy
+import operator
 
 import tools
 import secom_tools
@@ -253,7 +255,7 @@ class ApplicationFrame(wx.Frame):
                            style=wx.FD_OPEN) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
                 path = dlg.GetPath()
-                self._do_load_poi(path)
+                self._do_load_poi_info(path)
 
     def _on_load_slice_polygons(self, event):
         with RibbonOutlineDialog(self._model, None, wx.ID_ANY, "Slice Polygons") as dlg:
@@ -441,16 +443,30 @@ class ApplicationFrame(wx.Frame):
         secom_tools.set_absolute_stage_position(poi_stage_coords)
 
     def _do_lm_acquire(self):
+        # * * * * * * * * * *
+        # IMPROVEME: self._model.slice_offsets_microns can be calculated when user specifies the desired POI
+        # FIXME: perhaps don't initialize all_offsets_microns here. Do it after POI specification (or so) so that in principle we can
+        # perform multiple LM acquisitions in this pyramid scheme of ours. (?)
+
+        # Calculate the physical displacements on the sample required for moving between the points of interest.
+        overview_image_pixelsize_in_microns = 1000.0 / self._model.overview_image_pixels_per_mm
+        self._model.slice_offsets_microns = tools.physical_point_of_interest_offsets_in_microns(self._model.all_points_of_interest,                                                                                                overview_image_pixelsize_in_microns)
+        print('Rough offset from slice polygons (in microns): ' + repr(self._model.slice_offsets_microns))
+
+        self._model.all_offsets_microns = [{'name': 'Slice mapping',
+                                           'parameters': {},
+                                           'offsets': self._model.slice_offsets_microns}]
+
+        self._model.combined_offsets_microns = copy.deepcopy(self._model.slice_offsets_microns)
+        # * * * * * * * * * *
+
         # Move the stage to the first point of interest.
         # The stage may not currently be positioned there because,
         # for example, we may have moved the stage while building the focus map.
         self._move_stage_to_first_point_of_interest()
 
-        # Calculate the physical displacements on the sample required for moving between the points of interest.
-        overview_image_pixelsize_in_microns = 1000.0 / self._model.overview_image_pixels_per_mm
-        self._model.slice_offsets_microns = tools.physical_point_of_interest_offsets_in_microns(self._model.all_points_of_interest,
-                                                                                                overview_image_pixelsize_in_microns)
-        print('Rough offset from slice polygons (in microns): ' + repr(self._model.slice_offsets_microns))
+        # Remember current stage position so we can return to it after imaging.
+        orig_stage_pos = secom_tools.get_absolute_stage_position()
 
         # Now acquire an LM image at the point of interest location in each slice.
         wait = wx.BusyInfo("Acquiring LM images...")
@@ -459,185 +475,156 @@ class ApplicationFrame(wx.Frame):
                                                  self._model.focus_map if self._model.lm_use_focus_map else None)
         del wait
 
-        # Now tell Fiji to execute a macro that (i) reads the LM images, (ii) merges them into a stack,
-        # (iii) saves the stack to TIFF, (iv) aligns the slices in this stack
-        # using Fiji's Plugins > Registration > Linear Stack Alignment with SIFT
-        # and (v) saves the aligned stack to TIFF.
+        # Perform image registration on the acquired stack of LM images
+        self._do_registration("Registering LM images...", self._model.fiji_path, self._model.sift_registration_script,
+                              self._model.lm_registration_params,
+                              self._model.lm_images_output_folder, self._model.lm_images_prefix, self._model.lm_sift_output_folder,
+                              len(self._model.all_points_of_interest),
+                              self._model.lm_image_size, self._model.lm_sift_images_pixels_per_mm,
+                              'LM SIFT Registration',
+                              {})  # IMPROVEME? perhaps a nice touch would be to store the LM lens that was used. Can we query that via odemis-cli perhaps?
 
-        #----------------------------------------------
+        #
+        self._do_save_poi_info(self._model.lm_sift_output_folder)
 
-        print('Registering LM images')
-        print('Starting a headless Fiji and calling the SIFT image registration plugin. Please be patient...')
-        script_args = "srcdir='{}',dstdir='{}',prefix='{}',numimages='{}',do_enhance_contrast='{}',do_crop='{}',roi_x='{}',roi_y='{}',roi_width='{}',roi_height='{}'".format(self._model.lm_images_output_folder, self._model.lm_sift_output_folder, self._model.lm_images_prefix, len(self._model.all_points_of_interest), self._model.lm_registration_params["enhance_contrast"], self._model.lm_registration_params["crop"], self._model.lm_registration_params["roi"][0], self._model.lm_registration_params["roi"][1], self._model.lm_registration_params["roi"][2], self._model.lm_registration_params["roi"][3])
-
-        # Info about headless ImageJ: https://imagej.net/Headless#Running_macros_in_headless_mode
-        wait = wx.BusyInfo("Registering LM images...")
-        retcode, out, err = tools.commandline_exec(
-            [self._model.fiji_path, "-Dpython.console.encoding=UTF-8", "--ij2", "--headless", "--console", "--run",
-             self._model.sift_registration_script, script_args])
-
-        print('retcode={}\nstdout=\n{}\nstderr={}\n'.format(retcode, out, err))
-        del wait
-
-        # Parse the output of the SIFT registration plugin and extract
-        # the transformation matrices to register each slice onto the next.
-        print('Extracting SIFT transformation for fine slice transformation')
-        sift_matrices = tools.extract_sift_alignment_matrices(out)
-        print(sift_matrices)
-
-        # Calculate a fine stage position correction (in pixels) from the transformation
-        # that is needed to register successive images of the same ROI in successive sample sections.
-        image_size = self._model.lm_registration_params["roi"][2:] if self._model.lm_registration_params["crop"] else self._model.lm_image_size
-        center = np.array([image_size[0] / 2.0, image_size[1] / 2.0])  # image center, in pixels
-        sift_offsets = [np.array([0, 0])]  # stage position correction (in pixels)
-
-        for mat in sift_matrices:
-            # mat is a 2x3 numpy array; 3rd column is the translation vector
-            new_center = np.dot(mat, np.array([center[0], center[1], 1.0]))
-            offset = center - new_center  # displacement in pixels
-            sift_offsets.append(offset)
-            print('matrix={} center={} newcenter={} offset={} (in pixels)'.format(mat, center, new_center, offset))
-            center = new_center
-
-        sift_images_pixelsize_in_microns = 1000.0 / self._model.lm_sift_images_pixels_per_mm
-        sift_offsets_microns = [sift_offset * sift_images_pixelsize_in_microns for sift_offset in sift_offsets]
-
-        # Invert y component of the SIFT offsets.
-        sift_offsets_microns = [np.array([offset[0], -offset[1]]) for offset in sift_offsets_microns]
-        print('Fine SIFT offset (in microns): ' + repr(sift_offsets_microns))
-
-        # Combine (=sum) the rough translations obtained by mapping the slice polygons (of a x10 or x20 overview image)
-        # onto one another with the fine corrections obtained by SIFT registration of (x100) light microscopy images.
-        self._model.combined_offsets_microns = [trf_pair[0] + trf_pair[1] for i, trf_pair in
-                                                enumerate(zip(self._model.slice_offsets_microns, sift_offsets_microns))]
-        print('Rough offset from slice polygons + fine SIFT offset (in microns): ' + repr(self._model.combined_offsets_microns))
-
-        # Show overview of the offsets
-        tools.show_offsets_table(self._model.slice_offsets_microns, sift_offsets_microns, self._model.combined_offsets_microns)
-
-        #----------------------------------------------
-
-        # Move stage back to the first slice (using the inverse coarse movements)
-        print('Moving stage back to the first point-of-interest.')
-        total_stage_movement_microns = sum(self._model.slice_offsets_microns)
-        secom_tools.move_stage_relative(self._model.odemis_cli, -total_stage_movement_microns)
-
-        # Save point-of-interest position information
-        self._do_save_poi_info(self._model.lm_sift_output_folder, self._model.all_points_of_interest, self._model.slice_offsets_microns, sift_offsets_microns, self._model.combined_offsets_microns, self._model.overview_image_to_stage_coord_trf, self._model.overview_image_pixels_per_mm)
+        # Move stage back to initial position
+        print('Moving stage back to position at start of LM image acquisition')
+        secom_tools.set_absolute_stage_position(orig_stage_pos)
 
         # Enable/disable menu entries
         self._em_image_acquisition_item.Enable(True)
-
-
-
-    # def _do_registration(self, xxxxx):
-    #     # Parameters:
-    #     # - Fiji path (stored in model, same for LM and EM)
-    #     # - input folder (with individual LM/EM images) and output folder (for LM/EM image stacks, unregistered and registered)
-    #     # - path to registration script
-    #     # - filename prefix (to detect which images to register)
-    #     # - number of images to register
-    #     # - registration params (enhance contrast, do crop, crop roi)
-    #     # - image size (either from crop rectangle) or from lm_image_size or em_image_size / em_scale
-    #     # - pixel size
-    #     # - slices offsets + LM sift offset = combined offset;   + EM sift offset = final offset
-    #     #
-    #
-    #     # TODO: the registration params were set in the LM acquisition dialog. Probably other parameters are needed for EM registration? Adapt EM acq. dialog?
-    #     # TODO: the size of the acquired EM images depends on the em_scale. And this size is relevant for SIFT-based position finetuning.
-    #     # TODO: we will also need to save the POI with the more accurate EM SIFT correction
-    #     #-------------------------------------------------
-    #     print('Registering LM images')
-    #     print('Starting a headless Fiji and calling the SIFT image registration plugin. Please be patient...')
-    #     script_args = "srcdir='{}',dstdir='{}',prefix='{}',numimages='{}',do_enhance_contrast='{}',do_crop='{}',roi_x='{}',roi_y='{}',roi_width='{}',roi_height='{}'".format(
-    #         self._model.sift_input_folder, self._model.lm_sift_output_folder, self._model.lm_images_prefix,
-    #         len(self._model.all_points_of_interest), self._model.registration_params["enhance_contrast"],
-    #         self._model.registration_params["crop"], self._model.registration_params["roi"][0],
-    #         self._model.registration_params["roi"][1], self._model.registration_params["roi"][2],
-    #         self._model.registration_params["roi"][3])
-    #
-    #     # Info about headless ImageJ: https://imagej.net/Headless#Running_macros_in_headless_mode
-    #     wait = wx.BusyInfo("Registering LM images...")
-    #     retcode, out, err = tools.commandline_exec(
-    #         [self._model.fiji_path, "-Dpython.console.encoding=UTF-8", "--ij2", "--headless", "--console", "--run",
-    #          self._model.sift_registration_script, script_args])
-    #
-    #     print('retcode={}\nstdout=\n{}\nstderr={}\n'.format(retcode, out, err))
-    #     del wait
-    #
-    #     # Parse the output of the SIFT registration plugin and extract
-    #     # the transformation matrices to register each slice onto the next.
-    #     print('Extracting SIFT transformation for fine slice transformation')
-    #     sift_matrices = tools.extract_sift_alignment_matrices(out)
-    #     print(sift_matrices)
-    #
-    #     # Calculate a fine stage position correction (in pixels) from the transformation
-    #     # that is needed to register successive images of the same ROI in successive sample sections.
-    #     image_size = self._model.registration_params["roi"][2:] if self._model.registration_params["crop"] else self._model.lm_image_size
-    #     center = np.array([image_size[0] / 2.0, image_size[1] / 2.0])  # image center, in pixels
-    #     sift_offsets = [np.array([0, 0])]  # stage position correction (in pixels)
-    #
-    #     for mat in sift_matrices:
-    #         # mat is a 2x3 numpy array; 3rd column is the translation vector
-    #         new_center = np.dot(mat, np.array([center[0], center[1], 1.0]))
-    #         offset = center - new_center  # displacement in pixels
-    #         sift_offsets.append(offset)
-    #         print('matrix={} center={} newcenter={} offset={} (in pixels)'.format(mat, center, new_center, offset))
-    #         center = new_center
-    #
-    #     sift_images_pixelsize_in_microns = 1000.0 / self._model.lm_sift_images_pixels_per_mm
-    #     sift_offsets_microns = [sift_offset * sift_images_pixelsize_in_microns for sift_offset in sift_offsets]
-    #
-    #     # Invert y component of the SIFT offsets.
-    #     sift_offsets_microns = [np.array([offset[0], -offset[1]]) for offset in sift_offsets_microns]
-    #     print('Fine SIFT offset (in microns): ' + repr(sift_offsets_microns))
-    #
-    #     # Combine (=sum) the rough translations obtained by mapping the slice polygons (of a x10 or x20 overview image)
-    #     # onto one another with the fine corrections obtained by SIFT registration of (x100) light microscopy images.
-    #     self._model.combined_offsets_microns = [trf_pair[0] + trf_pair[1] for i, trf_pair in
-    #                                             enumerate(zip(self._model.slice_offsets_microns, sift_offsets_microns))]
-    #     print('Rough offset from slice polygons + fine SIFT offset (in microns): ' + repr(
-    #         self._model.combined_offsets_microns))
-    #
-    #     # Show overview of the offsets
-    #     tools.show_offsets_table(self._model.slice_offsets_microns, sift_offsets_microns,
-    #                              self._model.combined_offsets_microns)
-    #
-    #     #-------------------------------------------------
-
 
     def _do_em_acquire(self):
         # At this point the user should have vented the EM chamber and positioned the EM microscope
         # precisely on the (sub-cellular) feature of interest, close to the original point-of-interest
         # on the first slice.
 
+        # Remember current stage position so we can return to it after imaging.
+        orig_stage_pos = secom_tools.get_absolute_stage_position()
+
         # Now acquire an EM image at the same point of interest location in each slice,
         # but use the more accurate stage offsets (obtained from slice mapping + SIFT registration).
         wait = wx.BusyInfo("Acquiring EM images...")
         secom_tools.acquire_em_microscope_images(self._model.combined_offsets_microns, self._model.delay_between_EM_image_acquisition_secs,
                                                  self._model.odemis_cli, self._model.em_images_output_folder, self._model.em_images_prefix,
-                                                 self._model.em_scale, self._model.em_magnification, self._model.em_dwell_time_microseconds)
+                                                 self._model.get_em_scale_string(), self._model.em_magnification, self._model.em_dwell_time_microseconds)
         del wait
 
-        # Note: since the user needs to manually position the EM microscope over the POI in the first slice,
-        # multiple series of EM image acquisition using _do_em_acquire() are perfectly fine.
-        # (As long as the user did at least one LM image acquisition so we could calculate SIFT-corrected stage movements.)
+        # Perform image registration on the acquired stack of EM images
+        image_size = self._model.get_em_image_size_in_pixels()  # (width, height) in pixels
+        pixels_per_micrometer = self._model.get_em_pixels_per_micrometer()
+        image_pixels_per_mm = 1000.0 * pixels_per_micrometer
 
-    def _do_save_poi_info(self, output_folder, all_points_of_interest, slice_offsets_microns, sift_offsets_microns, combined_offsets_microns, overview_image_to_stage_coord_trf, image_pixels_per_mm):
+        self._do_registration("Registering EM images...", self._model.fiji_path, self._model.sift_registration_script,
+                              self._model.em_registration_params,
+                              self._model.em_images_output_folder, self._model.em_images_prefix, self._model.em_sift_output_folder,
+                              len(self._model.all_points_of_interest),
+                              image_size, image_pixels_per_mm,
+                              'EM SIFT Registration',
+                              {'em_scale': self._model.get_em_scale_string(),
+                               'em_magnification' : self._model.em_magnification,
+                               'em_dwell_time_microseconds' : self._model.em_dwell_time_microseconds})
+
+        #
+        self._do_save_poi_info(self._model.em_sift_output_folder)
+
+        # Move stage back to initial position
+        print('Moving stage back to position at start of EM image acquisition')
+        secom_tools.set_absolute_stage_position(orig_stage_pos)
+
+    def _do_registration(self, busy_string, fiji_path, registration_script, registration_params,
+                         input_folder, input_filenames_prefix, output_folder,
+                         num_images,
+                         orig_image_size, pixels_per_mm,
+                         info_description,
+                         info_parameters):
+
+        # Ensure that folder exists, if not create it and its parent folders.
+        tools.make_dir(output_folder)
+
+        # Tell Fiji to execute a macro that (i) reads the LM/EM images, (ii) merges them into a stack,
+        # (iii) saves the stack to TIFF, (iv) aligns the slices in this stack
+        # using Fiji's Plugins > Registration > Linear Stack Alignment with SIFT
+        # and (v) saves the aligned stack to TIFF.
+
+        print(busy_string)
+        print('Starting a headless Fiji and calling the SIFT image registration plugin. Please be patient...')
+        script_args = "srcdir='{}',dstdir='{}',prefix='{}',numimages='{}',do_enhance_contrast='{}',do_crop='{}',roi_x='{}',roi_y='{}',roi_width='{}',roi_height='{}'".format(
+            input_folder, output_folder, input_filenames_prefix,
+            num_images,
+            registration_params["enhance_contrast"],
+            registration_params["crop"],
+            registration_params["roi"][0], registration_params["roi"][1],
+            registration_params["roi"][2], registration_params["roi"][3])
+
+        # Note: info about headless ImageJ: https://imagej.net/Headless#Running_macros_in_headless_mode
+        wait = wx.BusyInfo(busy_string)
+        retcode, out, err = tools.commandline_exec(
+            [fiji_path, "-Dpython.console.encoding=UTF-8", "--ij2", "--headless", "--console", "--run",
+             registration_script, script_args])
+
+        print('Headless Fiji retcode={}\nstdout=\n{}\nstderr={}\n'.format(retcode, out, err))
+        del wait
+
+        # Parse the output of the SIFT registration plugin and extract
+        # the transformation matrices to register each slice onto the next.
+        print('Extracting SIFT transformation matrices')
+        sift_matrices = tools.extract_sift_alignment_matrices(out)
+        print(sift_matrices)
+
+        sift_offsets_microns = self.calculate_sift_offsets(sift_matrices, orig_image_size, pixels_per_mm, registration_params)
+        print('SIFT corrected point-of-interest offsets [micrometer]: ' + repr(sift_offsets_microns))
+
+        # Combine (=sum) existing offsets with this new one
+        assert self._model.combined_offsets_microns is not None
+        self._model.combined_offsets_microns = map(operator.add, self._model.combined_offsets_microns, sift_offsets_microns)
+        print('Combined offsets [micrometer]: ' + repr(self._model.combined_offsets_microns))
+
+        # Append offset correction to "history" of existing offsets.
+        self._model.all_offsets_microns.append({'name': info_description,
+                                                'parameters': info_parameters,
+                                                'offsets': sift_offsets_microns})
+
+        # For debugging / validation: display the offsets table.
+        tools.show_offsets_table(self._model.all_offsets_microns, self._model.combined_offsets_microns)
+
+    def calculate_sift_offsets(self, sift_matrices, orig_image_size, pixels_per_mm, registration_params):
+        # Calculate a fine stage position correction (in pixels) from the transformation
+        # that is needed to register successive images of the same ROI in successive sample sections.
+        image_size = registration_params["roi"][2:] if registration_params["crop"] else orig_image_size
+        center = np.array([image_size[0] / 2.0, image_size[1] / 2.0])  # image center, in pixels
+
+        sift_offsets = [np.array([0, 0])]  # stage position corrections (in pixels); one correction per sample section
+        for mat in sift_matrices:  # there is one transformation matrix per sample section
+            # mat is a 2x3 numpy array; 3rd column is the translation vector
+            new_center = np.dot(mat, np.array([center[0], center[1], 1.0]))
+            offset = center - new_center  # displacement in pixels
+            sift_offsets.append(offset)
+            center = new_center
+
+        pixelsize_in_microns = 1000.0 / pixels_per_mm
+        sift_offsets_microns = [offset * pixelsize_in_microns for offset in sift_offsets]
+
+        # Invert y component of the SIFT offsets.
+        sift_offsets_microns = [np.array([offset[0], -offset[1]]) for offset in sift_offsets_microns]
+
+        return sift_offsets_microns
+
+    def _do_save_poi_info(self, output_folder):
+
         # Make the point of interest (POI) position data persistent.
         # This will allow us to first perform LM image acquisitions for multiple initial ROIs,
         # then prepare the microscope for EM image acquisition (this is time consuming since microscope needs to be pumped vacuum),
         # and finally use the stored data from the LM acquisition to image all corresponding sections for each POI in EM mode.
         # Note: we store more data than is strictly necessary, partially for debugging purposes, and partially in case we later
         # need the additional information after all for some reason.
-        poi_info = {'version': '1',  # version of this POI info file
-                    'all_points_of_interest': make_json_serializable(all_points_of_interest),
-                    'combined_offsets_microns': make_json_serializable(combined_offsets_microns),
-                    'slice_offsets_microns': make_json_serializable(slice_offsets_microns),  # info only, not used
-                    'sift_offsets_microns': make_json_serializable(sift_offsets_microns),  # info only, not used
-                    'overview_image_to_stage_coord_trf': make_json_serializable(overview_image_to_stage_coord_trf),  # info only, not used
-                    'image_pixels_per_mm': image_pixels_per_mm}  # info only, not used
-        poi_json = json.dumps(poi_info)
+        poi_info = {'version': '2',  # version of this POI info file
+                    'all_points_of_interest': self._model.all_points_of_interest,
+                    'combined_offsets_microns': self._model.combined_offsets_microns,
+                    'all_offsets_microns': self._model.all_offsets_microns,  # info only, not used
+                    'overview_image_to_stage_coord_trf': self._model.overview_image_to_stage_coord_trf,  # info only, not used
+                    'overview_image_pixels_per_mm': self._model.overview_image_pixels_per_mm}  # info only, not used
+        poi_json = json.dumps(poi_info, cls=JSONNumpyEncoder)
         print(poi_json)
 
         filename = os.path.join(output_folder, 'poi_info.json')
@@ -645,19 +632,23 @@ class ApplicationFrame(wx.Frame):
         with open(filename, 'w') as f:   # IMPROVEME: check for IO errors e.g. file is locked or already exists etc.
             f.write(poi_json)
 
-    def _do_load_poi(self, filename):
+    def _do_load_poi_info(self, filename):
         print('Loading POI info from {}'.format(filename))
-        with open(filename) as f:
-            poi_info = json.load(f)  # IMPROVEME: check for IO errors
+        with open(filename) as f:  # IMPROVEME: check for IO errors
+            poi_info = json.load(f, object_hook=json_numpy_array_decoder)
         print(poi_info)
 
         # Update model with loaded point of interest
         self._model.combined_offsets_microns = poi_info['combined_offsets_microns']
         self._model.all_points_of_interest = poi_info['all_points_of_interest']
         self._model.original_point_of_interest = self._model.all_points_of_interest[0]
+        self._model.all_offsets_microns = poi_info['all_offsets_microns']
 
         # Update POI panel
         self._point_of_interest_panel.on_poi_loaded_from_file()
+
+        # Print offsets table for verification
+        tools.show_offsets_table(self._model.all_offsets_microns, self._model.combined_offsets_microns)
 
         # Move stage to the first point of interest. This is where the stage needs to be if the user
         # wants to start EM image acquisition.
@@ -671,51 +662,30 @@ class ApplicationFrame(wx.Frame):
         self._lm_image_acquisition_item.Enable(self._stage_is_aligned())
         self._em_image_acquisition_item.Enable(self._stage_is_aligned())
 
-def make_json_serializable(list_of_numpy_arrays):
-    return [numpy_array.tolist() for numpy_array in list_of_numpy_arrays]
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+# Note: this is certainly NOT a fully general way to serialize general numpy arrays to JSON,
+#       it only works for the relatively easy cases we need it for.
+
+# IMPROVEME: perhaps we should move this to its own file e.g. json_tools.py ?
+
+class JSONNumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):  # is it a numpy array or matrix?
+            return {'__numpy.ndarray__': True,  # We add metadata so that when reading the JSON object we realize the list data is actually a numpy array
+                    'dtype': str(obj.dtype),  # current unused
+                    'dtype.name': obj.dtype.name,  # probably good enough for our simple numpy arrays
+                    'shape': str(obj.shape),  # shape is probably redundant (can probably be recovered from nesting of lists in 'data')
+                    'data': obj.tolist() }
+        else:
+            return super(JSONNumpyEncoder, self).default(obj)
 
 
-# ###############################
-# #  EM   # EM image dimensions #
-# # Scale #   width   height    #
-# ###############################
-# #  1,1  #   5120     3840     #
-# #  2,2  #   2560     1920     #
-# #  4,4  #   1280      960     #
-# #  8,8  #    640      480     #
-# # 16,16 #    320      240     #
-# ###############################
-# def get_em_image_size_in_pixels(scale):
-#     # scale=1, 2, 4, 8 or 16
-#     # returns (width, height) of EM image in pixels
-#     width_pixels = 5120 / scale
-#     height_pixels = 3840 / scale
-#     return width_pixels, height_pixels
-#
-#
-# def get_em_image_size_in_microns(magnification):
-#     width_microns = 119 * (1000.0 / magnification)
-#     height_microns = 89.25 * (1000.0 / magnification)
-#     return width_microns, height_microns
-#
-#
-# # About EM image pixel size:
-# # One example image:
-# #   magnification=1000
-# #   scale=(4,4) so 1280x960 pixels
-# #   has physical FOV 119 x 89.25 micrometers
-# #   => pixels/micrometer = 1280/119 (or 960/89.25) = 10.756302521
-# #   If scale changes, the same physical FOV is imaged, so the pixels become accordingly larger or smaller.
-# #   If magnification becomes m times larger, the physical FOV becomes m times smaller.
-#
-# def get_em_pixels_per_micrometer(magnification, scale):
-#     # scale=1,2,4,8 or 16 (NOT a string such as '4,4')
-#     # magnification value (e.g. 5000 or 15000)
-#     width_pixels, height_pixels = get_em_image_size_in_pixels(scale)
-#     width_microns, height_microns = get_em_image_size_in_microns(magnification)
-#     pixels_per_micrometer = width_pixels / width_microns
-#     print(width_pixels / width_microns)
-#     print(height_pixels / height_microns)
-#     return pixels_per_micrometer
-#
+def json_numpy_array_decoder(dct):
+    if '__numpy.ndarray__' in dct:
+        return np.array(dct['data'], dtype=dct['dtype.name'])
+    else:
+        return dct
+
 

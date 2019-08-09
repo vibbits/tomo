@@ -1,3 +1,4 @@
+from __future__ import print_function  # so we can use Python 3's print('something', end='') to avoid newline
 import re
 import sys
 import cv2
@@ -5,6 +6,10 @@ import json
 import wx
 import numpy as np
 import subprocess
+
+# We need the Python2 backport pathlib2 (instead of pathlib)
+# so we can use the exist_ok parameter of mkdir()
+from pathlib2 import Path
 
 # # Some useful colors (in BGR) for OpenCV
 # red = (0, 0, 255)
@@ -410,22 +415,65 @@ def extract_sift_alignment_matrices(sift_plugin_log_string):
     return trf_matrices
 
 
-def show_offsets_table(slice_offsets_microns, sift_offsets_microns, combined_offsets_microns):
-    num_slices = len(slice_offsets_microns)
-    assert(len(sift_offsets_microns) == num_slices)
-    assert(len(combined_offsets_microns) == num_slices)
-    print('')
-    print('      +-----------------------------------------------------------------------------------------------------+')
-    print('      |                             Offsets from slice to slice, in micrometer.                             |')
-    print('      +---------------------------------+---------------------------------+---------------------------------+')
-    print('      |           slice mapping         |               SIFT              |     combined = mapping + SIFT   |')
-    print('      |         dx              dy      |         dx              dy      |         dx              dy      |')
-    print('+-----+---------------------------------+---------------------------------+---------------------------------+')
-    for i in range(0, num_slices):
-        print('| {:3d} | {:15f} {:15f} | {:15f} {:15f} | {:15f} {:15f} |'.format(i+1, slice_offsets_microns[i][0], slice_offsets_microns[i][1],
-                                                                                      sift_offsets_microns[i][0], sift_offsets_microns[i][1],
-                                                                                      combined_offsets_microns[i][0], combined_offsets_microns[i][1]))
-    print('+-----+---------------------------------+---------------------------------+---------------------------------+')
+# Example output of show_offsets_table(). The number of columns is variable.
+#
+#       +-----------------------------------------------------------------------------------------------------+
+#       |                             Offsets from slice to slice, in micrometer.                             |
+#       +-----------------------------------------------------------------------------------------------------+
+#       |          Slice mapping          |      LM SIFT registration       |               Sum               |
+#       |       dx              dy        |       dx              dy        |       dx              dy        |
+# +-----+-----------------------------------------------------------------------------------------------------+
+# |   0 |        0.000000        0.000000 |        0.000000        0.000000 |        0.000000        0.000000 |
+# |   1 |      -11.507879     -353.818638 |       -1.150788      -35.381864 |      -12.658667     -389.200502 |
+# |   2 |      -10.600406     -354.364418 |       -1.060041      -35.436442 |      -11.660446     -389.800860 |
+# |   3 |      -13.941941     -354.864500 |       -1.394194      -35.486450 |      -15.336135     -390.350950 |
+# |   4 |      -10.531486     -351.935047 |       -1.053149      -35.193505 |      -11.584634     -387.128552 |
+# |   5 |      -22.577733     -352.312350 |       -2.257773      -35.231235 |      -24.835507     -387.543585 |
+# +-----+-----------------------------------------------------------------------------------------------------+
+#
+def show_offsets_table(all_offsets_microns, combined_offsets_microns):
+    num_offsets = len(all_offsets_microns)
+    assert num_offsets > 0
+
+    num_slices = len(all_offsets_microns[0]['offsets'])
+    assert num_slices > 0
+
+    # Note: the values 31 and 33 below are because of the 15 character width used for printing dx and dy.
+    hline_length = 33 * (num_offsets + 1) + num_offsets
+    hline = '-' * hline_length
+    hline_long = '+-----+{}+'.format(hline)
+
+    # Print table title
+    print('      +{}+'.format(hline))
+    print('      |{:^{w}}|'.format('Offsets from slice to slice, in micrometer.', w=hline_length))
+    print('      +{}+'.format(hline))
+
+    # Print headers for the different offset correction columns
+    print('      |', end='')
+    for offset in range(num_offsets):
+        print(' {:^31} |'.format(all_offsets_microns[offset]['name']), end='')
+    print(' {:^31} |'.format('Sum'))
+
+    print('      |', end='')
+    for offset in range(num_offsets + 1):
+        print(' {:^15} {:^15} |'.format('dx', 'dy'), end='')
+    print()
+
+    # Print correction offsets for each section and for each correction offset (+combined offsets)
+    print(hline_long)
+    for slice in range(num_slices):
+        # Print slice number
+        print('| {:3d} |'.format(slice), end='')
+
+        # Print offset for each correction
+        for offset in range(num_offsets):
+            dx, dy = all_offsets_microns[offset]['offsets'][slice]
+            print(' {:15f} {:15f} |'.format(dx, dy), end='')
+
+        # Print combined offset (=sum of offsets)
+        dx, dy = combined_offsets_microns[slice][0], combined_offsets_microns[slice][1]
+        print(' {:15f} {:15f} |'.format(dx, dy))
+    print(hline_long)
 
 
 # Execute a shell command (lst) and return (command return code, standard output, standard error).
@@ -437,6 +485,16 @@ def commandline_exec(lst):
 
     encoding = sys.stdout.encoding  # I'm not sure that this is correct on all platforms
     return proc.returncode, out.decode(encoding), err.decode(encoding)
+
+
+def make_dir(dir, parents=True, exist_ok=True):
+    """
+    Creates a directory on the file system.
+    :param dir: full path of the directory to create
+    :param parents: if true, all intermediate directories will be created too if they don't exist yet
+    :param exist_ok: if true, it is not an error for the directory to exist already
+    """
+    Path(dir).mkdir(parents=parents, exist_ok=exist_ok)
 
 
 # # Small helper class to work around the issue where wx.BusyInfo(message) method pops up a box without the actual message.

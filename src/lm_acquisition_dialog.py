@@ -91,7 +91,6 @@ class LMAcquisitionDialog(wx.Dialog):
         lm_fgs.Add(self._lm_acquisition_delay_edit, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
         lm_fgs.Add(empty_label1, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         lm_fgs.Add(self._lm_use_focusmap_checkbox, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-
         lm_fgs.Add(image_size_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         lm_fgs.Add(image_size_pixels, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 

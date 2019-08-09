@@ -1,10 +1,6 @@
 import os
 import time
-from tools import commandline_exec
-
-# We need the Python2 backport pathlib2 (instead of pathlib)
-# so we can use the exist_ok parameter of mkdir()
-from pathlib2 import Path
+from tools import commandline_exec, make_dir
 
 # Try to import actual Odemis modules. If they are not available, for example on our Windows
 # development machine, we load stub modules instead.
@@ -35,7 +31,7 @@ def acquire_lm_microscope_images(physical_offsets_microns, stabilization_time, d
     print('Acquiring LM images')
 
     # Ensure that the output folder for the images exists
-    Path(images_output_folder).mkdir(parents=True, exist_ok=True)
+    make_dir(images_output_folder)
 
     # Acquire an image at each section
     for i, offset_microns in enumerate(physical_offsets_microns):
@@ -68,7 +64,7 @@ def acquire_em_microscope_images(physical_offsets_microns, delay_between_image_a
     print('Acquiring EM images')
 
     # Ensure that the output folder for the images exists
-    Path(images_output_folder).mkdir(parents=True, exist_ok=True)
+    make_dir(images_output_folder)
 
     # Setup microscope
     commandline_exec([odemis_cli, "--set-attr", "e-beam", "scale", scale_string])
