@@ -403,8 +403,8 @@ class ApplicationFrame(wx.Frame):
         print('Overview image pixel size = {} micrometer = {} pixel per mm'.format(overview_image_pixelsize_in_microns,
                                                                                    self._model.overview_image_pixels_per_mm))
 
-        # Add and draw the overview image
-        self._overview_canvas.set_image(self._model.overview_image_path)
+        # Load and display the overview image
+        self._overview_canvas.load_image(self._model.overview_image_path)
         self._overview_canvas.zoom_to_fit()
 
         # Once we have an overview image the user can use it to identify a landmark on that image

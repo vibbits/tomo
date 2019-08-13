@@ -5,12 +5,11 @@ from mark_mode import MarkMode
 from constants import POINTER_MODE_NAME
 
 # Align stage and overview image
-#    + first, in odemis:
+#    + first, in Odemis:
 #      - move stage to landmark of choice
-#    + then, in tomo:
+#    + then, in Tomo:
 #       - using the mark tool click on the same landmark on the overview image
-#       - fill in the input field to specify the overview image physical size or resolution
-#    + tomo then queries the stage position and calculates the transformation absolute stage position to overview image pixel coords
+#    + Tomo then queries the stage position and calculates the transformation absolute stage position to overview image pixel coords
 
 class StageAlignmentPanel(wx.Panel):
     _canvas = None
@@ -35,18 +34,6 @@ class StageAlignmentPanel(wx.Panel):
         separator = wx.StaticLine(self, wx.ID_ANY)
 
         w = 330
-        label0 = wx.StaticText(self, wx.ID_ANY, "Please specify the resolution of the overview image.")
-        label0.Wrap(w)  # force line wrapping
-
-        overview_pixel_size_label = wx.StaticText(self, wx.ID_ANY, "Pixel size (pixels/mm):")
-        self._overview_pixel_size_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.overview_image_pixels_per_mm), size=(100, -1))
-
-        pixel_size_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        pixel_size_sizer.AddSpacer(30)
-        pixel_size_sizer.Add(overview_pixel_size_label, flag=wx.ALIGN_CENTER_VERTICAL)
-        pixel_size_sizer.AddSpacer(5)
-        pixel_size_sizer.Add(self._overview_pixel_size_edit, flag=wx.ALIGN_CENTER_VERTICAL)
-
         label = wx.StaticText(self, wx.ID_ANY, "In Odemis, move the stage to an easy to recognize landmark. Then in Tomo use the Mark tool (+) to precisely indicate the same landmark on the overview image.")
         label.Wrap(w)  # force line wrapping
 
@@ -68,16 +55,12 @@ class StageAlignmentPanel(wx.Panel):
         alignment_info_sizer2.Add(self._image_coords_label)
 
         button_size = (125, -1)
-        self.done_button = wx.Button(self, wx.ID_ANY, "Done", size=button_size)  # The ApplicationFame will listen to clicks on this button.
-
-        self.Bind(wx.EVT_TEXT, self._on_overview_pixel_size_change, self._overview_pixel_size_edit)
+        self.done_button = wx.Button(self, wx.ID_ANY, "Done", size=button_size)  # The ApplicationFrame will listen to clicks on this button.
 
         b = 5  # border size
         contents = wx.BoxSizer(wx.VERTICAL)
         contents.Add(title, 0, wx.ALL | wx.EXPAND, border=b)
         contents.Add(separator, 0, wx.ALL | wx.EXPAND, border=b)
-        contents.Add(label0, 0, wx.ALL | wx.EXPAND, border=b)
-        contents.Add(pixel_size_sizer, 0, wx.ALL | wx.EXPAND, border=b)
         contents.Add(label, 0, wx.ALL | wx.EXPAND, border=b)
         contents.Add(self._alignment_state, 0, wx.ALL | wx.EXPAND, border=b)
         contents.Add(alignment_info_sizer1, 0, wx.LEFT | wx.EXPAND, border=b)
@@ -103,10 +86,6 @@ class StageAlignmentPanel(wx.Panel):
         coords = event.GetCoords()
         pos = (coords[0], -coords[1])
         self._place_landmark(pos)
-
-    def _on_overview_pixel_size_change(self, event):
-        self._model.overview_image_pixels_per_mm = float(self._overview_pixel_size_edit.GetValue())
-        print('overview_image_pixels_per_mm={}'.format(self._model.overview_image_pixels_per_mm))
 
     def _place_landmark(self, landmark_image_pos):
         """

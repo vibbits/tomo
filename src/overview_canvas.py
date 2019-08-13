@@ -44,7 +44,7 @@ class OverviewCanvas(TomoCanvas):
         TomoCanvas.__init__(self, parent, custom_modes, id=wx.ID_ANY, size=(800, -1))
         wx.CallAfter(self.Canvas.ZoomToBB)  # so it will get called after everything is created and sized
 
-    def set_image(self, filename):
+    def load_image(self, filename):
         print('Loading ' + filename)
 
         wait = wx.BusyInfo("Loading overview image...")
