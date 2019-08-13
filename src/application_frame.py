@@ -14,6 +14,7 @@ import operator
 import tools
 import secom_tools
 import resources
+from json_numpy import JSONNumpyEncoder, json_numpy_array_decoder
 from model import TomoModel
 from mark_mode import MarkMode
 from move_stage_mode import MoveStageMode
@@ -446,7 +447,9 @@ class ApplicationFrame(wx.Frame):
         # * * * * * * * * * *
         # IMPROVEME: self._model.slice_offsets_microns can be calculated when user specifies the desired POI
         # FIXME: perhaps don't initialize all_offsets_microns here. Do it after POI specification (or so) so that in principle we can
-        # perform multiple LM acquisitions in this pyramid scheme of ours. (?)
+        #        perform multiple LM acquisitions in this pyramid scheme of ours. (?)
+        #        Ah - but we need the overview image pixel size, and that is currently only provided in the LM image acquisition dialog...
+        #        Perhaps we should ask the user the pixel size when the overview image is loaded instead.
 
         # Calculate the physical displacements on the sample required for moving between the points of interest.
         overview_image_pixelsize_in_microns = 1000.0 / self._model.overview_image_pixels_per_mm
@@ -661,31 +664,3 @@ class ApplicationFrame(wx.Frame):
         # Enable/disable menu items
         self._lm_image_acquisition_item.Enable(self._stage_is_aligned())
         self._em_image_acquisition_item.Enable(self._stage_is_aligned())
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-# Note: this is certainly NOT a fully general way to serialize general numpy arrays to JSON,
-#       it only works for the relatively easy cases we need it for.
-
-# IMPROVEME: perhaps we should move this to its own file e.g. json_tools.py ?
-
-class JSONNumpyEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.ndarray):  # is it a numpy array or matrix?
-            return {'__numpy.ndarray__': True,  # We add metadata so that when reading the JSON object we realize the list data is actually a numpy array
-                    'dtype': str(obj.dtype),  # current unused
-                    'dtype.name': obj.dtype.name,  # probably good enough for our simple numpy arrays
-                    'shape': str(obj.shape),  # shape is probably redundant (can probably be recovered from nesting of lists in 'data')
-                    'data': obj.tolist() }
-        else:
-            return super(JSONNumpyEncoder, self).default(obj)
-
-
-def json_numpy_array_decoder(dct):
-    if '__numpy.ndarray__' in dct:
-        return np.array(dct['data'], dtype=dct['dtype.name'])
-    else:
-        return dct
-
-
