@@ -17,9 +17,10 @@ class AboutDialog(wx.Dialog):
         name.SetFont(large_font)
         description = wx.StaticText(self, wx.ID_ANY, "Prototype application for tomography on SECOM")
         description.SetFont(medium_font)
-        copyright = wx.StaticText(self, wx.ID_ANY, "(c) 2018 VIB - Vlaams Instituut voor Biotechnologie")
-        license = wx.StaticText(self, wx.ID_ANY, "Proprietary.")
+        copyright = wx.StaticText(self, wx.ID_ANY, "(c) 2018-2019 VIB - Vlaams Instituut voor Biotechnologie")
+        license = wx.StaticText(self, wx.ID_ANY, "Proprietary software.")
         developer = wx.StaticText(self, wx.ID_ANY, "Frank Vernaillen")
+        affiliation = wx.StaticText(self, wx.ID_ANY, "Bioinformatics Core, Bioimaging Core")
         website = wx.StaticText(self, wx.ID_ANY, 'http://www.vib.be')
         website.SetFont(underlined_font)
 
@@ -29,6 +30,7 @@ class AboutDialog(wx.Dialog):
         sizer.Add(description, 0, wx.ALL | wx.CENTER, 5)
         sizer.Add(copyright, 0, wx.ALL | wx.CENTER, 5)
         sizer.Add(developer, 0, wx.ALL | wx.CENTER, 5)
+        sizer.Add(affiliation, 0, wx.ALL | wx.CENTER, 5)
         sizer.Add(website, 0, wx.ALL | wx.CENTER, 5)
         sizer.Add(license, 0, wx.ALL | wx.CENTER, 5)
 
