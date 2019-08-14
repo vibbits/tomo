@@ -444,24 +444,21 @@ class ApplicationFrame(wx.Frame):
         secom_tools.set_absolute_stage_position(poi_stage_coords)
 
     def _do_lm_acquire(self):
-        # * * * * * * * * * *
-        # IMPROVEME: self._model.slice_offsets_microns can be calculated when user specifies the desired POI
-        # FIXME: perhaps don't initialize all_offsets_microns here. Do it after POI specification (or so) so that in principle we can
-        #        perform multiple LM acquisitions in this pyramid scheme of ours. (?)
-        #        Ah - but we need the overview image pixel size, and that is currently only provided in the LM image acquisition dialog...
-        #        Perhaps we should ask the user the pixel size when the overview image is loaded instead.
-
         # Calculate the physical displacements on the sample required for moving between the points of interest.
         overview_image_pixelsize_in_microns = 1000.0 / self._model.overview_image_pixels_per_mm
         self._model.slice_offsets_microns = tools.physical_point_of_interest_offsets_in_microns(self._model.all_points_of_interest,                                                                                                overview_image_pixelsize_in_microns)
         print('Rough offset from slice polygons (in microns): ' + repr(self._model.slice_offsets_microns))
 
+        # For each LM image acquisition we start *new* offset corrections.
+        # This ensures that if we change the POI we also start with a blank slate for offset corrections,
+        # otherwise we would incorrectly combine offset corrections for one POI with those for another
+        # (with possibly a different number of slices)
+        # For now we do not intend to do successive offset corrections using LM.
         self._model.all_offsets_microns = [{'name': 'Slice mapping',
                                            'parameters': {},
                                            'offsets': self._model.slice_offsets_microns}]
 
         self._model.combined_offsets_microns = copy.deepcopy(self._model.slice_offsets_microns)
-        # * * * * * * * * * *
 
         # Move the stage to the first point of interest.
         # The stage may not currently be positioned there because,

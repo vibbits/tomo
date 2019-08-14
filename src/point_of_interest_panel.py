@@ -99,6 +99,7 @@ class PointOfInterestPanel(wx.Panel):
                 self._model.all_points_of_interest = self._predicted_pois[:new_num_pois]
                 # FIXME: what if the user already acquired LM images for this roi and changes the number of sections here
                 # (e.g after loading the poi_info.json file). we can change all_points_of_interest, but what about the combined_offsets_microns??
+                # Perhaps for now we should forbid changing the number of slices at that time? (When precisely?)
                 self._update_ui()
                 return
 
