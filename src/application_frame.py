@@ -383,7 +383,9 @@ class ApplicationFrame(wx.Frame):
         dlg.Destroy()
 
     def _on_exit(self, event):
-        self.Close()
+        answer = wx.MessageBox('Exit Tomo?', '', wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION, self)
+        if answer == wx.YES:
+            self.Close()
 
     def _disable_menu(self):
         e1 = self._import_overview_image_item.IsEnabled(); self._import_overview_image_item.Enable(False)
