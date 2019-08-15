@@ -144,6 +144,7 @@ class FocusPanel(wx.Panel):
         table.SetColSize(1, col_size)
         table.SetColSize(2, col_size)
         table.SetRowLabelSize(40)  # width of the column that displays the row number
+        table.SetMaxClientSize((-1, 300))  # maximum vertical size is limited because if the table grows to high, the Done button underneath it disappears (IMPROVEME: is there no way to ensure that the Done button is always shown and the table only gets the remaining space above the button?)
 
         table.EnableEditing(False)
         table.DisableDragRowSize()
@@ -239,6 +240,7 @@ class FocusPanel(wx.Panel):
         self._table.SetCellValue(row, 0, '{:.9f}'.format(x))  # x and y are expressed in meters, display position with nanometer precision
         self._table.SetCellValue(row, 1, '{:.9f}'.format(y))
         self._table.SetCellValue(row, 2, '{:.9f}'.format(z))
+        self._table.GoToCell(row + 1, 0)  # in case the table is too large to show all rows, make sure that the new row is visible
         self._save_samples_button.Enable(True)
         self._save_button.Enable(True)
         self._show_button.Enable(True)
