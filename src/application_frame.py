@@ -183,10 +183,14 @@ class ApplicationFrame(wx.Frame):
         self._set_point_of_interest_item.Enable(False) # the point of interest is specified in overview image coordinates (so we need an overview image) and will predict analogous points of interest in the other slices (so we need to have slice outlines)
         self._build_focus_map_item = microscope_menu.Append(wx.NewId(), "Build Focus Map...")
         self._build_focus_map_item.Enable(False)  # focus setup is only possible after we've aligned stage with overview image (because in the focus mode we can click on the overview image to move the stage to our target point where we want to manually set the focus)
+        microscope_menu.AppendSeparator()
         self._lm_image_acquisition_item = microscope_menu.Append(wx.NewId(), "Acquire LM Images...")
         self._lm_image_acquisition_item.Enable(False)
         self._em_image_acquisition_item = microscope_menu.Append(wx.NewId(), "Acquire EM Images...")
         self._em_image_acquisition_item.Enable(False)
+        microscope_menu.AppendSeparator()
+        self._show_offsets_table_item = microscope_menu.Append(wx.NewId(), "Show Offsets Table")
+        self._show_offsets_table_item.Enable(False)
 
         experimental_menu = wx.Menu()
         self._segment_ribbons_item = experimental_menu.Append(wx.NewId(), "Segment Ribbons...")
@@ -215,6 +219,7 @@ class ApplicationFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_load_poi, self._load_poi_item)
         self.Bind(wx.EVT_MENU, self._on_set_point_of_interest, self._set_point_of_interest_item)
         self.Bind(wx.EVT_MENU, self._on_align_stage, self._align_stage_item)
+        self.Bind(wx.EVT_MENU, self._on_show_offsets_table, self._show_offsets_table_item)
         self.Bind(wx.EVT_MENU, self._on_lm_image_acquisition, self._lm_image_acquisition_item)
         self.Bind(wx.EVT_MENU, self._on_em_image_acquisition, self._em_image_acquisition_item)
         self.Bind(wx.EVT_MENU, self._on_segment_ribbons, self._segment_ribbons_item)
@@ -312,6 +317,9 @@ class ApplicationFrame(wx.Frame):
     def _on_build_focus_map_done_button_click(self, event):
         self._show_side_panel(self._focus_panel, False)
 
+    def _on_show_offsets_table(self, event):
+        tools.show_offsets_table(self._model.all_offsets_microns, self._model.combined_offsets_microns)
+
     def _on_align_stage(self, event):
         self._show_side_panel(self._stage_alignment_panel, True)
 
@@ -383,10 +391,11 @@ class ApplicationFrame(wx.Frame):
         e7 = self._set_point_of_interest_item.IsEnabled(); self._set_point_of_interest_item.Enable(False)
         e8 = self._align_stage_item.IsEnabled(); self._align_stage_item.Enable(False)
         e9 = self._load_poi_item.IsEnabled(); self._load_poi_item.Enable(False)
-        return e1, e2, e3, e4, e5, e6, e7, e8, e9
+        e10 = self._show_offsets_table_item.IsEnabled(); self._show_offsets_table_item.Enable(False)
+        return e1, e2, e3, e4, e5, e6, e7, e8, e9, e10
 
     def _enable_menu(self, state):
-        e1, e2, e3, e4, e5, e6, e7, e8, e9 = state
+        e1, e2, e3, e4, e5, e6, e7, e8, e9, e10 = state
         self._import_overview_image_item.Enable(e1)
         self._lm_image_acquisition_item.Enable(e2)
         self._em_image_acquisition_item.Enable(e3)
@@ -396,6 +405,7 @@ class ApplicationFrame(wx.Frame):
         self._set_point_of_interest_item.Enable(e7)
         self._align_stage_item.Enable(e8)
         self._load_poi_item.Enable(e9)
+        self._show_offsets_table_item.Enable(e10)
 
     def _do_import_overview_image(self):
         # Display overview image pixel size information
@@ -493,6 +503,7 @@ class ApplicationFrame(wx.Frame):
 
         # Enable/disable menu entries
         self._em_image_acquisition_item.Enable(True)
+        self._show_offsets_table_item.Enable(True)
 
     def _do_em_acquire(self):
         # At this point the user should have vented the EM chamber and positioned the EM microscope
@@ -661,3 +672,4 @@ class ApplicationFrame(wx.Frame):
         # Enable/disable menu items
         self._lm_image_acquisition_item.Enable(self._stage_is_aligned())
         self._em_image_acquisition_item.Enable(self._stage_is_aligned())
+        self._show_offsets_table_item.Enable(True)
