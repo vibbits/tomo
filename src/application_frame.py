@@ -168,7 +168,7 @@ class ApplicationFrame(wx.Frame):
         self._save_slice_polygons_item = file_menu.Append(wx.NewId(), "Save Slice Polygons...")
         file_menu.AppendSeparator()
         self._load_poi_item = file_menu.Append(wx.NewId(), "Load Point of Interest...")
-        self._load_poi_item.Enable(False)
+        self._load_poi_item.Enable(False)  # we need slice outlines and an aligned stage before we can use a saved POI file
         file_menu.AppendSeparator()
         exit_menu_item = file_menu.Append(wx.NewId(), "Exit")
 
@@ -333,6 +333,9 @@ class ApplicationFrame(wx.Frame):
         self._lm_image_acquisition_item.Enable(self._can_acquire_lm_images())
         self._em_image_acquisition_item.Enable(self._can_acquire_em_images())
 
+        have_slices = bool(self._model.slice_polygons)
+        self._load_poi_item.Enable(have_slices)
+
         # FIXME/CHECKME: do we need to recalculate or redo certain operations if the stage was aligned already, and the user now changes it?
 
     def _on_set_point_of_interest(self, event):
@@ -438,7 +441,7 @@ class ApplicationFrame(wx.Frame):
         # Enable the menu item for setting or loading a point of interest
         # (We can now because we have reference slice contours - though typically we will also want to load the overview image)
         self._set_point_of_interest_item.Enable(True)
-        self._load_poi_item.Enable(True)
+        self._load_poi_item.Enable(self._stage_is_aligned())
 
     def _transform_image_coords_to_stage_coords(self, image_coords):   # IMPROVEME: this is also coded somewhere else, use this function instead
         # Convert image coords to stage coords
