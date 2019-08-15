@@ -22,6 +22,7 @@ from preferences_dialog import PreferencesDialog
 from overview_image_dialog import OverviewImageDialog
 from lm_acquisition_dialog import LMAcquisitionDialog
 from em_acquisition_dialog import EMAcquisitionDialog
+from registration_import_dialog import RegistrationImportDialog
 from overview_canvas import OverviewCanvas
 from ribbon_outline_dialog import RibbonOutlineDialog
 from focus_panel import FocusPanel
@@ -494,9 +495,6 @@ class ApplicationFrame(wx.Frame):
                               'LM SIFT Registration',
                               {})  # IMPROVEME? perhaps a nice touch would be to store the LM lens that was used. Can we query that via odemis-cli perhaps?
 
-        #
-        self._do_save_poi_info(self._model.lm_sift_output_folder)
-
         # Move stage back to initial position
         print('Moving stage back to position at start of LM image acquisition')
         secom_tools.set_absolute_stage_position(orig_stage_pos)
@@ -536,9 +534,6 @@ class ApplicationFrame(wx.Frame):
                                'em_magnification' : self._model.em_magnification,
                                'em_dwell_time_microseconds' : self._model.em_dwell_time_microseconds})
 
-        #
-        self._do_save_poi_info(self._model.em_sift_output_folder)
-
         # Move stage back to initial position
         print('Moving stage back to position at start of EM image acquisition')
         secom_tools.set_absolute_stage_position(orig_stage_pos)
@@ -577,24 +572,53 @@ class ApplicationFrame(wx.Frame):
         print('Headless Fiji retcode={}\nstdout=\n{}\nstderr={}\n'.format(retcode, out, err))
         del wait
 
-        # Parse the output of the SIFT registration plugin and extract
-        # the transformation matrices to register each slice onto the next.
-        print('Extracting SIFT transformation matrices')
-        sift_matrices = tools.extract_sift_alignment_matrices(out)
-        print(sift_matrices)
+        # # # # # # # # # # BEGIN EXPERIMENTAL CODE
 
-        sift_offsets_microns = self.calculate_sift_offsets(sift_matrices, orig_image_size, pixels_per_mm, registration_params)
-        print('SIFT corrected point-of-interest offsets [micrometer]: ' + repr(sift_offsets_microns))
+        update_offsets = True
 
-        # Combine (=sum) existing offsets with this new one
-        assert self._model.combined_offsets_microns is not None
-        self._model.combined_offsets_microns = map(operator.add, self._model.combined_offsets_microns, sift_offsets_microns)
-        print('Combined offsets [micrometer]: ' + repr(self._model.combined_offsets_microns))
+        registration_correct = wx.MessageBox('Please check the registration result {}.\n'
+                                             'Are all images aligned correctly?'.format(os.path.join(output_folder, 'sift_aligned_stack.tif')), 'Registration successful?',
+                                             wx.YES_NO | wx.ICON_QUESTION, self)       # "Yes" is selected by default
+        if registration_correct == wx.NO:
+            print('User feedback: registration is not correct.')
+            with RegistrationImportDialog(output_folder, None, wx.ID_ANY, "Import Registration Output") as dlg:
+                if dlg.ShowModal() == wx.ID_OK:
+                    print('Using manual registration output')
+                    out = dlg.get_registration_output()
+                    info_description = info_description + ' (Manual)'
+                else:
+                    print('User feedback: do not use manual registration')
+                    update_offsets = False
+        else:
+            print('User feedback: registration is correct.')
 
-        # Append offset correction to "history" of existing offsets.
-        self._model.all_offsets_microns.append({'name': info_description,
-                                                'parameters': info_parameters,
-                                                'offsets': sift_offsets_microns})
+        # # # # # # # # # # END EXPERIMENTAL CODE
+
+        if update_offsets:
+            # Parse the output of the SIFT registration plugin and extract
+            # the transformation matrices to register each slice onto the next.
+            print('Extracting SIFT transformation matrices')
+            sift_matrices = tools.extract_sift_alignment_matrices(out)
+            print(sift_matrices)
+
+            sift_offsets_microns = self.calculate_sift_offsets(sift_matrices, orig_image_size, pixels_per_mm, registration_params)
+            print('SIFT corrected point-of-interest offsets [micrometer]: ' + repr(sift_offsets_microns))
+
+            # Combine (=sum) existing offsets with this new one
+            assert self._model.combined_offsets_microns is not None
+            self._model.combined_offsets_microns = map(operator.add, self._model.combined_offsets_microns, sift_offsets_microns)
+            print('Combined offsets [micrometer]: ' + repr(self._model.combined_offsets_microns))
+
+            # Append offset correction to "history" of existing offsets.
+            self._model.all_offsets_microns.append({'name': info_description,
+                                                    'parameters': info_parameters,
+                                                    'offsets': sift_offsets_microns})
+        else:
+            print('Registration plugin output NOT used.')
+            print('Slice offsets NOT updated with corrections.')
+
+        #
+        self._do_save_poi_info(output_folder)
 
         # For debugging / validation: display the offsets table.
         tools.show_offsets_table(self._model.all_offsets_microns, self._model.combined_offsets_microns)
