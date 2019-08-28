@@ -5,15 +5,25 @@
 Work in progress
 ----------------
 
-- Add (optional) extra EM "pyramid level" (after EM acquisition at e.g. 5000x magnification, register those images as well,
-  and use registration offset and rotation as additional fine correction of stage position. Then acquire EM images at e.g. 15000x magnification.
 
 To do
 -----
 
+- Disable the LM camera before starting EM image acquisition.
+  In Odemis this means that the button "OPTICAL" needs to be disabled (so it should be gray, not orange).
+  See tab_data.opticalState.
+  Can we change its state from outside Odemis? Perhaps too deep in Odemis to be accessed externally.
+
 - FIX inconsistency: after loading a poi_info.json file, the user can switch to the poi panel and change the number of sections.
   This will reduce all_points_of_interest, but what to do with combined_offsets_microns (used for EM acquisition)?
   See tomo/src/point_of_interest_panel.py.
-  Also (after loading a POI? after doing this change?), EM acquisition is (again? still?) disabled in the menu. This is not correct.
+  More generally, it would be nice to have the ability to image subsets of sample slices (to quickly try something out
+  or confirm that it works before spending tens of minutes to acquire images for all slices).
 
-- Add ability to pause/resume/stop image acquisition. See experiments/em_image_acquisition_demo.py
+Nice to have
+------------
+- Add ability to pause/resume/stop image acquisition? See experiments/em_image_acquisition_demo.py
+  (So the user can check that acquisition if going fine?)
+
+- Perhaps remember last file location of the POI json file?
+
