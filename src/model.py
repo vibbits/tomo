@@ -65,8 +65,8 @@ class TomoModel:
         self.lm_use_focus_map = True  # Flag deciding whether or not to use the focus map (self.focus_map) created with the low magnification lens (e.g. 20x) to set the (rough) focus during LM image acquisition with the 100x lens. The 100x lens has a smaller depth of field than the 20x, so focus set this way may not be very good, but it could be a decent initial focus guess for autofocus.
         self.focus_map = None  # The actual focus map (for LM only). It can be built and saved for use in the tiled overview image acquisition plugin for Odemis, and optionally used lateron during 100x LM image acquisition as well. Note: we need an overview image aligned with the stage before we can build a focus map (because we need to know the extent of the sample grid)
 
-        self.lm_registration_params = {'crop': False, 'roi': [0, 0, 2048, 2048], 'enhance_contrast': False}  # roi=[top left x, top left y, width, height] in pixels (integer values)
-        self.em_registration_params = {'crop': False, 'roi': [0, 0, 2048, 2048], 'enhance_contrast': False}  # same meaning as lm_registration_params
+        self.lm_registration_params = {'crop': False, 'roi': [0, 0, 2048, 2048], 'enhance_contrast': False, 'invert': False}  # roi=[top left x, top left y, width, height] in pixels (integer values); invert=invert stack images (yields more intuitive images in EM mode so always used there, not used for LM)
+        self.em_registration_params = {'crop': False, 'roi': [0, 0, 2048, 2048], 'enhance_contrast': True, 'invert': True}  # same meaning as lm_registration_params
 
         self.em_scale = 1  # scale for EM image acquisition (an integer: 1, 2, 4, 8 or 16); for example 4 corresponds to the Odemis scale string '4,4'
         self.em_dwell_time_microseconds = 50  # dwell time for EM image acquisition (in microseconds)
