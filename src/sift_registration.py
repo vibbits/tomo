@@ -9,6 +9,7 @@
 #@String dstdir
 #@String prefix
 #@Integer numimages
+#@Boolean do_invert
 #@Boolean do_enhance_contrast
 #@Boolean do_crop
 #@Integer roi_x
@@ -41,6 +42,7 @@ def registration():
     print('- Destination directory: {}'.format(dstdir))
     print('- Input image filename prefix: {}'.format(prefix))
     print('- Number of input images to register: {}'.format(numimages))
+    print('- Invert images? {}'.format('yes' if do_invert else 'no'))
     print('- Enhance contrast before registration? {}'.format('yes' if do_enhance_contrast else 'no'))
     print('- Crop images before registration? {}'.format('yes' if do_crop else 'no'))
     if do_crop:
@@ -89,6 +91,10 @@ def registration():
     IJ.save(stackImp, unaligned_stack_filename)
     WindowManager.setTempCurrentImage(stackImp)
 
+    if do_invert:
+        print('Inverting')
+        IJ.run("Invert", "stack")
+
     if do_crop:
         print('Cropping')
         stackImp.setRoi(roi_x, roi_y, roi_width, roi_height)
@@ -96,9 +102,8 @@ def registration():
 
     if do_enhance_contrast:
         print('Enhancing contrast')
-        # IJ.run("Brightness/Contrast...")  # <--- CHECKME This is not needed, I think (and throws exception when in headless mode)
         IJ.run("Enhance Contrast", "saturated=0.35")
-        IJ.run("Apply LUT","stack")
+        IJ.run("Apply LUT", "stack")
 
     IJ.save(stackImp, unaligned_stack_filename)
 
