@@ -71,6 +71,9 @@ def acquire_em_microscope_images(physical_offsets_microns, delay_between_image_a
     commandline_exec([odemis_cli, "--set-attr", "e-beam", "magnification", str(magnification)])
     commandline_exec([odemis_cli, "--set-attr", "e-beam", "dwellTime", str(dwell_time_microsecs * 1.0e-6)])  # the dwellTime argument for odemis_cli presumably is in seconds
 
+    # FIXME/Note: it seems that setting the magnification here has no effect on the actual microscope - apparently it needs to be set on the JEOL software?!
+    # FIXME/Note: it seems that setting the dwell time here also does not work - apparently the dwell time from Odemis is used?! Or is something wrong with the format of the floating point number (we use scientific notation such as "1e-6", is that not understood by odemis-cli perhaps)?!
+
     # Acquire an image at each section
     for i, offset_microns in enumerate(physical_offsets_microns):
         # Move the stage
