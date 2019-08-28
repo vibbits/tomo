@@ -74,8 +74,7 @@ class TomoModel:
 
         # Constants
         self.lm_image_size = (2048, 2048)  # (width, height) of the LM images in pixels; this is the size of the images that Odemis acquires; it is assumed to be constant.
-        self.em_image_size = (5120, 3840)  # (width, height) of the EM images in pixels *only* for an em_scale=1. For a scale s the actual EM images are 5120/s, 3840/s pixels large.
-            # IMPROVEME: perhaps rename to max_em_image_size to avoid confusion
+        self.max_em_image_size = (5120, 3840)  # (width, height) of the EM images in pixels *only* for an em_scale=1. For a scale s the actual EM images are 5120/s, 3840/s pixels large.
 
         # Persistent storage
         self._config = wx.Config('be.vib.bits.tomo')
@@ -152,8 +151,8 @@ class TomoModel:
 
     def get_em_image_size_in_pixels(self):
         # returns (width, height) of EM image in pixels
-        width_pixels = self.em_image_size[0] / self.em_scale
-        height_pixels = self.em_image_size[1] / self.em_scale
+        width_pixels = self.max_em_image_size[0] / self.em_scale
+        height_pixels = self.max_em_image_size[1] / self.em_scale
         return width_pixels, height_pixels
 
     def get_em_image_size_in_microns(self):
