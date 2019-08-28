@@ -69,7 +69,7 @@ def acquire_em_microscope_images(physical_offsets_microns, delay_between_image_a
     # Setup microscope
     commandline_exec([odemis_cli, "--set-attr", "e-beam", "scale", scale_string])
     commandline_exec([odemis_cli, "--set-attr", "e-beam", "magnification", str(magnification)])
-    commandline_exec([odemis_cli, "--set-attr", "e-beam", "dwellTime", str(dwell_time_microsecs * 1.0e-6)])  # the dwellTime argument for odemis_cli presumably is in seconds
+    commandline_exec([odemis_cli, "--set-attr", "e-beam", "dwellTime", '{:.10f}'.format(dwell_time_microsecs * 1.0e-6)])  # the dwellTime argument for odemis_cli presumably is in seconds
 
     # Acquire an image at each section
     for i, offset_microns in enumerate(physical_offsets_microns):
