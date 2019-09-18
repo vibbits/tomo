@@ -15,7 +15,7 @@ cx = w / 2;
 cy = h / 2;
 
 % Parameters of the
-a = pi / 6;   % clockwise rotation
+a = 5 * (pi / 180);   % clockwise rotation, in radians
 dx = 50;
 dy = 100;
 
@@ -37,4 +37,21 @@ R = [ cos(a) -sin(a) 0;
         0      0     1];
 T_2_to_3 = inv(Tc) * R * Tc * inv(T_1_to_2);
 inv(T_2_to_3)    % = what SIFT returns = actually the transform from 3 to 2 (but the SIFT plugin says "2 to 3")
+%%%
+T = T_2_to_3 * T_1_to_2
+T * [0 0 1]'
+inv(T) * [0 0 1]'
+
+%%%%
+
+% test 1, slice 1->2
+M = [[ 1.00000000e+00,  9.19852059e-17, -5.00488744e+01];
+     [-9.19852059e-17,  1.00000000e+00, -1.00097749e+02]]
+calculate_sift_correction(M, w, h);
+
+% test 3, slice 1->2
+M = [[ 9.96192591e-01  8.71798285e-02 -9.79013872e+01]; [-8.71798285e-02  9.96192591e-01 -3.76990516e+01]];
+calculate_sift_correction(M, w, h);
+
+
 
