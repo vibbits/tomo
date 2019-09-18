@@ -638,16 +638,27 @@ class ApplicationFrame(wx.Frame):
         sift_offsets = [np.array([0, 0])]  # stage position corrections (in pixels); one correction per sample section
         for mat in sift_matrices:  # there is one transformation matrix per sample section
             # mat is a 2x3 numpy array; 3rd column is the translation vector
+
+            # mat is actually the transformation matrix from section i+1 to section i (!!), invert it to get
+            # the transformation matrix from section i to section i+1, which is what we need.
+            mat = tools.invert_2_by_3_matrix(mat)
+
             new_center = np.dot(mat, np.array([center[0], center[1], 1.0]))
             offset = center - new_center  # displacement in pixels
             sift_offsets.append(offset)
             center = new_center
 
+        # Scale the offsets from dimensionless pixels to microns (for stage movements)
         pixelsize_in_microns = 1000.0 / pixels_per_mm
         sift_offsets_microns = [offset * pixelsize_in_microns for offset in sift_offsets]
 
         # Invert y component of the SIFT offsets.
+        # Our images have their origin at the top left corner, with y-axis pointing down;
+        # the stage has its y-axis pointing up (?).
         sift_offsets_microns = [np.array([offset[0], -offset[1]]) for offset in sift_offsets_microns]
+
+        # Corrections need to be done in the opposite direction
+        sift_offsets_microns = [-offset for offset in sift_offsets_microns]
 
         return sift_offsets_microns
 

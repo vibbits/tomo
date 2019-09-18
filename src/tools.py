@@ -387,13 +387,23 @@ def matrix_string_to_numpy_array(str):
 #    373 features extracted.
 #    identifying correspondences using brute force ... took 253ms
 #    33 potentially corresponding features identified
-#    Slice 3 to 4 transformation: [1.0, 0.0, 0.0, 1.0, 45.05236873053536, 9.754784450831266]    <-- this is a private modification
-#    Slice 1 to 4 transformation: [1.0, 0.0, 0.0, 1.0, 93.45191660749424, -5.962104282614291]   <-- this is a private modification
+#    Slice 3 to 4 transformation: [1.0, 0.0, 0.0, 1.0, 45.05236873053536, 9.754784450831266]    <-- this is a private modification to the SIFT registration plugin
+#    Slice 1 to 4 transformation: [1.0, 0.0, 0.0, 1.0, 93.45191660749424, -5.962104282614291]   <-- this is a private modification to the SIFT registration plugin
 #    Processing SIFT ...
 #    ...
 # From this text string (sift_plugin_log_string) we extract the transformation matrices
 # between slice i and i+1, for all slices. This function returns a list with numpy arrays (of shape 2 x 3)
 # representing these transformation matrices.
+#
+# ! ! ! ! ! ! ! ! ! ! ! ! ! !
+# VERY IMPORTANT NOTE:
+# It seems that the information printed by our private modification to the "Linear stack alignment with SIFT" plugin
+# has the order of the transformation wrong!
+# So
+#    Slice 3 to 4 transformation: [1.0, 0.0, 0.0, 1.0, 45.05236873053536, 9.754784450831266]
+# is actually the transformation that maps points from slice 4 onto slice 3!
+# To get the transform from 3 to 4, that matrix must be inverted.
+# ! ! ! ! ! ! ! ! ! ! ! ! ! !
 def extract_sift_alignment_matrices(sift_plugin_log_string):
     # Split the log string in individual lines
     lines = sift_plugin_log_string.splitlines()
@@ -413,6 +423,14 @@ def extract_sift_alignment_matrices(sift_plugin_log_string):
     # Turn matrix strings into 2 x 3 numpy arrays. The 3rd column is the translation vector.
     trf_matrices = [matrix_string_to_numpy_array(s) for s in trf_matrix_strings]
     return trf_matrices
+
+
+def invert_2_by_3_matrix(mat):
+    # mat is a 2x3 matrix with an implicit [0 0 1] bottom third row;
+    # this function returns its inverse matrix, also with an implied [0 0 1] bottom row.
+    full_mat = np.vstack((mat, np.array([0, 0, 1])))
+    inv_mat = np.linalg.inv(full_mat)
+    return inv_mat[0:2, :]   # return the top two rows; the bottom row is an implicit [0 0 1]
 
 
 # Example output of show_offsets_table(). The number of columns is variable.
