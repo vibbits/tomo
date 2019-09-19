@@ -492,7 +492,7 @@ class ApplicationFrame(wx.Frame):
         del wait
 
         # Perform image registration on the acquired stack of LM images
-        self._do_registration("Registering LM images...", self._model.fiji_path, self._model.sift_registration_script,
+        self._do_registration('LM', self._model.fiji_path, self._model.sift_registration_script,
                               self._model.lm_registration_params,
                               self._model.lm_images_output_folder, self._model.lm_images_prefix, self._model.lm_sift_output_folder,
                               len(self._model.all_points_of_interest),
@@ -529,7 +529,7 @@ class ApplicationFrame(wx.Frame):
         pixels_per_micrometer = self._model.get_em_pixels_per_micrometer()
         image_pixels_per_mm = 1000.0 * pixels_per_micrometer
 
-        self._do_registration("Registering EM images...", self._model.fiji_path, self._model.sift_registration_script,
+        self._do_registration('EM', self._model.fiji_path, self._model.sift_registration_script,
                               self._model.em_registration_params,
                               self._model.em_images_output_folder, self._model.em_images_prefix, self._model.em_sift_output_folder,
                               len(self._model.all_points_of_interest),
@@ -543,12 +543,13 @@ class ApplicationFrame(wx.Frame):
         print('Moving stage back to position at start of EM image acquisition')
         secom_tools.set_absolute_stage_position(orig_stage_pos)
 
-    def _do_registration(self, busy_string, fiji_path, registration_script, registration_params,
+    def _do_registration(self, modality, fiji_path, registration_script, registration_params,
                          input_folder, input_filenames_prefix, output_folder,
                          num_images,
                          orig_image_size, pixels_per_mm,
                          info_description,
                          info_parameters):
+        # modality is 'EM' or 'LM'
 
         # Ensure that folder exists, if not create it and its parent folders.
         tools.make_dir(output_folder)
@@ -557,6 +558,8 @@ class ApplicationFrame(wx.Frame):
         # (iii) saves the stack to TIFF, (iv) aligns the slices in this stack
         # using Fiji's Plugins > Registration > Linear Stack Alignment with SIFT
         # and (v) saves the aligned stack to TIFF.
+
+        busy_string = "Registering {} images...".format(modality)
 
         print(busy_string)
         print('Starting a headless Fiji and calling the SIFT image registration plugin. Please be patient...')
@@ -608,6 +611,9 @@ class ApplicationFrame(wx.Frame):
             print(sift_matrices)
 
             sift_offsets_microns = self.calculate_sift_offsets(sift_matrices, orig_image_size, pixels_per_mm, registration_params)
+            if modality == 'EM':   # Flip the x-coordinate. This is related to the fact that the EM and LM microscopes look at the same from opposite direction???
+                sift_offsets_microns = [np.array([-offset[0], offset[1]]) for offset in sift_offsets_microns]
+                print('Flipped sign of X coordinates of corrections because imaging modality was EM.')
             print('SIFT corrected point-of-interest offsets [micrometer]: ' + repr(sift_offsets_microns))
 
             # Combine (=sum) existing offsets with this new one
