@@ -644,7 +644,7 @@ class ApplicationFrame(wx.Frame):
             mat = tools.invert_2_by_3_matrix(mat)
 
             new_center = np.dot(mat, np.array([center[0], center[1], 1.0]))
-            offset = center - new_center  # displacement in pixels
+            offset = new_center - center  # displacement in pixels
             sift_offsets.append(offset)
             center = new_center
 
@@ -656,9 +656,6 @@ class ApplicationFrame(wx.Frame):
         # Our images have their origin at the top left corner, with y-axis pointing down;
         # the stage has its y-axis pointing up (?).
         sift_offsets_microns = [np.array([offset[0], -offset[1]]) for offset in sift_offsets_microns]
-
-        # Corrections need to be done in the opposite direction
-        sift_offsets_microns = [-offset for offset in sift_offsets_microns]
 
         return sift_offsets_microns
 
