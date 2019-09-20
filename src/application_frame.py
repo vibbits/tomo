@@ -611,9 +611,6 @@ class ApplicationFrame(wx.Frame):
             print(sift_matrices)
 
             sift_offsets_microns = self.calculate_sift_offsets(sift_matrices, orig_image_size, pixels_per_mm, registration_params)
-            if modality == 'EM':   # Flip the x-coordinate. This is related to the fact that the EM and LM microscopes look at the same from opposite direction???
-                sift_offsets_microns = [np.array([-offset[0], offset[1]]) for offset in sift_offsets_microns]
-                print('Flipped sign of X coordinates of corrections because imaging modality was EM.')
             print('SIFT corrected point-of-interest offsets [micrometer]: ' + repr(sift_offsets_microns))
 
             # Combine (=sum) existing offsets with this new one
