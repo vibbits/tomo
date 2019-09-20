@@ -40,7 +40,7 @@ class LMAcquisitionDialog(wx.Dialog):
         lm_sizer.AddSpacer(8)
         lm_sizer.Add(self._lm_images_output_folder_button, flag=wx.ALIGN_CENTER_VERTICAL)
 
-        empty_label1 = wx.StaticText(self, wx.ID_ANY, "")  # IMPROVEME: using an empty label as placeholder is probably not the
+        empty_label1 = wx.StaticText(self, wx.ID_ANY, "")  # IMPROVEME: using an empty label as placeholder is probably not the canonical way to go.
         empty_label2 = wx.StaticText(self, wx.ID_ANY, "")
         empty_label3 = wx.StaticText(self, wx.ID_ANY, "")
 

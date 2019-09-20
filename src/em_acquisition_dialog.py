@@ -48,7 +48,7 @@ class EMAcquisitionDialog(wx.Dialog):
 
         #
         sift_output_folder_label = wx.StaticText(self, wx.ID_ANY, "Output Folder:")
-        self._sift_output_folder_edit = wx.TextCtrl(self, wx.ID_ANY, self._model.lm_sift_output_folder, size=(w, -1))
+        self._sift_output_folder_edit = wx.TextCtrl(self, wx.ID_ANY, self._model.em_sift_output_folder, size=(w, -1))
         self._sift_output_folder_button = wx.Button(self, wx.ID_ANY, "Browse")
 
         sift_out_sizer = wx.BoxSizer(wx.HORIZONTAL)
