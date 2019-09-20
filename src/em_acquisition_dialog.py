@@ -181,6 +181,10 @@ class EMAcquisitionDialog(wx.Dialog):
         self._model.em_dwell_time_microseconds = float(self._em_dwell_time_text.GetValue())
         print('em_dwell_time_microsecs={}'.format(self._model.em_dwell_time_microseconds))
 
+        # FIXME: it seems that setting a dwell time < 800 ns gets silently ignored by Odemis
+        # (which then continues to use the typically larger current dwell time)
+        # Check in Odemis source code if we can confirm that. And then forbid the user from setting a smaller value here in Tomo.
+
     def _on_delay_change(self, event):
         self._model.delay_between_EM_image_acquisition_secs = float(self._em_acquisition_delay_text.GetValue())
         print('delay_between_EM_image_acquisition_secs={}'.format(self._model.delay_between_EM_image_acquisition_secs))
