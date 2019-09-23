@@ -13,10 +13,17 @@ except ImportError:
     from odemis_stubs import align
     odemis_stubbed = True
 
+
+# IMPROVEME: We currently call odemis-cli via commandline_exec() but in the code below we don't check whether it was successful. We should.
+#            If, for example, we set an invalid attribute value (say, because it is outside the range of values allowed by Odemis)
+#            Odemis will reject this value and return an error via odemis_cli, but the Tomo user will not be informed...
+
+
 # IMPROVEME? Use the Odemis Python API instead of odemis_cli? This is more elegant, but has the disadvantage that we cannot
 # easily reproduce bugs or test issues using an Odemis command line (removing Tomo as a possible cause of the problem).
 # Another issue with the API is that starting Odemis, starting Tomo, then stopping and restarting Odemis, seems to result
 # in Tomo having Odemis objects that are "obsolete": e.g. model.getComponent(role="stage") then fails with a Pyro4 error/exception.
+
 
 # This function automatically acquires multiple LM images.
 # It assumes that the microscope parameters are already set correctly in Odemis, and that the stage is positioned
