@@ -563,8 +563,8 @@ class ApplicationFrame(wx.Frame):
 
         print(busy_string)
         print('Starting a headless Fiji and calling the SIFT image registration plugin. Please be patient...')
-        script_args = "srcdir='{}',dstdir='{}',prefix='{}',numimages='{}',do_invert='{}',do_enhance_contrast='{}',do_crop='{}',roi_x='{}',roi_y='{}',roi_width='{}',roi_height='{}'".format(
-            input_folder, output_folder, input_filenames_prefix,
+        script_args = "srcdir='{}',dstdir='{}',prefix='{}',method='{}',numimages='{}',do_invert='{}',do_enhance_contrast='{}',do_crop='{}',roi_x='{}',roi_y='{}',roi_width='{}',roi_height='{}'".format(
+            input_folder, output_folder, input_filenames_prefix, 'sift',
             num_images,
             registration_params["invert"],
             registration_params["enhance_contrast"],
