@@ -4,7 +4,7 @@
 import tools
 
 fiji_path = '/home/frank/Fiji.app/ImageJ-linux64'
-sift_registration_script = '/home/frank/development/tomo/src/sift_registration.py'
+sift_registration_script = '/home/frank/development/tomo/src/fiji_registration.py'
 
 sift_input_folder = '/media/frank/FRANK EXTERNAL/Secom/Frank-x100-LM-Stacks-examples/cell2/'
 sift_output_folder = '/media/frank/FRANK EXTERNAL/Secom/Frank-x100-LM-Stacks-examples/cell2/output_frank'

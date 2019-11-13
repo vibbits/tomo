@@ -96,7 +96,7 @@ class TomoModel:
         self.overview_image_pixels_per_mm            = self._config.ReadFloat(TomoModel._KEY_OVERVIEW_IMAGE_PIXELS_PER_MM, 3077.38542)
         self.fiji_path                               = self._config.Read(TomoModel._KEY_FIJI_PATH, r'/home/secom/Downloads/Fiji.app/ImageJ-linux64')
         self.odemis_cli                              = self._config.Read(TomoModel._KEY_ODEMIS_CLI, r'/usr/bin/odemis-cli')
-        self.sift_registration_script                = self._config.Read(TomoModel._KEY_SIFT_REGISTRATION_SCRIPT, r'/home/secom/development/tomo/sift_registration.py')
+        self.sift_registration_script                = self._config.Read(TomoModel._KEY_SIFT_REGISTRATION_SCRIPT, r'/home/secom/development/tomo/fiji_registration.py')
         self.lm_images_prefix                        = self._config.Read(TomoModel._KEY_LM_IMAGES_PREFIX, 'lmsection')
         self.em_images_prefix                        = self._config.Read(TomoModel._KEY_EM_IMAGES_PREFIX, 'emsection')
         self.lm_sift_output_folder                   = self._config.Read(TomoModel._KEY_LM_SIFT_OUTPUT_FOLDER, r'/home/secom/')
