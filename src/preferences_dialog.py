@@ -5,24 +5,15 @@
 import wx
 
 class PreferencesDialog(wx.Dialog):
-    _model = None
-
-    _odemis_cli_path_edit = None
-    _registration_script_file_edit = None
-    _fiji_path_edit = None
-
-    # Staging area for model, will be copied into _model if user presses OK, will be discarded on Cancel
-    _odemis_cli = None
-    _fiji_path = None
-    _sift_registration_script = None
-
     def __init__(self, model, parent, ID, title, size=wx.DefaultSize, pos=wx.DefaultPosition, style=wx.DEFAULT_DIALOG_STYLE):
         wx.Dialog.__init__(self, parent, ID, title, pos, size, style)
 
         self._model = model
+
+        # Staging area for model, will be copied into _model if user presses OK, will be discarded on Cancel
         self._odemis_cli = self._model.odemis_cli
         self._fiji_path = self._model.fiji_path
-        self._sift_registration_script = self._model.sift_registration_script
+        self._registration_script = self._model.registration_script
 
         w = 450
 
@@ -33,7 +24,7 @@ class PreferencesDialog(wx.Dialog):
         self._odemis_cli_path_edit = wx.TextCtrl(self, wx.ID_ANY, model.odemis_cli, size=(w, -1))
 
         registration_script_file_label = wx.StaticText(self, wx.ID_ANY, "Registration Script for Fiji:")
-        self._registration_script_file_edit = wx.TextCtrl(self, wx.ID_ANY, model.sift_registration_script, size = (w, -1))
+        self._registration_script_file_edit = wx.TextCtrl(self, wx.ID_ANY, model.registration_script, size = (w, -1))
 
         # Environment
         env_fgs = wx.FlexGridSizer(cols = 2, vgap = 4, hgap = 8)
@@ -70,7 +61,7 @@ class PreferencesDialog(wx.Dialog):
     def _on_ok(self, event):
         self._model.odemis_cli = self._odemis_cli
         self._model.fiji_path = self._fiji_path
-        self._model.sift_registration_script = self._sift_registration_script
+        self._model.registration_script = self._registration_script
         self._model.write_parameters()
         self.EndModal(wx.OK)
 
@@ -85,4 +76,4 @@ class PreferencesDialog(wx.Dialog):
         self._fiji_path = self._fiji_path_edit.GetValue()
 
     def _on_registration_script_change(self, event):
-        self._sift_registration_script = self._registration_script_file_edit.GetValue()
+        self._registration_script = self._registration_script_file_edit.GetValue()

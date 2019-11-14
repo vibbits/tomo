@@ -19,14 +19,14 @@ class TomoModel:
     _KEY_LM_DO_AUTOFOCUS = 'lm_do_autofocus'
     _KEY_LM_MAX_AUTOFOCUS_CHANGE_NANOMETERS = 'lm_max_autofocus_change_nanometers'
     _KEY_OVERVIEW_IMAGE_PIXELS_PER_MM = 'overview_image_pixels_per_mm'
-    _KEY_LM_SIFT_IMAGES_PIXELS_PER_MM = 'lm_sift_images_pixels_per_mm'
+    _KEY_LM_REGISTRATION_IMAGES_PIXELS_PER_MM = 'lm_registration_images_pixels_per_mm'
     _KEY_FIJI_PATH = 'fiji_path'
     _KEY_ODEMIS_CLI = 'odemis_cli'
-    _KEY_SIFT_REGISTRATION_SCRIPT = 'sift_registration_script'
+    _KEY_REGISTRATION_SCRIPT = 'registration_script'
     _KEY_LM_IMAGES_PREFIX = 'lm_images_prefix'
     _KEY_EM_IMAGES_PREFIX = 'em_images_prefix'
-    _KEY_LM_SIFT_OUTPUT_FOLDER = 'lm_sift_output_folder'
-    _KEY_EM_SIFT_OUTPUT_FOLDER = 'em_sift_output_folder'
+    _KEY_LM_REGISTRATION_OUTPUT_FOLDER = 'lm_registration_output_folder'
+    _KEY_EM_REGISTRATION_OUTPUT_FOLDER = 'em_registration_output_folder'
     _KEY_TEMPLATE_SLICE_PATH = 'template_slice_path'
     _KEY_PREPROCESSED_OVERVIEW_IMAGE_PATH = 'preprocessed_overview_image_path'
 
@@ -42,14 +42,14 @@ class TomoModel:
         self.delay_between_LM_image_acquisition_secs = 0.0  # time in seconds to pause between successive microscope commands to acquire an LM image (maybe 1 or 2 secs in reality)
         self.delay_between_EM_image_acquisition_secs = 0.0  # time in seconds to pause between successive microscope commands to acquire an EM image (maybe 1 or 2 secs in reality)
         self.overview_image_pixels_per_mm = 0.0  # of the e.g. x20 lens overview image
-        self.lm_sift_images_pixels_per_mm = 0.0  # of the e.g. x100 lens LM images that will be acquired and used for SIFT registration
+        self.lm_registration_images_pixels_per_mm = 0.0  # of the e.g. x100 lens LM images that will be acquired and used for registration
         self.fiji_path = None  # path to the Fiji executable; a headless Fiji is called in the background to perform LM image registration using one of the Fiji plugins
         self.odemis_cli = None  # path to the Odemis CLI (command line interface) tool
-        self.sift_registration_script = None  # full path of the Python image registration script that will be run from a headless Fiji that will be started from Tomo
+        self.registration_script = None  # full path of the Python image registration script that will be run from a headless Fiji that will be started from Tomo
         self.lm_images_prefix = None  # prefix of x100 image filenames
         self.em_images_prefix = None  # prefix of EM image filenames
-        self.lm_sift_output_folder = None
-        self.em_sift_output_folder = None
+        self.lm_registration_output_folder = None
+        self.em_registration_output_folder = None
         self.template_slice_path = None
         self.preprocessed_overview_image_path = None  # the path of the most recently loaded preprocessed overview image
 
@@ -57,16 +57,16 @@ class TomoModel:
         self.slice_polygons = []
         self.all_points_of_interest = None  # in overview image coordinates (pixels), first point is user selected POI in first section, all others are predicted POIs in subsequent sections
         self.slice_offsets_microns = None  # stage movements to move from the point-of-interest in slice to to slice i+1, based only on mapping the slice outline quadrilaterals
-        self.combined_offsets_microns = None  # refined stage movement (combining slice outline mapping + SIFT registration of x100 images)
-        self.all_offsets_microns = []  # All poi offsets (slice mapping + LM SIFT offsets + EM sift offsets + ???): e.g. [{'name':'slice mapping', 'parameters':{}, 'offsets':[(dx1,dy1),(dx2,dy2)]}, {'name':'LM SIFT Registration', 'parameters':{}, 'offsets':[(dx1,dy1), (dx2,dy2),...]}, ('name': 'EM SIFT Registration', 'parameters': {'magnification':5000, etc}, 'offsets': [(dx1,dy1),(dx2, dy2),...]})]; the sum of all these offsets is the same as combined_offsets_microns
+        self.combined_offsets_microns = None  # refined stage movement (combining slice outline mapping + registration of x100 images)
+        self.all_offsets_microns = []  # All poi offsets (slice mapping + LM registration offsets + EM registration offsets + ???): e.g. [{'name':'slice mapping', 'parameters':{}, 'offsets':[(dx1,dy1),(dx2,dy2)]}, {'name':'LM SIFT Registration', 'parameters':{}, 'offsets':[(dx1,dy1), (dx2,dy2),...]}, ('name': 'EM SIFT Registration', 'parameters': {'magnification':5000, etc}, 'offsets': [(dx1,dy1),(dx2, dy2),...]})]; the sum of all these offsets is the same as combined_offsets_microns
                                        # Currently used only as an informative history of the different offset corrections.
         self.overview_image_to_stage_coord_trf = None  # a numpy 3 x 3 homogeneous transformation matrix from overview image (pixel) coordinates to stage position coordinates (in mm); the third row of the matrix is [0 0 1], and it transforms a column matrix [xi; yi; 1]
 
         self.lm_use_focus_map = True  # Flag deciding whether or not to use the focus map (self.focus_map) created with the low magnification lens (e.g. 20x) to set the (rough) focus during LM image acquisition with the 100x lens. The 100x lens has a smaller depth of field than the 20x, so focus set this way may not be very good, but it could be a decent initial focus guess for autofocus.
         self.focus_map = None  # The actual focus map (for LM only). It can be built and saved for use in the tiled overview image acquisition plugin for Odemis, and optionally used lateron during 100x LM image acquisition as well. Note: we need an overview image aligned with the stage before we can build a focus map (because we need to know the extent of the sample grid)
 
-        self.lm_registration_params = {'crop': False, 'roi': [0, 0, 2048, 2048], 'enhance_contrast': False, 'invert': False}  # roi=[top left x, top left y, width, height] in pixels (integer values); invert=invert stack images (yields more intuitive images in EM mode so always used there, not used for LM)
-        self.em_registration_params = {'crop': False, 'roi': [0, 0, 2048, 2048], 'enhance_contrast': True, 'invert': True}  # same meaning as lm_registration_params
+        self.lm_registration_params = {'method': 'StackReg', 'crop': False, 'roi': [0, 0, 2048, 2048], 'enhance_contrast': False, 'invert': False}  # roi=[top left x, top left y, width, height] in pixels (integer values); invert=invert stack images (yields more intuitive images in EM mode so always used there, not used for LM); possible methods, see self.registration_methods
+        self.em_registration_params = {'method': 'StackReg', 'crop': False, 'roi': [0, 0, 2048, 2048], 'enhance_contrast': True, 'invert': True}  # same meaning as lm_registration_params
 
         self.em_scale = 1  # scale for EM image acquisition (an integer: 1, 2, 4, 8 or 16); for example 4 corresponds to the Odemis scale string '4,4'
         self.em_dwell_time_microseconds = 50  # dwell time for EM image acquisition (in microseconds)
@@ -75,6 +75,7 @@ class TomoModel:
         # Constants
         self.lm_image_size = (2048, 2048)  # (width, height) of the LM images in pixels; this is the size of the images that Odemis acquires; it is assumed to be constant.
         self.max_em_image_size = (5120, 3840)  # (width, height) of the EM images in pixels *only* for an em_scale=1. For a scale s the actual EM images are 5120/s, 3840/s pixels large.
+        self.registration_methods = ['StackReg', 'SIFT']
 
         # Persistent storage
         self._config = wx.Config('be.vib.bits.tomo')
@@ -96,12 +97,12 @@ class TomoModel:
         self.overview_image_pixels_per_mm            = self._config.ReadFloat(TomoModel._KEY_OVERVIEW_IMAGE_PIXELS_PER_MM, 3077.38542)
         self.fiji_path                               = self._config.Read(TomoModel._KEY_FIJI_PATH, r'/home/secom/Downloads/Fiji.app/ImageJ-linux64')
         self.odemis_cli                              = self._config.Read(TomoModel._KEY_ODEMIS_CLI, r'/usr/bin/odemis-cli')
-        self.sift_registration_script                = self._config.Read(TomoModel._KEY_SIFT_REGISTRATION_SCRIPT, r'/home/secom/development/tomo/fiji_registration.py')
+        self.registration_script                     = self._config.Read(TomoModel._KEY_REGISTRATION_SCRIPT, r'/home/secom/development/tomo/fiji_registration.py')
         self.lm_images_prefix                        = self._config.Read(TomoModel._KEY_LM_IMAGES_PREFIX, 'lmsection')
         self.em_images_prefix                        = self._config.Read(TomoModel._KEY_EM_IMAGES_PREFIX, 'emsection')
-        self.lm_sift_output_folder                   = self._config.Read(TomoModel._KEY_LM_SIFT_OUTPUT_FOLDER, r'/home/secom/')
-        self.em_sift_output_folder                   = self._config.Read(TomoModel._KEY_EM_SIFT_OUTPUT_FOLDER, r'/home/secom/')
-        self.lm_sift_images_pixels_per_mm            = self._config.ReadFloat(TomoModel._KEY_LM_SIFT_IMAGES_PIXELS_PER_MM, 0.0)
+        self.lm_registration_output_folder           = self._config.Read(TomoModel._KEY_LM_REGISTRATION_OUTPUT_FOLDER, r'/home/secom/')
+        self.em_registration_output_folder           = self._config.Read(TomoModel._KEY_EM_REGISTRATION_OUTPUT_FOLDER, r'/home/secom/')
+        self.lm_registration_images_pixels_per_mm    = self._config.ReadFloat(TomoModel._KEY_LM_REGISTRATION_IMAGES_PIXELS_PER_MM, 0.0)
         self.template_slice_path                     = self._config.Read(TomoModel._KEY_TEMPLATE_SLICE_PATH, r'/home/secom/some/folder/template_slice_contour.json')
         self.preprocessed_overview_image_path        = self._config.Read(TomoModel._KEY_PREPROCESSED_OVERVIEW_IMAGE_PATH, r'/home/secom/development/tomo/data/preprocessed_overview_image.tif')
 
@@ -117,12 +118,12 @@ class TomoModel:
         self._config.WriteFloat(TomoModel._KEY_OVERVIEW_IMAGE_PIXELS_PER_MM, self.overview_image_pixels_per_mm)
         self._config.Write(TomoModel._KEY_FIJI_PATH, self.fiji_path)
         self._config.Write(TomoModel._KEY_ODEMIS_CLI, self.odemis_cli)
-        self._config.Write(TomoModel._KEY_SIFT_REGISTRATION_SCRIPT, self.sift_registration_script)
+        self._config.Write(TomoModel._KEY_REGISTRATION_SCRIPT, self.registration_script)
         self._config.Write(TomoModel._KEY_LM_IMAGES_PREFIX, self.lm_images_prefix)
         self._config.Write(TomoModel._KEY_EM_IMAGES_PREFIX, self.em_images_prefix)
-        self._config.Write(TomoModel._KEY_LM_SIFT_OUTPUT_FOLDER, self.lm_sift_output_folder)
-        self._config.Write(TomoModel._KEY_EM_SIFT_OUTPUT_FOLDER, self.em_sift_output_folder)
-        self._config.WriteFloat(TomoModel._KEY_LM_SIFT_IMAGES_PIXELS_PER_MM, self.lm_sift_images_pixels_per_mm)
+        self._config.Write(TomoModel._KEY_LM_REGISTRATION_OUTPUT_FOLDER, self.lm_registration_output_folder)
+        self._config.Write(TomoModel._KEY_EM_REGISTRATION_OUTPUT_FOLDER, self.em_registration_output_folder)
+        self._config.WriteFloat(TomoModel._KEY_LM_REGISTRATION_IMAGES_PIXELS_PER_MM, self.lm_registration_images_pixels_per_mm)
         self._config.Write(TomoModel._KEY_TEMPLATE_SLICE_PATH, self.template_slice_path)
         self._config.Write(TomoModel._KEY_PREPROCESSED_OVERVIEW_IMAGE_PATH, self.preprocessed_overview_image_path)
         self._config.Flush()

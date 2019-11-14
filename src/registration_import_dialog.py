@@ -28,7 +28,7 @@ class RegistrationImportDialog(wx.Dialog):
         fgs.Add(path_sizer, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
         instructions_label = wx.StaticText(self, wx.ID_ANY, (
-            "Please select the file with the manually saved text output from the 'Linear Stack Alignment with SIFT' plugin."
+            "Please select the file with the manually saved text output from the 'Linear Stack Alignment with SIFT' or 'StackReg' plugin."
             "The transformation matrices for aligning the images will be extracted and used as offset corrections for the point-of-interest positions."))
         instructions_label.Wrap(650)  # Force line wrapping of the instructions text
 

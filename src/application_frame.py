@@ -346,7 +346,7 @@ class ApplicationFrame(wx.Frame):
 
         # Enable/disable menu entries
         self._lm_image_acquisition_item.Enable(self._can_acquire_lm_images())
-        self._em_image_acquisition_item.Enable(False)  # After changing the POI we need to acquire LM images first to obtain SIFT-corrected stage movements.
+        self._em_image_acquisition_item.Enable(False)  # After changing the POI we need to acquire LM images first to obtain registration-corrected stage movements.
 
     def _can_acquire_lm_images(self):
         stage_is_aligned = self._stage_is_aligned()
@@ -492,12 +492,13 @@ class ApplicationFrame(wx.Frame):
         del wait
 
         # Perform image registration on the acquired stack of LM images
-        self._do_registration('LM', self._model.fiji_path, self._model.sift_registration_script,
+        info_description = 'LM {} Registration'.format(self._model.lm_registration_params['method'])
+        self._do_registration('LM', self._model.fiji_path, self._model.registration_script,
                               self._model.lm_registration_params,
-                              self._model.lm_images_output_folder, self._model.lm_images_prefix, self._model.lm_sift_output_folder,
+                              self._model.lm_images_output_folder, self._model.lm_images_prefix, self._model.lm_registration_output_folder,
                               len(self._model.all_points_of_interest),
-                              self._model.lm_image_size, self._model.lm_sift_images_pixels_per_mm,
-                              'LM SIFT Registration',
+                              self._model.lm_image_size, self._model.lm_registration_images_pixels_per_mm,
+                              info_description,
                               {})  # IMPROVEME? perhaps a nice touch would be to store the LM lens that was used. Can we query that via odemis-cli perhaps?
 
         # Move stage back to initial position
@@ -517,7 +518,7 @@ class ApplicationFrame(wx.Frame):
         orig_stage_pos = secom_tools.get_absolute_stage_position()
 
         # Now acquire an EM image at the same point of interest location in each slice,
-        # but use the more accurate stage offsets (obtained from slice mapping + SIFT registration).
+        # but use the more accurate stage offsets (obtained from slice mapping + image registration).
         wait = wx.BusyInfo("Acquiring EM images...")
         secom_tools.acquire_em_microscope_images(self._model.combined_offsets_microns, self._model.delay_between_EM_image_acquisition_secs,
                                                  self._model.odemis_cli, self._model.em_images_output_folder, self._model.em_images_prefix,
@@ -529,12 +530,14 @@ class ApplicationFrame(wx.Frame):
         pixels_per_micrometer = self._model.get_em_pixels_per_micrometer()
         image_pixels_per_mm = 1000.0 * pixels_per_micrometer
 
-        self._do_registration('EM', self._model.fiji_path, self._model.sift_registration_script,
+        info_description = 'EM {} Registration'.format(self._model.em_registration_params['method'])
+
+        self._do_registration('EM', self._model.fiji_path, self._model.registration_script,
                               self._model.em_registration_params,
-                              self._model.em_images_output_folder, self._model.em_images_prefix, self._model.em_sift_output_folder,
+                              self._model.em_images_output_folder, self._model.em_images_prefix, self._model.em_registration_output_folder,
                               len(self._model.all_points_of_interest),
                               image_size, image_pixels_per_mm,
-                              'EM SIFT Registration',
+                              info_description,
                               {'em_scale': self._model.get_em_scale_string(),
                                'em_magnification' : self._model.em_magnification,
                                'em_dwell_time_microseconds' : self._model.em_dwell_time_microseconds})
@@ -556,15 +559,15 @@ class ApplicationFrame(wx.Frame):
 
         # Tell Fiji to execute a macro that (i) reads the LM/EM images, (ii) merges them into a stack,
         # (iii) saves the stack to TIFF, (iv) aligns the slices in this stack
-        # using Fiji's Plugins > Registration > Linear Stack Alignment with SIFT
         # and (v) saves the aligned stack to TIFF.
+        # Registration happens either with Fiji's Plugins > Registration > Linear Stack Alignment with SIFT, or with Plugins > StackReg.
 
         busy_string = "Registering {} images...".format(modality)
 
         print(busy_string)
-        print('Starting a headless Fiji and calling the SIFT image registration plugin. Please be patient...')
+        print('Starting a headless Fiji and calling the image registration plugin. Please be patient...')
         script_args = "srcdir='{}',dstdir='{}',prefix='{}',method='{}',numimages='{}',do_invert='{}',do_enhance_contrast='{}',do_crop='{}',roi_x='{}',roi_y='{}',roi_width='{}',roi_height='{}'".format(
-            input_folder, output_folder, input_filenames_prefix, 'sift',
+            input_folder, output_folder, input_filenames_prefix, registration_params['method'],
             num_images,
             registration_params["invert"],
             registration_params["enhance_contrast"],
@@ -585,8 +588,9 @@ class ApplicationFrame(wx.Frame):
 
         update_offsets = True
 
+        output_filename = '{}_aligned_stack.tif'.format(registration_params['method'])
         registration_correct = wx.MessageBox('Please check the registration result {}.\n'
-                                             'Are all images aligned correctly?'.format(os.path.join(output_folder, 'sift_aligned_stack.tif')), 'Registration successful?',
+                                             'Are all images aligned correctly?'.format(os.path.join(output_folder, output_filename)), 'Registration successful?',
                                              wx.YES_NO | wx.ICON_QUESTION, self)       # "Yes" is selected by default
         if registration_correct == wx.NO:
             print('User feedback: registration is not correct.')
@@ -604,24 +608,25 @@ class ApplicationFrame(wx.Frame):
         # # # # # # # # # # END EXPERIMENTAL CODE
 
         if update_offsets:
-            # Parse the output of the SIFT registration plugin and extract
+            # Parse the output of the registration plugin and extract
             # the transformation matrices to register each slice onto the next.
-            print('Extracting SIFT transformation matrices')
-            sift_matrices = tools.extract_sift_alignment_matrices(out)
-            print(sift_matrices)
+            print('Extracting transformation matrices from registration plugin output')
+            registration_matrices = tools.extract_registration_matrices(registration_params['method'], out)
+            print(registration_matrices)
 
-            sift_offsets_microns = self.calculate_sift_offsets(sift_matrices, orig_image_size, pixels_per_mm, registration_params)
-            print('SIFT corrected point-of-interest offsets [micrometer]: ' + repr(sift_offsets_microns))
+            registration_offsets_microns = self.calculate_registration_offsets(registration_matrices, orig_image_size, pixels_per_mm, registration_params)
+            print('Registration corrected point-of-interest offsets [micrometer]: ' + repr(registration_offsets_microns))
 
             # Combine (=sum) existing offsets with this new one
             assert self._model.combined_offsets_microns is not None
-            self._model.combined_offsets_microns = map(operator.add, self._model.combined_offsets_microns, sift_offsets_microns)
+            assert len(self._model.combined_offsets_microns) == len(registration_offsets_microns)
+            self._model.combined_offsets_microns = map(operator.add, self._model.combined_offsets_microns, registration_offsets_microns)
             print('Combined offsets [micrometer]: ' + repr(self._model.combined_offsets_microns))
 
             # Append offset correction to "history" of existing offsets.
             self._model.all_offsets_microns.append({'name': info_description,
                                                     'parameters': info_parameters,
-                                                    'offsets': sift_offsets_microns})
+                                                    'offsets': registration_offsets_microns})
         else:
             print('Registration plugin output NOT used.')
             print('Slice offsets NOT updated with corrections.')
@@ -632,35 +637,31 @@ class ApplicationFrame(wx.Frame):
         # For debugging / validation: display the offsets table.
         tools.show_offsets_table(self._model.all_offsets_microns, self._model.combined_offsets_microns)
 
-    def calculate_sift_offsets(self, sift_matrices, orig_image_size, pixels_per_mm, registration_params):
+    def calculate_registration_offsets(self, registration_matrices, orig_image_size, pixels_per_mm, registration_params):
         # Calculate a fine stage position correction (in pixels) from the transformation
         # that is needed to register successive images of the same ROI in successive sample sections.
         image_size = registration_params["roi"][2:] if registration_params["crop"] else orig_image_size
         center = np.array([image_size[0] / 2.0, image_size[1] / 2.0])  # image center, in pixels
 
-        sift_offsets = [np.array([0, 0])]  # stage position corrections (in pixels); one correction per sample section
-        for mat in sift_matrices:  # there is one transformation matrix per sample section
+        registration_offsets = [np.array([0, 0])]  # stage position corrections (in pixels); one correction per sample section
+        for mat in registration_matrices:  # there is one transformation matrix per sample section
             # mat is a 2x3 numpy array; 3rd column is the translation vector
-
-            # mat is actually the transformation matrix from section i+1 to section i (!!), invert it to get
-            # the transformation matrix from section i to section i+1, which is what we need.
-            mat = tools.invert_2_by_3_matrix(mat)
 
             new_center = np.dot(mat, np.array([center[0], center[1], 1.0]))
             offset = new_center - center  # displacement in pixels
-            sift_offsets.append(offset)
+            registration_offsets.append(offset)
             center = new_center
 
         # Scale the offsets from dimensionless pixels to microns (for stage movements)
         pixelsize_in_microns = 1000.0 / pixels_per_mm
-        sift_offsets_microns = [offset * pixelsize_in_microns for offset in sift_offsets]
+        registration_offsets_microns = [offset * pixelsize_in_microns for offset in registration_offsets]
 
-        # Invert y component of the SIFT offsets.
+        # Invert y component of the registration offsets.
         # Our images have their origin at the top left corner, with y-axis pointing down;
         # the stage has its y-axis pointing up (?).
-        sift_offsets_microns = [np.array([offset[0], -offset[1]]) for offset in sift_offsets_microns]
+        registration_offsets_microns = [np.array([offset[0], -offset[1]]) for offset in registration_offsets_microns]
 
-        return sift_offsets_microns
+        return registration_offsets_microns
 
     def _do_save_poi_info(self, output_folder):
 

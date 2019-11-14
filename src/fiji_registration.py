@@ -1,4 +1,5 @@
-# Script for registering a set of images with ImageJ's "Linear Stack Alignment with SIFT" registration plugin.
+# Script for registering a set of images with ImageJ's "Linear Stack Alignment with SIFT"
+# or "StackReg" registration plugins.
 # This script is typically executed by a headless Fiji started by Tomo.
 #
 # Frank Vernaillen
@@ -60,6 +61,8 @@ def registration():
                 images.append(filename)
 
     print('Found {} images starting with desired filename prefix "{}"'.format(len(images), prefix))
+    if len(images) < numimages:
+        print('ERROR: The registration plugin was asked to register {} images but only {} were found!'.format(numimages, len(images)))
 
     # Sort the image filenames in natural order
     # (so with "prefix2.tif" before "prefix11.tif")
@@ -120,7 +123,7 @@ def registration():
     # Make the unaligned stack the current image for the registration plugin
     WindowManager.setTempCurrentImage(stackImp)   # WindowManager.getCurrentImage() will now return stackImp
 
-    if method == 'sift':
+    if method == 'SIFT':
         # Align the stack with SIFT. For now we run the ImageJ SIFT plugin,
         # but maybe we ought to use the SIFT class directly?
         # Here are some pointers.
@@ -129,15 +132,15 @@ def registration():
         # SIFT plugin source code:
         # - https://github.com/axtimwalde/mpicbg/blob/2f411b380cffb580e35410b6517ffeb2c72489e2/mpicbg_/src/main/java/SIFT_Align.java)
         # - https://github.com/axtimwalde/mpicbg/blob/2f411b380cffb580e35410b6517ffeb2c72489e2/mpicbg/src/main/java/mpicbg/ij/SIFT.java
-        print('Running the Linear Stack Aligment with SIFT plugin')
+        print('Running plugin: Linear Stack Aligment with SIFT')
     #   IJ.run("Linear Stack Alignment with SIFT", "initial_gaussian_blur=1.60 steps_per_scale_octave=3 minimum_image_size=64 maximum_image_size=1024 feature_descriptor_size=4 feature_descriptor_orientation_bins=8 closest/next_closest_ratio=0.92 maximal_alignment_error=25 inlier_ratio=0.05 expected_transformation=Rigid interpolate")
     #   IJ.run("Linear Stack Alignment with SIFT", "initial_gaussian_blur=1.8 steps_per_scale_octave=3 minimum_image_size=128 maximum_image_size=1024 feature_descriptor_size=8 feature_descriptor_orientation_bins=8 closest/next_closest_ratio=0.92 maximal_alignment_error=25 inlier_ratio=0.05 expected_transformation=Translation interpolate")
         IJ.run("Linear Stack Alignment with SIFT", "initial_gaussian_blur=1.6 steps_per_scale_octave=3 minimum_image_size=128 maximum_image_size=1024 feature_descriptor_size=8 feature_descriptor_orientation_bins=8 closest/next_closest_ratio=0.92 maximal_alignment_error=50 inlier_ratio=0.05 expected_transformation=Rigid interpolate")
-    elif method == 'stackreg':
-        print('Running the StackReg plugin')
+    elif method == 'StackReg':
+        print('Running plugin: StackReg')
         IJ.run("StackReg ", "transformation=[Rigid Body]")
     else:
-        print('Unsupported registration method: {}'.format(method))
+        print('ERROR: Unsupported registration method: {}'.format(method))
 
     # Save the aligned stack
     aligned_stack = IJ.getImage()  # The plugin only created one new image, the aligned stack, and it is now active

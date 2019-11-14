@@ -391,7 +391,7 @@ def matrix_string_to_numpy_array(str):
 #    Slice 1 to 4 transformation: [1.0, 0.0, 0.0, 1.0, 93.45191660749424, -5.962104282614291]   <-- this is a private modification to the SIFT registration plugin
 #    Processing SIFT ...
 #    ...
-# From this text string (sift_plugin_log_string) we extract the transformation matrices
+# From this text string (registration_plugin_log_string) we extract the transformation matrices
 # between slice i and i+1, for all slices. This function returns a list with numpy arrays (of shape 2 x 3)
 # representing these transformation matrices.
 #
@@ -404,24 +404,31 @@ def matrix_string_to_numpy_array(str):
 # is actually the transformation that maps points from slice 4 onto slice 3!
 # To get the transform from 3 to 4, that matrix must be inverted.
 # ! ! ! ! ! ! ! ! ! ! ! ! ! !
-def extract_sift_alignment_matrices(sift_plugin_log_string):
+def extract_registration_matrices(registration_method, registration_plugin_log_string):
     # Split the log string in individual lines
-    lines = sift_plugin_log_string.splitlines()
+    lines = registration_plugin_log_string.splitlines()
 
-    # Keep only the lines mentioning SIFT transformation matrices
+    # Keep only the lines mentioning transformation matrices
     pattern = "^Slice \d+ to \d+ transformation: (\[.+\])"
     trf_lines = [line for line in lines if re.search(pattern, line)]
 
-    # trf_lines now consists of pairs of lines: the first one with info about the transformation
-    # between slice i-1 and i, and the second one the transformation between slice 1 and i.
-    # We only need the former, so discard every second line.
-    trf_lines = trf_lines[::2]   # list[start:end:step]
+    if registration_method == 'SIFT':
+        # trf_lines now consists of pairs of lines: the first one with info about the transformation
+        # between slice i-1 and i, and the second one the transformation between slice 1 and i.
+        # We only need the former, so discard every second line.
+        trf_lines = trf_lines[::2]   # list[start:end:step]
 
     # Now extract the transformation matrices as strings
     trf_matrix_strings = [re.search(pattern, trf_line).group(1) for trf_line in trf_lines]
 
     # Turn matrix strings into 2 x 3 numpy arrays. The 3rd column is the translation vector.
     trf_matrices = [matrix_string_to_numpy_array(s) for s in trf_matrix_strings]
+
+    if registration_method == 'SIFT':
+        # The matrices are actually the transformation matrix from section i+1 to section i (!!), invert each of them to get
+        # the transformation matrix from section i to section i+1, which is what we need.
+        trf_matrices = [invert_2_by_3_matrix(mat) for mat in trf_matrices]
+
     return trf_matrices
 
 

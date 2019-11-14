@@ -44,17 +44,22 @@ class LMAcquisitionDialog(wx.Dialog):
         empty_label2 = wx.StaticText(self, wx.ID_ANY, "")
         empty_label3 = wx.StaticText(self, wx.ID_ANY, "")
 
-        sift_output_folder_label = wx.StaticText(self, wx.ID_ANY, "Output Folder:")
-        self._sift_output_folder_edit = wx.TextCtrl(self, wx.ID_ANY, self._model.lm_sift_output_folder, size=(w, -1))
-        self._sift_output_folder_button = wx.Button(self, wx.ID_ANY, "Browse")
+        lm_registration_method_label = wx.StaticText(self, wx.ID_ANY, "Registration method:")
+        self._lm_registration_dropdown = wx.Choice(self, wx.ID_ANY, choices=self._model.registration_methods)
+        ok = self._lm_registration_dropdown.SetStringSelection(self._model.lm_registration_params['method'])
+        assert ok
 
-        sift_out_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sift_out_sizer.Add(self._sift_output_folder_edit, flag=wx.ALIGN_CENTER_VERTICAL)
-        sift_out_sizer.AddSpacer(8)
-        sift_out_sizer.Add(self._sift_output_folder_button, flag=wx.ALIGN_CENTER_VERTICAL)
+        registration_output_folder_label = wx.StaticText(self, wx.ID_ANY, "Output Folder:")
+        self._registration_output_folder_edit = wx.TextCtrl(self, wx.ID_ANY, self._model.lm_registration_output_folder, size=(w, -1))
+        self._registration_output_folder_button = wx.Button(self, wx.ID_ANY, "Browse")
 
-        sift_pixel_size_label = wx.StaticText(self, wx.ID_ANY, "Pixel size (pixels/mm):")
-        self._sift_pixel_size_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.lm_sift_images_pixels_per_mm), size=(100, -1))
+        registration_out_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        registration_out_sizer.Add(self._registration_output_folder_edit, flag=wx.ALIGN_CENTER_VERTICAL)
+        registration_out_sizer.AddSpacer(8)
+        registration_out_sizer.Add(self._registration_output_folder_button, flag=wx.ALIGN_CENTER_VERTICAL)
+
+        registration_pixel_size_label = wx.StaticText(self, wx.ID_ANY, "Pixel size (pixels/mm):")
+        self._registration_pixel_size_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.lm_registration_images_pixels_per_mm), size=(100, -1))
 
         # The image size is just information to the user, a reminder that we rely on the acquired images to be of a certain size.
         image_size_label = wx.StaticText(self, wx.ID_ANY, "Image size (width x height):")
@@ -98,29 +103,31 @@ class LMAcquisitionDialog(wx.Dialog):
         lm_sizer = wx.StaticBoxSizer(lm_box, wx.VERTICAL)
         lm_sizer.Add(lm_fgs, 0, wx.ALL|wx.CENTER, 10)
 
-        # SIFT registration
-        sift_fgs = wx.FlexGridSizer(cols=2, vgap=4, hgap=8)
-        sift_fgs.Add(sift_output_folder_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        sift_fgs.Add(sift_out_sizer, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        sift_fgs.Add(sift_pixel_size_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        sift_fgs.Add(self._sift_pixel_size_edit, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        # Image registration
+        regist_fgs = wx.FlexGridSizer(cols=2, vgap=4, hgap=8)
+        regist_fgs.Add(lm_registration_method_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        regist_fgs.Add(self._lm_registration_dropdown, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        regist_fgs.Add(registration_output_folder_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        regist_fgs.Add(registration_out_sizer, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        regist_fgs.Add(registration_pixel_size_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        regist_fgs.Add(self._registration_pixel_size_edit, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
-        sift_fgs.Add(empty_label2, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        sift_fgs.Add(self._enhance_contrast_checkbox, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        sift_fgs.Add(empty_label3, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        sift_fgs.Add(self._crop_checkbox, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        regist_fgs.Add(empty_label2, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        regist_fgs.Add(self._enhance_contrast_checkbox, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        regist_fgs.Add(empty_label3, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        regist_fgs.Add(self._crop_checkbox, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
-        sift_fgs.Add(self._roi_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        sift_fgs.Add(roi_values_sizer, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        regist_fgs.Add(self._roi_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        regist_fgs.Add(roi_values_sizer, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
-        sift_box = wx.StaticBox(self, -1, 'SIFT Registration')
-        sift_sizer = wx.StaticBoxSizer(sift_box, wx.VERTICAL)
-        sift_sizer.Add(sift_fgs, 0, wx.ALL|wx.CENTER, 10)
+        regist_box = wx.StaticBox(self, -1, 'Image Registration')
+        regist_sizer = wx.StaticBoxSizer(regist_box, wx.VERTICAL)
+        regist_sizer.Add(regist_fgs, 0, wx.ALL|wx.CENTER, 10)
 
         instructions_label = wx.StaticText(self, wx.ID_ANY, ("If the LM microscope is ready and positioned over the point-of-interest in the first slice "
                                                              "press the button below to start image acquisition. " 
                                                              "The microscope will successively acquire LM images at the point-of-interest on each slice "
-                                                             "and align them with SIFT image registration. Furthermore, the image offsets calculated during "
+                                                             "and align them with image registration. Furthermore, the image offsets calculated during "
                                                              "registration are used to improve the predicted point-of-interest positions in the different slices. "
                                                              "After imaging the last slice, the stage will be moved back to the point-of-interest on the first slice."))
         instructions_label.Wrap(650)  # Force line wrapping of the instructions text (max 650 pixels per line).
@@ -131,8 +138,9 @@ class LMAcquisitionDialog(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self._on_prefix_change, self._prefix_edit)
         self.Bind(wx.EVT_TEXT, self._on_stabilization_time_change, self._lm_stabilization_time_edit)
         self.Bind(wx.EVT_TEXT, self._on_delay_change, self._lm_acquisition_delay_edit)
-        self.Bind(wx.EVT_TEXT, self._on_sift_output_folder_change, self._sift_output_folder_edit)
-        self.Bind(wx.EVT_TEXT, self._on_sift_pixel_size_change, self._sift_pixel_size_edit)
+        self.Bind(wx.EVT_TEXT, self._on_registration_output_folder_change, self._registration_output_folder_edit)
+        self.Bind(wx.EVT_TEXT, self._on_registration_pixel_size_change, self._registration_pixel_size_edit)
+        self.Bind(wx.EVT_CHOICE, self._on_registration_method_change, self._lm_registration_dropdown)
         self.Bind(wx.EVT_CHECKBOX, self._on_enhance_contrast_change, self._enhance_contrast_checkbox)
         self.Bind(wx.EVT_CHECKBOX, self._on_use_focusmap_change, self._lm_use_focusmap_checkbox)
         self.Bind(wx.EVT_CHECKBOX, self._on_crop_change, self._crop_checkbox)
@@ -141,13 +149,13 @@ class LMAcquisitionDialog(wx.Dialog):
         self.Bind(wx.lib.intctrl.EVT_INT, self._on_roi_int_change, self._roi_width_edit)
         self.Bind(wx.lib.intctrl.EVT_INT, self._on_roi_int_change, self._roi_height_edit)
         self.Bind(wx.EVT_BUTTON, self._on_lm_output_folder_browse_button_click, self._lm_images_output_folder_button)
-        self.Bind(wx.EVT_BUTTON, self._on_sift_output_folder_browse_button_click, self._sift_output_folder_button)
+        self.Bind(wx.EVT_BUTTON, self._on_registration_output_folder_browse_button_click, self._registration_output_folder_button)
         self.Bind(wx.EVT_BUTTON, self._on_acquire_button_click, self._acquire_button)
 
-        b = 5 # border size
+        b = 5  # border size
         contents = wx.BoxSizer(wx.VERTICAL)
         contents.Add(lm_sizer, 0, wx.ALL | wx.EXPAND, border=b)
-        contents.Add(sift_sizer, 0, wx.ALL | wx.EXPAND, border=b)
+        contents.Add(regist_sizer, 0, wx.ALL | wx.EXPAND, border=b)
         contents.Add(instructions_label, 0, wx.ALL | wx.CENTER, border=b)
         contents.Add(self._acquire_button, 0, wx.ALL | wx.CENTER, border=b)
 
@@ -170,15 +178,15 @@ class LMAcquisitionDialog(wx.Dialog):
                 self._model.lm_images_output_folder = path
                 self._lm_images_output_folder_edit.SetValue(path)
 
-    def _on_sift_output_folder_browse_button_click(self, event):
-        defaultPath = self._model.lm_sift_output_folder
+    def _on_registration_output_folder_browse_button_click(self, event):
+        defaultPath = self._model.lm_registration_output_folder
         print('defaultPath='+defaultPath)
-        with wx.DirDialog(self, "Select the SIFT output directory", defaultPath) as dlg:
+        with wx.DirDialog(self, "Select the registration output directory", defaultPath) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
                 path = dlg.GetPath()
-                print('Set lm_sift_output_folder = ' + path)
-                self._model.lm_sift_output_folder = path
-                self._sift_output_folder_edit.SetValue(path)
+                print('Set lm_registration_output_folder = ' + path)
+                self._model.lm_registration_output_folder = path
+                self._registration_output_folder_edit.SetValue(path)
 
     def _on_acquire_button_click(self, event):
         self._model.write_parameters()
@@ -254,10 +262,14 @@ class LMAcquisitionDialog(wx.Dialog):
         self._model.lm_registration_params['enhance_contrast'] = self._enhance_contrast_checkbox.IsChecked()
         print('enhance_contrast={}'.format(self._model.lm_registration_params['enhance_contrast']))
 
-    def _on_sift_output_folder_change(self, event):
-        self._model.lm_sift_output_folder = self._sift_output_folder_edit.GetValue()
-        print('lm_sift_output_folder={}'.format(self._model.lm_sift_output_folder))
+    def _on_registration_output_folder_change(self, event):
+        self._model.lm_registration_output_folder = self._registration_output_folder_edit.GetValue()
+        print('lm_registration_output_folder={}'.format(self._model.lm_registration_output_folder))
 
-    def _on_sift_pixel_size_change(self, event):
-        self._model.lm_sift_images_pixels_per_mm = float(self._sift_pixel_size_edit.GetValue())
-        print('lm_sift_images_pixels_per_mm={}'.format(self._model.lm_sift_images_pixels_per_mm))
+    def _on_registration_pixel_size_change(self, event):
+        self._model.lm_registration_images_pixels_per_mm = float(self._registration_pixel_size_edit.GetValue())
+        print('lm_registration_images_pixels_per_mm={}'.format(self._model.lm_registration_images_pixels_per_mm))
+
+    def _on_registration_method_change(self, event):
+        self._model.lm_registration_params['method'] = self._lm_registration_dropdown.GetStringSelection()
+        print('lm registration method={}'.format(self._model.lm_registration_params['method']))
