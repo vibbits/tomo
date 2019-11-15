@@ -380,6 +380,9 @@ def matrix_string_to_numpy_array(str):
     return np.array([[a, c, tx], [b, d, ty]])
 
 
+# Tomo supports two different registration plugins: "Linear stack alignment with SIFT" and "StackReg".
+# We privately modified these plugins to output the transformation matrices.
+#
 # The output of the (modified) SIFT registration plugin looks like this:
 #    ...
 #    Processing SIFT ...
@@ -391,7 +394,21 @@ def matrix_string_to_numpy_array(str):
 #    Slice 1 to 4 transformation: [1.0, 0.0, 0.0, 1.0, 93.45191660749424, -5.962104282614291]   <-- this is a private modification to the SIFT registration plugin
 #    Processing SIFT ...
 #    ...
-# From this text string (registration_plugin_log_string) we extract the transformation matrices
+#
+# The output of StackReg looks like this:
+#
+#    registerSlice s=2 target=img["StackRegTarget" (-6), 16-bit, 1030x1072x1x1x1] imp=img["unaligned_stack" (-5), 16-bit, 1030x1072x1x3x1] width=1030 height=1072 transformation=1 globalTransform=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]] anchorPoints=... colorWeights=...
+#    TurboReg_ -align -file C:\Users\frver\AppData\Local\Temp\StackRegSource 0 0 1029 1071 -file C:\Users\frver\AppData\Local\Temp\StackRegTarget 0 0 1029 1071 -rigidBody 515 536 515 536 515 268 515 268 515 804 515 804 -hideOutput
+#    Slice 1 to 2 transformation: [0.9998977372473945, -0.014300875761312967, 0.014300875761312967, 0.9998977372473945, 24.744083973172906, 41.399843582548556]
+#    New globalTransform: [[0.9998977372473945, 0.014300875761312967, 24.744083973172906], [-0.014300875761312967, 0.9998977372473945, 41.399843582548556], [0.0, 0.0, 1.0]]
+#    TurboReg_ -transform -file C:\Users\frver\AppData\Local\Temp\StackRegSource 1030 1072 -rigidBody 547.3566880636448 569.9800797300759 515 536 543.5240533596129 302.0074861477741 515 268 551.1893227676767 837.9526733123777 515 804 -hideOutput
+#    registerSlice s=3 target=img["StackRegTarget" (-6), 16-bit, 1030x1072x1x1x1] imp=img["unaligned_stack" (-5), 16-bit, 1030x1072x1x3x1] width=1030 height=1072 transformation=1 globalTransform=[[0.9998977372473945, 0.014300875761312967, 24.744083973172906], [-0.014300875761312967, 0.9998977372473945, 41.399843582548556], [0.0, 0.0, 1.0]] anchorPoints=... colorWeights=...
+#    TurboReg_ -align -file C:\Users\frver\AppData\Local\Temp\StackRegSource 0 0 1029 1071 -file C:\Users\frver\AppData\Local\Temp\StackRegTarget 0 0 1029 1071 -rigidBody 515 536 515 536 515 268 515 268 515 804 515 804 -hideOutput
+#    Slice 2 to 3 transformation: [0.9999999457419547, 3.2941780114142537E-4, -3.2941780114142537E-4, 0.9999999457419547, 32.55504184913411, 30.685476221629187]
+#    New globalTransform: [[0.9999023939579454, 0.01397149087140508, 57.285486634300824], [-0.01397149087140508, 0.9999023939579454, 72.09346869963684], [0.0, 0.0, 1.0]]
+#    TurboReg_ -transform -file C:\Users\frver\AppData\Local\Temp\StackRegSource 1030 1072 -rigidBody 579.7239386297159 600.845834062322 515 536 575.9795790761793 332.8719924815926 515 268 583.4682981832524 868.8196756430514 515 804 -hideOutput
+#
+# From these text strings (registration_plugin_log_string) we extract the transformation matrices
 # between slice i and i+1, for all slices. This function returns a list with numpy arrays (of shape 2 x 3)
 # representing these transformation matrices.
 #
