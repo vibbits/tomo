@@ -23,7 +23,7 @@ roi_x = 520
 roi_y = 460
 roi_width = 1030
 roi_height = 1072
-method = 'stackreg'  # possible methods: 'sift' (=Linear Stack Alignment with SIFT) or 'stackreg' (requires the StackReg and TurboReg plugin jars).
+method = 'StackReg'  # 'StackReg'  # possible methods: 'SIFT' (=Linear Stack Alignment with SIFT) or 'StackReg' (requires the StackReg and TurboReg plugin jars).
 
 # Note: the style below for passing arguments to Fiji seems to work both on Windows and Ubuntu.
 script_args = "srcdir='{}',dstdir='{}',prefix='{}',method='{}',numimages='{}',do_enhance_contrast='{}',do_crop='{}',roi_x='{}',roi_y='{}',roi_width='{}',roi_height='{}'".format(
