@@ -3,12 +3,14 @@
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
 
 import numpy as np
+import os
 import cv2
 import wx
 import matplotlib
 import tools
 matplotlib.use('wxagg')
 from matplotlib import pyplot as plt
+
 
 class PreprocessDialog(wx.Dialog):
     def __init__(self, img, model, parent, ID, title, size=wx.DefaultSize, pos=wx.DefaultPosition, style=wx.DEFAULT_DIALOG_STYLE):
@@ -177,7 +179,20 @@ class PreprocessDialog(wx.Dialog):
         """
         return self.result
 
+    def save_intermediate_preprocessing_steps(self, output_dir):  # for testing only
+        # Preprocess full original image
+        self.preprocess(self.orig_img)
+        tools.save_image(self.orig_img, os.path.join(output_dir, "intermediate_1_orig.png"))
+        tools.save_image(self.contrast_enhanced_img, os.path.join(output_dir, "intermediate_2_contrast_enhanced.png"))
+        tools.save_image(self.blurred_img, os.path.join(output_dir, "intermediate_3_blurred.png"))
+        tools.save_image(self.abs_laplacian, os.path.join(output_dir, "intermediate_4_abs_laplacian.png"))
+        tools.save_image(self.result, os.path.join(output_dir, "intermediate_5_blurred.png"))
+        # Restore normal state (= the preprocessed cropped image)
+        self.preprocess(self.orig_img_crop)
+
     def _on_accept(self, event):
+        if False:  # for testing only
+            self.save_intermediate_preprocessing_steps('e:\\')
         self.EndModal(wx.OK)
 
     def _on_cancel(self, event):
