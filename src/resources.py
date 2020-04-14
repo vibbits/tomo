@@ -18,6 +18,34 @@ movestage = PyEmbeddedImage(
     "gg==")
 
 #----------------------------------------------------------------------
+createpolygon = PyEmbeddedImage(
+    "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAABHNCSVQICAgIfAhkiAAAAGtJ"
+    "REFUSIntlMEKwDAIQ43u//94607uUKZjKwqB5VRKMT5iBdSkUlpaXUQ2P4xjH6vFoIb5ro8g"
+    "6+JJGX05wWXgnb/Nwt9H5H0Ev0EkzKviy4fLRrufYEV3I8tBEOUGNXAQuHgzyMS/KvgNTv3Y"
+    "IFM3V/IYAAAAAElFTkSuQmCC")
+
+#----------------------------------------------------------------------
+editpolygon = PyEmbeddedImage(
+    "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAABHNCSVQICAgIfAhkiAAAAIdJ"
+    "REFUSIntVNEKwCAI9Gz//8flnhwRszbLYLB7Egn1zkuAE0WCQ6sT0aGBlCyzxcAJbW4fg94U"
+    "I/TYhzO4Gujkb3eh7y3m+xj8DSygPRWeD9ez9n4GXkjJEnYqVNY7eZc00MmXM7AMUefdO3ji"
+    "NnCCm0EtixUTTUpk+b/Of99Fyz6ahfBTcQKstDR4TniiFwAAAABJRU5ErkJggg==")
+
+#----------------------------------------------------------------------
+selectpolygon = PyEmbeddedImage(
+    "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAABHNCSVQICAgIfAhkiAAAAH9J"
+    "REFUSIntVNEKwCAI1Nr//3G5J0e4NNZUGOyeIsLzvDzEUiESJbQ6ABx8oN7obTEsFeVdngKr"
+    "ixUs9eEKLgLu/KkX/F5TnqfgJ9CAMip2Fs762vkKdkG9UXhUzMbrPiJJEuLBSBJmMpPc0tQD"
+    "o9muCmaB6UagLZvbHmj4ftidRpssPWwOjwUAAAAASUVORK5CYII=")
+
+#----------------------------------------------------------------------
+buildribbon = PyEmbeddedImage(
+    "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAABHNCSVQICAgIfAhkiAAAAGpJ"
+    "REFUSIntlDsSwCAIBQFz/xsrqWgImQgRk4KtHMcB9/lBpAaZUGp1ADj0BI/Ob4siNZTxfgNr"
+    "F7NY9ukGlwayc+9ZyHptvt+gGmjw7quIPDjran9nsAqXAY/O3ugqorUNIlREj/wroggnq18s"
+    "Ke2QY00AAAAASUVORK5CYII=")
+
+#----------------------------------------------------------------------
 tomo = PyEmbeddedImage(
     "iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAABHNCSVQICAgIfAhkiAAAIABJ"
     "REFUeJzt3Xt8VeW5J/Dfs9beOxdIgIRwJ4SL3OSSEBSEFkiII9ojVq0REryVtrZn5mMdrAdr"

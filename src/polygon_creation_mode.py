@@ -19,7 +19,7 @@ class PolygonCreationMode(BaseMode):
 
     def __init__(self, canvas=None):
         BaseMode.__init__(self, canvas)
-        self.Cursor = wx.NullCursor  # TODO: use dedicated tool cursor instead
+        self.Cursor = wx.NullCursor  # use regular arrow cursor
 
     def OnLeftDown(self, event):
         # print('Polygon creation tool: left mouse button down {} {}'.format(event, event.GetPosition()))

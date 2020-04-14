@@ -3,7 +3,7 @@
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
 
 import wx
-from wx.lib.floatcanvas import FloatCanvas, Resources
+from wx.lib.floatcanvas import FloatCanvas
 
 import numpy as np
 import os
@@ -70,10 +70,10 @@ class ApplicationFrame(wx.Frame):
         self._ribbon_builder_mode = RibbonBuilderMode()
         custom_modes = [(MarkMode.NAME, self._mark_mode, resources.crosshair.GetBitmap()),
                         (MoveStageMode.NAME, self._move_stage_mode, resources.movestage.GetBitmap()),
-                        (PolygonSelectionMode.NAME, self._polygon_selection_mode, Resources.getPointerBitmap()),  # TODO: create icon
-                        (PolygonEditingMode.NAME, self._polygon_editing_mode, Resources.getPointerBitmap()),  # TODO: create icon
-                        (PolygonCreationMode.NAME, self._polygon_creation_mode, Resources.getPointerBitmap()),
-                        (RibbonBuilderMode.NAME, self._ribbon_builder_mode, Resources.getPointerBitmap())]  # TODO: create icon (a quad with a + ?)
+                        (PolygonSelectionMode.NAME, self._polygon_selection_mode, resources.selectpolygon.GetBitmap()),
+                        (PolygonCreationMode.NAME, self._polygon_creation_mode, resources.createpolygon.GetBitmap()),
+                        (PolygonEditingMode.NAME, self._polygon_editing_mode, resources.editpolygon.GetBitmap()),
+                        (RibbonBuilderMode.NAME, self._ribbon_builder_mode, resources.buildribbon.GetBitmap())]
 
         # Canvas
         self._overview_canvas = OverviewCanvas(self, custom_modes)
@@ -90,8 +90,8 @@ class ApplicationFrame(wx.Frame):
             self._overview_canvas.ToolBar.EnableTool(tool.GetId(), False)
 
         self._overview_canvas.RegisterTool(PolygonSelectionMode.NAME, self._selector.start, self._selector.stop)
-        self._overview_canvas.RegisterTool(PolygonEditingMode.NAME, self._editor.start, self._editor.stop)
         self._overview_canvas.RegisterTool(PolygonCreationMode.NAME, self._creator.start, self._creator.stop)
+        self._overview_canvas.RegisterTool(PolygonEditingMode.NAME, self._editor.start, self._editor.stop)
         self._overview_canvas.RegisterTool(RibbonBuilderMode.NAME, self._ribbon_builder.start, self._ribbon_builder.stop)
 
         # Slice contour handling is possible.
@@ -197,6 +197,7 @@ class ApplicationFrame(wx.Frame):
         self._segment_ribbons_item = experimental_menu.Append(wx.NewId(), "Segment Ribbons...")
         self._contour_finder_item = experimental_menu.Append(wx.NewId(), "Find slice contours...")  # an active contours (style) contour fitting prototype
         self._contour_finder_item.Enable(False)
+        self._save_screenshot_item = experimental_menu.Append(wx.NewId(), "Save Screenshot...")
 
         view_menu = wx.Menu()
         self._show_slice_numbers_item = view_menu.Append(wx.NewId(), "Show slice numbers", kind=wx.ITEM_CHECK)
@@ -225,6 +226,7 @@ class ApplicationFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_em_image_acquisition, self._em_image_acquisition_item)
         self.Bind(wx.EVT_MENU, self._on_segment_ribbons, self._segment_ribbons_item)
         self.Bind(wx.EVT_MENU, self._on_find_contours, self._contour_finder_item)
+        self.Bind(wx.EVT_MENU, self._on_save_screenshot, self._save_screenshot_item)
         self.Bind(wx.EVT_MENU, self._on_build_focus_map, self._build_focus_map_item)
         self.Bind(wx.EVT_MENU, self._on_show_slice_numbers, self._show_slice_numbers_item)
         self.Bind(wx.EVT_MENU, self._on_about, self._about_item)
@@ -282,6 +284,19 @@ class ApplicationFrame(wx.Frame):
                 path = dlg.GetPath()
                 tools.json_save_polygons(path, self._model.slice_polygons)
                 print('Saved {} slice polygons to {}'.format(len(self._model.slice_polygons), path))
+
+    def _on_save_screenshot(self, event):
+        defaultDir = ""
+        defaultFile = ""
+        with wx.FileDialog(self, "Specify filename for screenshot",
+                           defaultDir, defaultFile,
+                           wildcard="PNG files (*.png)|*.png",
+                           style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
+                path = dlg.GetPath()
+                #self._overview_canvas.get_wximage().SaveFile(path, wx.BITMAP_TYPE_PNG)
+                self._overview_canvas.Canvas.SaveAsImage(path, wx.BITMAP_TYPE_PNG)
+                print('Saved screenshot to {}'.format(path))
 
     def _on_edit_preferences(self, event):
         with PreferencesDialog(self._model, None, wx.ID_ANY, "Preferences") as dlg:

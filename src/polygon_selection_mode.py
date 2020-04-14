@@ -1,6 +1,5 @@
 import wx
 from base_mode import BaseMode
-import resources
 
 class PolygonSelectionMode(BaseMode):
     # Mode label, shown in the tool bar.
@@ -18,7 +17,7 @@ class PolygonSelectionMode(BaseMode):
 
     def __init__(self, canvas=None):
         BaseMode.__init__(self, canvas)
-        self.Cursor = wx.NullCursor  # TODO: use dedicated tool cursor instead
+        self.Cursor = wx.NullCursor  # use regular arrow cursor
 
     def OnLeftUp(self, event):
         # print('Polygon selection tool: left mouse button up {} {}; canvas={}'.format(event, event.GetPosition(), self.Canvas))

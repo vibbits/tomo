@@ -4,6 +4,10 @@ cd src\
 del resources.py
 img2py -m #ffffff    ..\images\crosshair.png resources.py
 img2py -m #ffffff -a ..\images\movestage.png resources.py
+img2py -m #ffffff -a ..\images\createpolygon.png resources.py
+img2py -m #ffffff -a ..\images\editpolygon.png resources.py
+img2py -m #ffffff -a ..\images\selectpolygon.png resources.py
+img2py -m #ffffff -a ..\images\buildribbon.png resources.py
 img2py            -a ..\images\tomo.ico resources.py
 
 Note that the PNGs that are to be used as bitmaps for the tool bar should NOT have an alpha channel and have to use the -m #ffffff option.

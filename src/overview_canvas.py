@@ -41,7 +41,7 @@ class OverviewCanvas(TomoCanvas):
     def __init__(self, parent, custom_modes=None):
         if custom_modes is None:
             custom_modes = []
-        TomoCanvas.__init__(self, parent, custom_modes, id=wx.ID_ANY, size=(800, -1))
+        TomoCanvas.__init__(self, parent, custom_modes, id=wx.ID_ANY, size=(1600, -1))
         wx.CallAfter(self.Canvas.ZoomToBB)  # so it will get called after everything is created and sized
 
     def load_image(self, filename):
