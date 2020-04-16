@@ -75,7 +75,7 @@ def main():
     print('Environment:\n  Python: {}.{}.{}\n  OpenCV: {}\n  wxPython: {}'.format(sys.version_info[0], sys.version_info[1], sys.version_info[2], cv2.__version__, wx.version()))
 
     app = wx.App()
-    frame = ApplicationFrame(None, wx.ID_ANY, "Tomography Prototype")
+    frame = ApplicationFrame(None, wx.ID_ANY, "Tomo")
     frame.CenterOnScreen()
     frame.Show(True)
     app.MainLoop()
