@@ -13,7 +13,7 @@ class AboutDialog(wx.Dialog):
 
         bitmap = wx.Bitmap(resources.tomo.GetImage().Scale(64, 64, wx.IMAGE_QUALITY_BICUBIC))  # Downscale the Tomo icon
         icon = wx.StaticBitmap(self, wx.ID_ANY, bitmap)
-        name = wx.StaticText(self, wx.ID_ANY, 'Tomo 1.0')
+        name = wx.StaticText(self, wx.ID_ANY, 'Tomo 1.1')
         name.SetFont(large_font)
         description = wx.StaticText(self, wx.ID_ANY, "Array tomography on SECOM")
         description.SetFont(medium_font)
