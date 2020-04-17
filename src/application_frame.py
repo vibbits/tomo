@@ -193,10 +193,12 @@ class ApplicationFrame(wx.Frame):
         self._show_offsets_table_item = microscope_menu.Append(wx.NewId(), "Show Offsets Table")
         self._show_offsets_table_item.Enable(False)
 
+        segmentation_menu = wx.Menu()
+        self._contour_finder_item = segmentation_menu.Append(wx.NewId(), "Find slice contours...")  # an active contours (style) contour fitting prototype
+        self._contour_finder_item.Enable(False)
+
         experimental_menu = wx.Menu()
         self._segment_ribbons_item = experimental_menu.Append(wx.NewId(), "Segment Ribbons...")
-        self._contour_finder_item = experimental_menu.Append(wx.NewId(), "Find slice contours...")  # an active contours (style) contour fitting prototype
-        self._contour_finder_item.Enable(False)
         self._save_screenshot_item = experimental_menu.Append(wx.NewId(), "Save Screenshot...")
 
         view_menu = wx.Menu()
@@ -206,10 +208,15 @@ class ApplicationFrame(wx.Frame):
         help_menu = wx.Menu()
         self._about_item = help_menu.Append(wx.NewId(), "About")
 
+        # Enable/disable unfinished/unstable experiments. Disabled by default.
+        experimenting = False
+
         menu_bar.Append(file_menu, "&File")
         menu_bar.Append(edit_menu, "&Edit")
         menu_bar.Append(microscope_menu, "&Microscope")
-        menu_bar.Append(experimental_menu, "&Experimental")
+        menu_bar.Append(segmentation_menu, "&Segmentation")
+        if experimenting:
+            menu_bar.Append(experimental_menu, "&Experimental")
         menu_bar.Append(view_menu, "&View")
         menu_bar.Append(help_menu, "&Help")
 
