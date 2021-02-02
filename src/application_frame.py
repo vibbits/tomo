@@ -483,21 +483,31 @@ class ApplicationFrame(wx.Frame):
         secom_tools.set_absolute_stage_position(poi_stage_coords)
 
     def _do_lm_acquire(self):
-        # Calculate the physical displacements on the sample required for moving between the points of interest.
-        overview_image_pixelsize_in_microns = 1000.0 / self._model.overview_image_pixels_per_mm
-        self._model.slice_offsets_microns = tools.physical_point_of_interest_offsets_in_microns(self._model.all_points_of_interest,                                                                                                overview_image_pixelsize_in_microns)
-        print('Rough offset from slice polygons (in microns): ' + repr(self._model.slice_offsets_microns))
+        ###
+        if self._model.slice_offsets_microns is None:
+            print('There were no earlier LM acquisitions. POI position prediction is based on slice contours only.')
 
-        # For each LM image acquisition we start *new* offset corrections.
-        # This ensures that if we change the POI we also start with a blank slate for offset corrections,
-        # otherwise we would incorrectly combine offset corrections for one POI with those for another
-        # (with possibly a different number of slices)
-        # For now we do not intend to do successive offset corrections using LM.
-        self._model.all_offsets_microns = [{'name': 'Slice mapping',
-                                           'parameters': {},
-                                           'offsets': self._model.slice_offsets_microns}]
+            # Calculate the physical displacements on the sample required for moving between the points of interest.
+            overview_image_pixelsize_in_microns = 1000.0 / self._model.overview_image_pixels_per_mm
+            self._model.slice_offsets_microns = tools.physical_point_of_interest_offsets_in_microns(self._model.all_points_of_interest, 
+                                                                                                    overview_image_pixelsize_in_microns)
+            print('Rough offset from slice polygons (in microns): ' + repr(self._model.slice_offsets_microns))
 
-        self._model.combined_offsets_microns = copy.deepcopy(self._model.slice_offsets_microns)
+            # Obsolete comment:
+            #    For each LM image acquisition we start *new* offset corrections.
+            #    This ensures that if we change the POI we also start with a blank slate for offset corrections,
+            #    otherwise we would incorrectly combine offset corrections for one POI with those for another
+            #    (with possibly a different number of slices)
+            # FIXME: clean up this code + PointOfInterestPanel. When changing the POI, or the number of POIs, the position corrections
+            # should be discarded, but the user needs to be made aware of this in that panel.
+            self._model.all_offsets_microns = [{'name': 'Slice mapping',
+                                            'parameters': {},
+                                            'offsets': self._model.slice_offsets_microns}]
+
+            self._model.combined_offsets_microns = copy.deepcopy(self._model.slice_offsets_microns)
+        else:
+            print('There were earlier LM acquisitions. Their position corrections will be taken into account for the current acquisition.')
+        ###
 
         # Move the stage to the first point of interest.
         # The stage may not currently be positioned there because,
@@ -507,9 +517,13 @@ class ApplicationFrame(wx.Frame):
         # Remember current stage position so we can return to it after imaging.
         orig_stage_pos = secom_tools.get_absolute_stage_position()
 
+        # Print an overview of the position corrections.
+        print('The following position corrections will be taken into account during LM image acquisition:')
+        tools.show_offsets_table(self._model.all_offsets_microns, self._model.combined_offsets_microns)
+
         # Now acquire an LM image at the point of interest location in each slice.
         wait = wx.BusyInfo("Acquiring LM images...")
-        secom_tools.acquire_lm_microscope_images(self._model.slice_offsets_microns, self._model.lm_stabilization_time_secs, self._model.delay_between_LM_image_acquisition_secs,
+        secom_tools.acquire_lm_microscope_images(self._model.combined_offsets_microns, self._model.lm_stabilization_time_secs, self._model.delay_between_LM_image_acquisition_secs,
                                                  self._model.odemis_cli, self._model.lm_images_output_folder, self._model.lm_images_prefix,
                                                  self._model.focus_map if self._model.lm_use_focus_map else None)
         del wait
@@ -539,6 +553,10 @@ class ApplicationFrame(wx.Frame):
 
         # Remember current stage position so we can return to it after imaging.
         orig_stage_pos = secom_tools.get_absolute_stage_position()
+
+        # Print an overview of the position corrections.
+        print('The following position corrections will be taken into account during EM image acquisition:')
+        tools.show_offsets_table(self._model.all_offsets_microns, self._model.combined_offsets_microns)
 
         # Now acquire an EM image at the same point of interest location in each slice,
         # but use the more accurate stage offsets (obtained from slice mapping + image registration).

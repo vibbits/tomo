@@ -13,11 +13,11 @@ class AboutDialog(wx.Dialog):
 
         bitmap = wx.Bitmap(resources.tomo.GetImage().Scale(64, 64, wx.IMAGE_QUALITY_BICUBIC))  # Downscale the Tomo icon
         icon = wx.StaticBitmap(self, wx.ID_ANY, bitmap)
-        name = wx.StaticText(self, wx.ID_ANY, 'Tomo 1.1')
+        name = wx.StaticText(self, wx.ID_ANY, 'Tomo 1.1.1')
         name.SetFont(large_font)
         description = wx.StaticText(self, wx.ID_ANY, "Array tomography on SECOM")
         description.SetFont(medium_font)
-        copyright = wx.StaticText(self, wx.ID_ANY, "(c) 2018-2020 VIB - Vlaams Instituut voor Biotechnologie")
+        copyright = wx.StaticText(self, wx.ID_ANY, "(c) 2018-2021 VIB - Vlaams Instituut voor Biotechnologie")
         license = wx.StaticText(self, wx.ID_ANY, "Licensed under the GNU General Public License v3.0")
         developer = wx.StaticText(self, wx.ID_ANY, "Frank Vernaillen")
         affiliation = wx.StaticText(self, wx.ID_ANY, "VIB Bioinformatics Core, VIB Bioimaging Core")
