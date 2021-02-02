@@ -102,7 +102,7 @@ def move_stage_relative(odemis_cli, offset_microns):   # move the stage a certai
     # stage = model.getComponent(role = "stage")
     # stage.moveRel({"x": dx_microns, "y": dy_microns})   # in what units is x and y?? Possibly meters instead of microns
     # CHECKME: moveRelSync or moveRel? Answer: most likely MoveRelSync to ensure the move is completed before we continue and acquire and image, for example
-    # CHECKME: moveRel() returns a future?? Do we need to apply
+    # CHECKME: moveRel() returns a future?
 
 
 def set_absolute_stage_position(pos):
@@ -110,8 +110,9 @@ def set_absolute_stage_position(pos):
     Move the stage to the specified absolute position (in meters)
     """
     # IMPROVEME: is there a way to protect against stage movements that are too large (and will jam the stage)?
-    #            this could happen if for example the user clicks outside the overview image (FIXME: need to protect against that)
+    #            this could happen if for example the user clicks outside the overview image
     #            but also if the overview image resolution entered by the user is too large.
+    #            (One would hope that Odemis prevents this, but it does not seem to do so unfortunately.)
     x, y = pos
     print("Move stage to absolute position x={} y={} [m]".format(x, y))
     stage = model.getComponent(role="stage")
