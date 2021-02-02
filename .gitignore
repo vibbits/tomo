@@ -2,4 +2,7 @@ src/*.pyc
 src/
 support/imagej_plugins/
 data/
+archive/
+experiments/
+jeol/
 .idea
