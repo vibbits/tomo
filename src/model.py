@@ -72,6 +72,8 @@ class TomoModel:
         self.em_dwell_time_microseconds = 50  # dwell time for EM image acquisition (in microseconds)
         self.em_magnification = 5000  # magnification factor for EM image acquisition
 
+        self.em_pois_to_image = []  # list with the numbers of the points-of-interest to image during EM image acquisition; note that position numbers start at 1; this allows us to perform EM imaging on a subset of the POIs, e.g. to image ribbon by ribbon and perform EM microscope tuning at the start of each ribbon
+
         # Constants
         self.lm_image_size = (2048, 2048)  # (width, height) of the LM images in pixels; this is the size of the images that Odemis acquires; it is assumed to be constant.
         self.max_em_image_size = (5120, 3840)  # (width, height) of the EM images in pixels *only* for an em_scale=1. For a scale s the actual EM images are 5120/s, 3840/s pixels large.

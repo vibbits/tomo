@@ -46,6 +46,9 @@ class EMAcquisitionDialog(wx.Dialog):
         image_size_label = wx.StaticText(self, wx.ID_ANY, "Image size (width x height):")
         self._image_size_pixels = wx.StaticText(self, wx.ID_ANY, "{} x {} pixels".format(0, 0))
 
+        em_poi_filter_label = wx.StaticText(self, wx.ID_ANY, "Positions to image (first is 1):")
+        self._em_poi_filter_text = wx.TextCtrl(self, wx.ID_ANY, "None", size=(70, -1))
+
         #
         registration_output_folder_label = wx.StaticText(self, wx.ID_ANY, "Output Folder:")
         self._registration_output_folder_edit = wx.TextCtrl(self, wx.ID_ANY, self._model.em_registration_output_folder, size=(w, -1))
@@ -88,6 +91,9 @@ class EMAcquisitionDialog(wx.Dialog):
         acquisition_fgs.Add(image_size_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         acquisition_fgs.Add(self._image_size_pixels, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
+        acquisition_fgs.Add(em_poi_filter_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        acquisition_fgs.Add(self._em_poi_filter_text, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+
         #
         output_box = wx.StaticBox(self, -1, 'Output')
         output_sizer = wx.StaticBoxSizer(output_box, wx.VERTICAL)
@@ -123,6 +129,7 @@ class EMAcquisitionDialog(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self._on_delay_change, self._em_acquisition_delay_text)
         self.Bind(wx.EVT_TEXT, self._on_dwell_time_change, self._em_dwell_time_text)
         self.Bind(wx.EVT_TEXT, self._on_magnification_change, self._em_magnification_text)
+        self.Bind(wx.EVT_TEXT, self._on_poi_filter_change, self._em_poi_filter_text)
         self.Bind(wx.EVT_CHOICE, self._on_scale_change, self._em_scale_dropdown)
         self.Bind(wx.EVT_BUTTON, self._on_em_output_folder_browse_button_click, self._em_images_output_folder_button)
         self.Bind(wx.EVT_TEXT, self._on_registration_output_folder_change, self._registration_output_folder_edit)
@@ -193,6 +200,24 @@ class EMAcquisitionDialog(wx.Dialog):
         # (which then continues to use the typically larger current dwell time)
         # Check in Odemis source code if we can confirm that. And then forbid the user from setting a smaller value here in Tomo.
 
+    def set_default_poi_list(self):
+        first_poi, last_poi = 1, len(self._model.all_points_of_interest)
+        self._model.em_pois_to_image = range(1, last_poi + 1)
+        self._em_poi_filter_text.SetValue('{}-{}'.format(first_poi, last_poi))
+
+    def _on_poi_filter_change(self, event):
+        num_pois = len(self._model.all_points_of_interest)
+        text = self._em_poi_filter_text.GetValue()
+        print('em_poi_filter_text="{}" num_pois={}'.format(text, num_pois))
+        pois_range = _parse_filter_text(text, num_pois)
+        if pois_range is not None:
+            first_poi, last_poi = pois_range
+            print('Valid POIs filter: acquire pois {} to {}'.format(first_poi, last_poi))
+            self._model.em_pois_to_image = range(first_poi, last_poi + 1)
+        else:
+            print('Invalid POIs filter text -> acquire all POIs')
+            self._model.em_pois_to_image = range(1, num_pois + 1)
+
     def _on_delay_change(self, event):
         self._model.delay_between_EM_image_acquisition_secs = float(self._em_acquisition_delay_text.GetValue())
         print('delay_between_EM_image_acquisition_secs={}'.format(self._model.delay_between_EM_image_acquisition_secs))
@@ -211,4 +236,19 @@ class EMAcquisitionDialog(wx.Dialog):
         pixels_per_micrometer = self._model.get_em_pixels_per_micrometer()
         self._registration_pixel_size_value.SetLabelText('{:f}'.format(pixels_per_micrometer))
 
+
+def _parse_filter_text(text, upper_limit):  
+    # Parse a string such as "n-m" with 1 <= n <= m <= upper_limit into (n, m).
+    # Returns None if text does not satisfy this requirements.
+    print('filter text={}'.format(text))
+    chunks = text.split('-')
+    if len(chunks) != 2:
+        return None
+    s1, s2 = chunks
+    if not(s1.isdigit() and s2.isdigit()):
+        return None
+    lo, hi = int(s1), int(s2)
+    if lo < 1 or hi > upper_limit or lo > hi:
+        return None
+    return lo, hi
 

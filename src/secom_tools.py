@@ -67,7 +67,10 @@ def acquire_lm_microscope_images(physical_offsets_microns, stabilization_time, d
 
 
 def acquire_em_microscope_images(physical_offsets_microns, delay_between_image_acquisition_secs,
-                                 odemis_cli, images_output_folder, images_prefix, scale_string, magnification, dwell_time_microsecs):
+                                 odemis_cli, images_output_folder, images_prefix, scale_string, magnification, dwell_time_microsecs, 
+                                 positions_to_image):
+                                 # positions_to_image is an array specifying which position-of-interest needs to be imaged, other positions will be skipped;
+                                 # note that the position numbers start at 1.
     print('Acquiring EM images')
 
     # Ensure that the output folder for the images exists
@@ -85,13 +88,16 @@ def acquire_em_microscope_images(physical_offsets_microns, delay_between_image_a
         # Move the stage
         move_stage_relative(odemis_cli, offset_microns)
 
-        # Acquire an LM/EM image and save it to the output folder
-        image_path = os.path.join(images_output_folder, '{}{}.ome.tiff'.format(images_prefix, i))
-        commandline_exec([odemis_cli, "--acquire", "se-detector", "--output", image_path])
+        if i + 1 in positions_to_image:
+            # Acquire an LM/EM image and save it to the output folder
+            image_path = os.path.join(images_output_folder, '{}{}.ome.tiff'.format(images_prefix, i))
+            commandline_exec([odemis_cli, "--acquire", "se-detector", "--output", image_path])
 
-        # Wait a short time for the image acquisition to finish
-        # CHECKME: Is this needed? Maybe odemis_cli will automatically buffer commands until it is finished?
-        time.sleep(delay_between_image_acquisition_secs)
+            # Wait a short time for the image acquisition to finish
+            # CHECKME: Is this needed? Maybe odemis_cli will automatically buffer commands until it is finished?
+            time.sleep(delay_between_image_acquisition_secs)
+        else:
+            print('Skipped EM imaging at position {}'.format(i + 1))
 
 
 def move_stage_relative(odemis_cli, offset_microns):   # move the stage a certain distance relative to its current position

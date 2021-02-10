@@ -319,6 +319,7 @@ class ApplicationFrame(wx.Frame):
 
     def _on_em_image_acquisition(self, event):
         with EMAcquisitionDialog(self._model, None, wx.ID_ANY, "Acquire EM Images") as dlg:
+            dlg.set_default_poi_list()
             dlg.CenterOnScreen()
             if dlg.ShowModal() == wx.ID_OK:
                 self._do_em_acquire()
@@ -563,7 +564,8 @@ class ApplicationFrame(wx.Frame):
         wait = wx.BusyInfo("Acquiring EM images...")
         secom_tools.acquire_em_microscope_images(self._model.combined_offsets_microns, self._model.delay_between_EM_image_acquisition_secs,
                                                  self._model.odemis_cli, self._model.em_images_output_folder, self._model.em_images_prefix,
-                                                 self._model.get_em_scale_string(), self._model.em_magnification, self._model.em_dwell_time_microseconds)
+                                                 self._model.get_em_scale_string(), self._model.em_magnification, self._model.em_dwell_time_microseconds,
+                                                 self._model.em_pois_to_image)
         del wait
 
         # Perform image registration on the acquired stack of EM images
