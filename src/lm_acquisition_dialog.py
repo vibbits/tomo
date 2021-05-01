@@ -58,8 +58,8 @@ class LMAcquisitionDialog(wx.Dialog):
         registration_out_sizer.AddSpacer(8)
         registration_out_sizer.Add(self._registration_output_folder_button, flag=wx.ALIGN_CENTER_VERTICAL)
 
-        registration_pixel_size_label = wx.StaticText(self, wx.ID_ANY, "Pixel size (pixels/mm):")
-        self._registration_pixel_size_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.lm_registration_images_pixels_per_mm), size=(100, -1))
+        registration_pixel_size_label = wx.StaticText(self, wx.ID_ANY, "Pixel size [nm]:")
+        self._registration_pixel_size_nm_edit = wx.TextCtrl(self, wx.ID_ANY, str(1000000.0 / self._model.lm_registration_images_pixels_per_mm), size=(100, -1))
 
         # The image size is just information to the user, a reminder that we rely on the acquired images to be of a certain size.
         image_size_label = wx.StaticText(self, wx.ID_ANY, "Image size (width x height):")
@@ -110,7 +110,7 @@ class LMAcquisitionDialog(wx.Dialog):
         regist_fgs.Add(registration_output_folder_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         regist_fgs.Add(registration_out_sizer, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
         regist_fgs.Add(registration_pixel_size_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        regist_fgs.Add(self._registration_pixel_size_edit, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        regist_fgs.Add(self._registration_pixel_size_nm_edit, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
         regist_fgs.Add(empty_label2, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         regist_fgs.Add(self._enhance_contrast_checkbox, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
@@ -139,7 +139,7 @@ class LMAcquisitionDialog(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self._on_stabilization_time_change, self._lm_stabilization_time_edit)
         self.Bind(wx.EVT_TEXT, self._on_delay_change, self._lm_acquisition_delay_edit)
         self.Bind(wx.EVT_TEXT, self._on_registration_output_folder_change, self._registration_output_folder_edit)
-        self.Bind(wx.EVT_TEXT, self._on_registration_pixel_size_change, self._registration_pixel_size_edit)
+        self.Bind(wx.EVT_TEXT, self._on_registration_pixel_size_change, self._registration_pixel_size_nm_edit)
         self.Bind(wx.EVT_CHOICE, self._on_registration_method_change, self._lm_registration_dropdown)
         self.Bind(wx.EVT_CHECKBOX, self._on_enhance_contrast_change, self._enhance_contrast_checkbox)
         self.Bind(wx.EVT_CHECKBOX, self._on_use_focusmap_change, self._lm_use_focusmap_checkbox)
@@ -267,7 +267,7 @@ class LMAcquisitionDialog(wx.Dialog):
         print('lm_registration_output_folder={}'.format(self._model.lm_registration_output_folder))
 
     def _on_registration_pixel_size_change(self, event):
-        self._model.lm_registration_images_pixels_per_mm = float(self._registration_pixel_size_edit.GetValue())
+        self._model.lm_registration_images_pixels_per_mm = 1000000.0 / float(self._registration_pixel_size_nm_edit.GetValue())
         print('lm_registration_images_pixels_per_mm={}'.format(self._model.lm_registration_images_pixels_per_mm))
 
     def _on_registration_method_change(self, event):

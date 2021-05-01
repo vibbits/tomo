@@ -41,8 +41,8 @@ class TomoModel:
         self.lm_stabilization_time_secs = 0.0  # time in seconds that we wait for the immersion oil droplet and stage etc. to stabilize before acquiring 100x LM images
         self.delay_between_LM_image_acquisition_secs = 0.0  # time in seconds to pause between successive microscope commands to acquire an LM image (maybe 1 or 2 secs in reality)
         self.delay_between_EM_image_acquisition_secs = 0.0  # time in seconds to pause between successive microscope commands to acquire an EM image (maybe 1 or 2 secs in reality)
-        self.overview_image_pixels_per_mm = 0.0  # of the e.g. x20 lens overview image
-        self.lm_registration_images_pixels_per_mm = 0.0  # of the e.g. x100 lens LM images that will be acquired and used for registration
+        self.overview_image_pixels_per_mm = 2500.0  # of the e.g. x20 lens overview image
+        self.lm_registration_images_pixels_per_mm = 10000.0  # of the e.g. x100 lens LM images that will be acquired and used for registration
         self.fiji_path = None  # path to the Fiji executable; a headless Fiji is called in the background to perform LM image registration using one of the Fiji plugins
         self.odemis_cli = None  # path to the Odemis CLI (command line interface) tool
         self.registration_script = None  # full path of the Python image registration script that will be run from a headless Fiji that will be started from Tomo
@@ -172,6 +172,9 @@ class TomoModel:
         pixels_per_micrometer_y = height_pixels / height_microns
         assert abs(pixels_per_micrometer_x - pixels_per_micrometer_y) < 1e-3
         return pixels_per_micrometer_x
+
+    def get_em_pixelsize_in_nanometer(self):
+        return 1000.0 / self.get_em_pixels_per_micrometer()
 
     def set_em_scale_string(self, scale_string):
         """

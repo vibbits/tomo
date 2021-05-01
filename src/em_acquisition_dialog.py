@@ -59,8 +59,8 @@ class EMAcquisitionDialog(wx.Dialog):
         regist_out_sizer.AddSpacer(8)
         regist_out_sizer.Add(self._registration_output_folder_button, flag=wx.ALIGN_CENTER_VERTICAL)
 
-        registration_pixel_size_label = wx.StaticText(self, wx.ID_ANY, u"Pixel size [pixels/\u03bcm]:")  # \u03bc is the greek letter mu
-        self._registration_pixel_size_value = wx.StaticText(self, wx.ID_ANY, "0.0")
+        registration_pixel_size_label = wx.StaticText(self, wx.ID_ANY, u"Pixel size [nm]:")
+        self._registration_pixel_size_nm_value = wx.StaticText(self, wx.ID_ANY, "0.0")
 
         em_registration_method_label = wx.StaticText(self, wx.ID_ANY, "Registration method:")
         self._em_registration_dropdown = wx.Choice(self, wx.ID_ANY, choices=self._model.registration_methods)
@@ -111,7 +111,7 @@ class EMAcquisitionDialog(wx.Dialog):
         regist_fgs.Add(registration_output_folder_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         regist_fgs.Add(regist_out_sizer, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
         regist_fgs.Add(registration_pixel_size_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        regist_fgs.Add(self._registration_pixel_size_value, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        regist_fgs.Add(self._registration_pixel_size_nm_value, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
         regist_box = wx.StaticBox(self, -1, 'Image Registration')
         regist_sizer = wx.StaticBoxSizer(regist_box, wx.VERTICAL)
@@ -233,8 +233,8 @@ class EMAcquisitionDialog(wx.Dialog):
     def _update_image_size_labels(self):  # IMPROVEME: again, using a listener on the model would probably be cleaner/safer
         w, h = self._model.get_em_image_size_in_pixels()
         self._image_size_pixels.SetLabelText('{} x {}'.format(w, h))
-        pixels_per_micrometer = self._model.get_em_pixels_per_micrometer()
-        self._registration_pixel_size_value.SetLabelText('{:f}'.format(pixels_per_micrometer))
+        pixelsize_in_nanometer = self._model.get_em_pixelsize_in_nanometer()
+        self._registration_pixel_size_nm_value.SetLabelText('{:f}'.format(pixelsize_in_nanometer))
 
 
 def _parse_filter_text(text, upper_limit):  

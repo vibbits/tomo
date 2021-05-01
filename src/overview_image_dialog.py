@@ -27,14 +27,14 @@ class OverviewImageDialog(wx.Dialog):
         path_sizer.AddSpacer(8)
         path_sizer.Add(self._browse_button, flag=wx.ALIGN_CENTER_VERTICAL)
 
-        overview_pixel_size_label = wx.StaticText(self, wx.ID_ANY, "Pixel size [pixels/mm]:")
-        self._overview_pixel_size_edit = wx.TextCtrl(self, wx.ID_ANY, str(self._model.overview_image_pixels_per_mm), size=(100, -1))
+        overview_pixel_size_label = wx.StaticText(self, wx.ID_ANY, "Pixel size [nm]:")
+        self._overview_pixel_size_nm_edit = wx.TextCtrl(self, wx.ID_ANY, str(1000000.0 / self._model.overview_image_pixels_per_mm), size=(100, -1))
 
         fgs = wx.FlexGridSizer(cols=2, vgap=4, hgap=8)
         fgs.Add(overview_image_path_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(path_sizer, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
         fgs.Add(overview_pixel_size_label, flag=wx.LEFT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        fgs.Add(self._overview_pixel_size_edit, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        fgs.Add(self._overview_pixel_size_nm_edit, flag=wx.RIGHT | wx.ALIGN_CENTER_VERTICAL)
 
         instructions_label = wx.StaticText(self, wx.ID_ANY, (
             "Please select an overview LM image of the sample. It will be used for coarse microscope navigation. "
@@ -50,7 +50,7 @@ class OverviewImageDialog(wx.Dialog):
 
         self.Bind(wx.EVT_TEXT, self._on_overview_image_path_change, self._overview_image_path_edit)
         self.Bind(wx.EVT_BUTTON, self._on_browse_button_click, self._browse_button)
-        self.Bind(wx.EVT_TEXT, self._on_overview_pixel_size_change, self._overview_pixel_size_edit)
+        self.Bind(wx.EVT_TEXT, self._on_overview_pixel_size_change, self._overview_pixel_size_nm_edit)
         self.Bind(wx.EVT_BUTTON, self._on_import_button_click, self._import_button)
 
         b = 5  # border size
@@ -87,5 +87,5 @@ class OverviewImageDialog(wx.Dialog):
         print('overview_image_path={}'.format(self._model.overview_image_path))
 
     def _on_overview_pixel_size_change(self, event):
-        self._model.overview_image_pixels_per_mm = float(self._overview_pixel_size_edit.GetValue())
+        self._model.overview_image_pixels_per_mm = 1000000.0 / float(self._overview_pixel_size_nm_edit.GetValue())
         print('overview_image_pixels_per_mm={}'.format(self._model.overview_image_pixels_per_mm))
