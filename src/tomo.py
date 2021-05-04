@@ -1,4 +1,4 @@
-# Prototype tomography with Secom
+# Tomo: Experimental serial section tomography with SECOM
 # (c) Vlaams Instituut voor Biotechnologie (VIB)
 # Frank Vernaillen
 # 2018-2021
