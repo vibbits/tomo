@@ -14,7 +14,7 @@ The normal environment for Tomo, when doing actual microscopy work, is:
 
 However, for software development we can also run Tomo with reduced functionality on a system without microscope and without Odemis.
 
-# Installation
+## Installation
 
 For actual microscopy work, Tomo needs to be installed on the computer which runs Odemis and is connected to the electron microscope equiped with the SECOM platform. Since Odemis is not installed in a virtual enviroment, neither is Tomo in this case.
 
