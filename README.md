@@ -5,17 +5,14 @@ Experimental software for serial section array tomography on the [Delmic SECOM](
 
 ## Prerequisites
 
-For production work:
+For production work we need:
 
 * Ubuntu 16.04 or 18.04 (for Odemis)
 * [Odemis](https://github.com/delmic/odemis) v3.0.7
 * Electron microscope with SECOM platform
 * [Fiji](https://imagej.net/Fiji)
 
-Alternatively, for development on a system without Odemis and no microscope:
-
-* Ubuntu 16.04 or 18.04, or Windows 10
-* Fiji
+However, for software development we can also run Tomo with reduced functionality on a system without microscope and without Odemis.
 
 # Installation
 
