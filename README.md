@@ -5,16 +5,18 @@ Experimental software for serial section array tomography on the [Delmic SECOM](
 
 ## Prerequisites
 
-For production work we need:
+The normal environment for Tomo, when doing actual microscopy work, is:
 
 * Ubuntu 16.04 or 18.04 (for Odemis)
 * [Odemis](https://github.com/delmic/odemis) v3.0.7
-* Electron microscope with SECOM platform
+* Electron microscope with SECOM platform, controlled by Odemis
 * [Fiji](https://imagej.net/Fiji)
 
 However, for software development we can also run Tomo with reduced functionality on a system without microscope and without Odemis.
 
 # Installation
+
+For actual microscopy work, Tomo needs to be installed on the computer which runs Odemis and is connected to the electron microscope equiped with the SECOM platform. Since Odemis is not installed in a virtual enviroment, neither is Tomo in this case.
 
 First get the latest Tomo sources from GitHub:
 
@@ -23,7 +25,7 @@ git clone https://github.com/vibbits/tomo.git
 cd tomo
 ```
 
-For actual production work, Tomo needs to be installed on the computer which runs Odemis and is connected to the electron microscope equiped with the SECOM platform. Since Odemis is not installed in a virtual enviroment, neither is Tomo in this case. Tomo requirements are then installed like this:
+Tomo requirements are then installed like this:
 
 ```bash
 pip install -r requirements.txt
