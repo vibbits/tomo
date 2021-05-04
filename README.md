@@ -31,7 +31,7 @@ Tomo requirements are then installed like this:
 pip install -r requirements.txt
 ```
 
-Tomo can however also be run in a development environment, without a microscope and without Odemis installed. Stub functions are then used instead of Odemis API calls, but a significant part of Tomo is still functional. This setup is useful for software development of Tomo. Tomo requirements can then be installed in a Conda environment:
+Tomo can however also be run in a development environment, on a stand-alone computer without a microscope and without Odemis installed. Stub functions are then used instead of Odemis API calls, but a significant part of Tomo is still functional. This setup is useful for software development of Tomo. Tomo requirements can then be installed in a Conda environment:
 
 ```bash
 conda env create -f environment-dev.yml
