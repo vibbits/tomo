@@ -1,7 +1,7 @@
 # Prototype tomography with Secom
+# (c) Vlaams Instituut voor Biotechnologie (VIB)
 # Frank Vernaillen
-# Vlaams Instituut voor Biotechnologie (VIB)
-# September 2018
+# 2018-2021
 
 import sys
 import cv2
