@@ -8,7 +8,7 @@ Experimental software for serial section array tomography on the [Delmic SECOM](
 * Electron microscope with SECOM platform (for production work)
 * [Fiji](https://imagej.net/Fiji)
 
-# Installation
+## Installation
 
 First get the latest Tomo sources from GitHub:
 ```
