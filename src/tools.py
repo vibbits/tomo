@@ -371,78 +371,63 @@ def physical_point_of_interest_offsets_in_microns(all_points_of_interest, pixels
     return physical_offsets_microns
 
 
-# Turns a string like '[0.9999774253040736, -0.006719291795643401, 0.006719291795643401, 0.9999774253040736, 344.7268472712018, 34.41100247082332]'
-# into a 2 x 3 numpy array
-def matrix_string_to_numpy_array(str):
-    elems = str[1:-1].split(',')  # drop [ and ] and split into matrix elements
+# Turns a string like '[[0.999948185933372, -0.010179658567826, 2.748126743432709], [0.010179658567826, 0.999948185933372, -5.932567328680079]]'
+# into the corresponding 2x3 numpy array.
+def matrix_string_to_numpy_array(s):
+    elems = s.replace(',', ' ').replace('[', ' ').replace(']', ' ').split()
     nums = [float(e) for e in elems]  # convert from strings to numbers
-    a, b, c, d, tx, ty = nums
-    return np.array([[a, c, tx], [b, d, ty]])
+    a, b, tx, c, d, ty = nums
+    return np.array([[a, b, tx], [c, d, ty]])
 
 
 # Tomo supports two different registration plugins: "Linear stack alignment with SIFT" and "StackReg".
-# We privately modified these plugins to output the transformation matrices.
 #
-# The output of the (modified) SIFT registration plugin looks like this:
+# The output of the Linear Stack Alignment with SIFT registration plugin (mpicbg_-1.4.1.jar) looks like this:
 #    ...
 #    Processing SIFT ...
-#     took 1873ms.
-#    373 features extracted.
-#    identifying correspondences using brute force ... took 253ms
-#    33 potentially corresponding features identified
-#    Slice 3 to 4 transformation: [1.0, 0.0, 0.0, 1.0, 45.05236873053536, 9.754784450831266]    <-- this is a private modification to the SIFT registration plugin
-#    Slice 1 to 4 transformation: [1.0, 0.0, 0.0, 1.0, 93.45191660749424, -5.962104282614291]   <-- this is a private modification to the SIFT registration plugin
+#     took 1261ms.
+#    3261 features extracted.
 #    Processing SIFT ...
+#     took 884ms.
+#    3415 features extracted.
+#    59 potentially corresponding features identified
+#    Transformation Matrix: AffineTransform[[0.999948185933372, -0.010179658567826, 2.748126743432709], [0.010179658567826, 0.999948185933372, -5.932567328680079]]
+#    Processing SIFT ...
+#     took 906ms.
+#    3381 features extracted.
+#    58 potentially corresponding features identified
+#    Transformation Matrix: AffineTransform[[0.999997767563037, -0.002113023649348, 1.841657708433971], [0.002113023649348, 0.999997767563037, 2.378823142381009]]
 #    ...
 #
-# The output of StackReg looks like this:
+# The output of StackReg patched to output the transformation matrice looks like this:
+#    ...
+#    [INFO] Reading available sites from https://imagej.net/
+#    Transformation Matrix: AffineTransform[[0.9998568836986051, 0.01691780483732866, 23.78881976316677], [-0.01691780483732866, 0.9998568836986051, 43.48101306132037]]
+#    Transformation Matrix: AffineTransform[[0.9999992150826272, 0.0012529302173312933, 34.948131111836915], [-0.0012529302173312933, 0.9999992150826272, 30.13283233002437]]
+#    Transformation Matrix: AffineTransform[[0.9999975340031375, 0.002220807880910907, -37.83548181304559], [-0.002220807880910907, 0.9999975340031375, 39.439221764493595]]
+#    ...
 #
-#    registerSlice s=2 target=img["StackRegTarget" (-6), 16-bit, 1030x1072x1x1x1] imp=img["unaligned_stack" (-5), 16-bit, 1030x1072x1x3x1] width=1030 height=1072 transformation=1 globalTransform=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]] anchorPoints=... colorWeights=...
-#    TurboReg_ -align -file C:\Users\frver\AppData\Local\Temp\StackRegSource 0 0 1029 1071 -file C:\Users\frver\AppData\Local\Temp\StackRegTarget 0 0 1029 1071 -rigidBody 515 536 515 536 515 268 515 268 515 804 515 804 -hideOutput
-#    Slice 1 to 2 transformation: [0.9998977372473945, -0.014300875761312967, 0.014300875761312967, 0.9998977372473945, 24.744083973172906, 41.399843582548556]
-#    New globalTransform: [[0.9998977372473945, 0.014300875761312967, 24.744083973172906], [-0.014300875761312967, 0.9998977372473945, 41.399843582548556], [0.0, 0.0, 1.0]]
-#    TurboReg_ -transform -file C:\Users\frver\AppData\Local\Temp\StackRegSource 1030 1072 -rigidBody 547.3566880636448 569.9800797300759 515 536 543.5240533596129 302.0074861477741 515 268 551.1893227676767 837.9526733123777 515 804 -hideOutput
-#    registerSlice s=3 target=img["StackRegTarget" (-6), 16-bit, 1030x1072x1x1x1] imp=img["unaligned_stack" (-5), 16-bit, 1030x1072x1x3x1] width=1030 height=1072 transformation=1 globalTransform=[[0.9998977372473945, 0.014300875761312967, 24.744083973172906], [-0.014300875761312967, 0.9998977372473945, 41.399843582548556], [0.0, 0.0, 1.0]] anchorPoints=... colorWeights=...
-#    TurboReg_ -align -file C:\Users\frver\AppData\Local\Temp\StackRegSource 0 0 1029 1071 -file C:\Users\frver\AppData\Local\Temp\StackRegTarget 0 0 1029 1071 -rigidBody 515 536 515 536 515 268 515 268 515 804 515 804 -hideOutput
-#    Slice 2 to 3 transformation: [0.9999999457419547, 3.2941780114142537E-4, -3.2941780114142537E-4, 0.9999999457419547, 32.55504184913411, 30.685476221629187]
-#    New globalTransform: [[0.9999023939579454, 0.01397149087140508, 57.285486634300824], [-0.01397149087140508, 0.9999023939579454, 72.09346869963684], [0.0, 0.0, 1.0]]
-#    TurboReg_ -transform -file C:\Users\frver\AppData\Local\Temp\StackRegSource 1030 1072 -rigidBody 579.7239386297159 600.845834062322 515 536 575.9795790761793 332.8719924815926 515 268 583.4682981832524 868.8196756430514 515 804 -hideOutput
+# From these text strings (registration_plugin_log_string) we extract the transformation matrices between successive slices.
+# This function returns a list with numpy arrays (of shape 2 x 3) representing these transformation matrices.
 #
-# From these text strings (registration_plugin_log_string) we extract the transformation matrices
-# between slice i and i+1, for all slices. This function returns a list with numpy arrays (of shape 2 x 3)
-# representing these transformation matrices.
-#
-# ! ! ! ! ! ! ! ! ! ! ! ! ! !
-# VERY IMPORTANT NOTE:
-# It seems that the information printed by our private modification to the "Linear stack alignment with SIFT" plugin
-# has the order of the transformation wrong!
-# So
-#    Slice 3 to 4 transformation: [1.0, 0.0, 0.0, 1.0, 45.05236873053536, 9.754784450831266]
-# is actually the transformation that maps points from slice 4 onto slice 3!
-# To get the transform from 3 to 4, that matrix must be inverted.
-# ! ! ! ! ! ! ! ! ! ! ! ! ! !
 def extract_registration_matrices(registration_method, registration_plugin_log_string):
+    assert registration_method == 'SIFT' or registration_method == 'Stackreg'
+
     # Split the log string in individual lines
     lines = registration_plugin_log_string.splitlines()
 
     # Keep only the lines mentioning transformation matrices
-    pattern = "^Slice \d+ to \d+ transformation: (\[.+\])"
+    pattern = "^Transformation Matrix: AffineTransform(\[.+\])"
     trf_lines = [line for line in lines if re.search(pattern, line)]
 
-    if registration_method == 'SIFT':
-        # trf_lines now consists of pairs of lines: the first one with info about the transformation
-        # between slice i-1 and i, and the second one the transformation between slice 1 and i.
-        # We only need the former, so discard every second line.
-        trf_lines = trf_lines[::2]   # list[start:end:step]
-
-    # Now extract the transformation matrices as strings
+    # Extract the transformation matrices as strings
     trf_matrix_strings = [re.search(pattern, trf_line).group(1) for trf_line in trf_lines]
 
-    # Turn matrix strings into 2 x 3 numpy arrays. The 3rd column is the translation vector.
+    # Turn matrix strings into 2x3 numpy arrays
     trf_matrices = [matrix_string_to_numpy_array(s) for s in trf_matrix_strings]
 
     if registration_method == 'SIFT':
-        # The matrices are actually the transformation matrix from section i+1 to section i (!!), invert each of them to get
+        # The matrices are actually the transformation matrix from section i+1 to section i, invert each of them to get
         # the transformation matrix from section i to section i+1, which is what we need.
         trf_matrices = [invert_2_by_3_matrix(mat) for mat in trf_matrices]
 

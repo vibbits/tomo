@@ -1,0 +1,22 @@
+--- StackReg_.java	2011-07-07 17:13:54.000000000 +0200
++++ StackRegModified_.java	2021-05-06 17:41:52.232528100 +0200
+@@ -983,6 +983,11 @@
+ } /* end QRdecomposition */
+ 
+ /*------------------------------------------------------------------*/
++private String trfToString(double [][] m)
++{
++	return "AffineTransform[[" + m[0][0] + ", " + m[0][1] + ", " + m[0][2] + "], [" + m[1][0] + ", " + m[1][1] + ", " + m[1][2] + "]]";
++}
++
+ private ImagePlus registerSlice (
+ 	ImagePlus source,
+ 	final ImagePlus target,
+@@ -1119,6 +1124,7 @@
+ 		targetPoints = (double[][])method.invoke(turboReg);
+ 		localTransform = getTransformationMatrix(targetPoints, sourcePoints,
+ 			transformation);
++		System.out.println("Transformation Matrix: " + trfToString(localTransform));
+ 		double[][] rescued =
+ 			{{globalTransform[0][0],
+ 			globalTransform[0][1],
